@@ -55,6 +55,7 @@ For a new project, run these in order:
 ./pastForward abort            # stop it gracefully (SIGTERM; snakemake shuts down its own subprocesses)
 ./pastForward abort --force    # or kill it and everything it started, immediately
 ./pastForward unlock           # clear a stale lock left by a crashed run
+./pastForward touch            # mark existing output files as up to date, so the next run skips the steps that made them
 ./pastForward doctor                        # list conda envs and whether each is built
 ./pastForward doctor --rebuild-envs ecmsd   # force one (or, with no names, all) to be recreated
 ./pastForward print-log        # print the most recently written log from logs/
@@ -66,7 +67,9 @@ For a new project, run these in order:
 
 `run` requires `--cores <N>` (or `-j`/`--jobs`). pastForward will not guess a thread count for you. `--use-conda`, `--keep-going`, and `--rerun-trigger mtime` are added automatically, but if you pass one of them yourself, your value is used instead. Any other extra arguments (e.g. `--forceall`) go straight through to Snakemake. `run` also refuses to start if a tracked run is still alive in the same project folder. Stop that one with `abort` first.
 
-Each `run`/`dryrun` writes a timestamped log to `logs/` in your project folder. `status` reads the most recent `run` back out of there.
+`touch` runs `snakemake --touch`: it only updates the timestamps of output files that already exist, so Snakemake treats them as up to date and skips the steps that produced them. Nothing is recomputed and no file content changes. It is meant for cases where the results are fine but their timestamps are not, e.g. after copying results in from another machine. Output files that do not exist yet are skipped with a warning, and by default only files Snakemake already considers out of date are touched. Add `--forcerun <rule>` or `--forceall` to touch the rest as well.
+
+Each `run`/`dryrun`/`touch` writes a timestamped log to `logs/` in your project folder. `status` reads the most recent `run` back out of there.
 
 Snakemake keeps track of what's already been done and only re-runs steps that are missing or out of date. To start completely over, delete the relevant `results` and `processed` folders and run the pipeline again.
 

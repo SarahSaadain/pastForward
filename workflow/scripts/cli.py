@@ -137,9 +137,9 @@ def _timestamp():
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
-def _build_run_cmd(extra_args):
+def _build_run_cmd(extra_args, defaults=DEFAULT_RUN_FLAGS):
     cmd = ["snakemake"]
-    for flag, value in DEFAULT_RUN_FLAGS:
+    for flag, value in defaults:
         if flag not in extra_args:
             cmd.append(flag)
             if value is not None:
@@ -148,15 +148,28 @@ def _build_run_cmd(extra_args):
     return cmd
 
 
+def _with_default_cores(extra_args):
+    extra_args = list(extra_args)
+    if not any(a in CORES_FLAGS for a in extra_args):
+        extra_args += ["--cores", "1"]
+    return extra_args
+
+
 def _build_dryrun_cmd(extra_args):
     # Reuses _build_run_cmd so a dry run predicts what `run` will actually do. Without
     # --rerun-trigger mtime a dry run falls back to Snakemake's default trigger set (mtime,
     # params, input, code, software-env) and reports reruns - e.g. "Code has changed since
     # last execution" - that the real run would never perform. --keep-going is a no-op here.
-    extra_args = list(extra_args)
-    if not any(a in CORES_FLAGS for a in extra_args):
-        extra_args += ["--cores", "1"]
-    return _build_run_cmd(extra_args) + ["--dryrun"]
+    return _build_run_cmd(_with_default_cores(extra_args)) + ["--dryrun"]
+
+
+def _build_touch_cmd(extra_args):
+    # Deliberately not --use-conda: snakemake builds every rule's conda env before the touch
+    # executor ever runs (workflow.py calls dag.create_conda_envs() whenever conda deployment
+    # is on, touch or not), which is a long detour for a command that only stamps mtimes on
+    # files that already exist. --rerun-trigger mtime stays, so "out of date" means the same
+    # here as it does for `run`.
+    return _build_run_cmd(_with_default_cores(extra_args), defaults=[("--rerun-trigger", "mtime")]) + ["--touch"]
 
 
 def _run_foreground(cmd, log_path):
@@ -232,6 +245,13 @@ def cmd_dryrun(argv):
     _ensure_project_root()
     cmd = _build_dryrun_cmd(argv)
     log_path = LOG_DIR / f"dryrun_{_timestamp()}.log"
+    sys.exit(_run_foreground(cmd, log_path))
+
+
+def cmd_touch(argv):
+    _ensure_project_root()
+    cmd = _build_touch_cmd(argv)
+    log_path = LOG_DIR / f"touch_{_timestamp()}.log"
     sys.exit(_run_foreground(cmd, log_path))
 
 
@@ -705,6 +725,7 @@ COMMANDS = {
     "status": cmd_status,
     "abort": cmd_abort,
     "unlock": cmd_unlock,
+    "touch": cmd_touch,
     "doctor": cmd_doctor,
     "check": cmd_check,
     "preview": cmd_preview,
@@ -743,6 +764,16 @@ Commands:
                                 immediately.
   unlock                        Run `snakemake --unlock` to clear a stale
                                 Snakemake lock left by a crashed run.
+  touch [snakemake-args...]     Mark existing output files as up to date
+                                (`snakemake --touch`), so the next run skips
+                                the steps that made them instead of redoing
+                                them. Nothing is recomputed - only the files'
+                                timestamps change. Useful after copying
+                                results in from elsewhere, or when a file was
+                                touched by hand. Outputs that do not exist yet
+                                are skipped with a warning. Add
+                                --forcerun/--forceall to touch files Snakemake
+                                already considers up to date.
   doctor [--rebuild-envs [name ...]]
                                 List the pipeline's conda environments
                                 (workflow/envs/*.yaml) and whether each is
@@ -767,7 +798,7 @@ Commands:
   version                       Print the pastForward pipeline version.
 
 Run from a project root: the folder containing workflow/ and config/.
-Logs for `run`/`dryrun` are written to logs/<command>_<timestamp>.log.
+Logs for `run`/`dryrun`/`touch` are written to logs/<command>_<timestamp>.log.
 """
 
 

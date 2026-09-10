@@ -68,6 +68,19 @@ class BuildCmdTestCase(unittest.TestCase):
         self.assertEqual(cmd.count("--rerun-trigger"), 1)
         self.assertNotIn("mtime", cmd)
 
+    def test_touch_cmd_defaults_cores_and_skips_conda(self):
+        # --use-conda would make Snakemake build every rule's environment before touching
+        # anything, which a touch has no use for.
+        cmd = cli._build_touch_cmd([])
+        self.assertEqual(cmd, ["snakemake", "--rerun-trigger", "mtime", "--cores", "1", "--touch"])
+
+    def test_touch_cmd_passes_user_flags_through(self):
+        cmd = cli._build_touch_cmd(["--cores", "4", "--forcerun", "count_reads_raw"])
+        self.assertEqual(
+            cmd,
+            ["snakemake", "--rerun-trigger", "mtime", "--cores", "4", "--forcerun", "count_reads_raw", "--touch"],
+        )
+
 
 class StatusHelpersTestCase(unittest.TestCase):
     def test_format_duration(self):
