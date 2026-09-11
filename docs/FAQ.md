@@ -332,6 +332,9 @@ Also, splitting by cluster allows for more efficient parallel processing. Each c
 **Q: What determines which BAM becomes the `_final.bam`?**
 pastForward follows a priority chain: rescaled BAM → deduplicated BAM → sorted BAM, using the most-processed available result based on which steps are enabled.
 
+**Q: Deduplication runs in reference_module. Why not in REVEAL processing too?**
+See "Why doesn't REVEAL processing deduplicate reads..." in the REVEAL Module section below. Short version: it's deliberate, not a gap, because of how the feature library is built.
+
 ---
 
 ## Taxonomic Screening
@@ -393,6 +396,11 @@ In case multiple references are available in `<species>/input/reference_module/`
 
 **Q: What does the copy number fold-change flag mean in the REVEAL output?**
 Sequences are flagged if the log₂ fold-change in median coverage across individuals exceeds `CN_FC` (default ≥ 2) or the absolute difference exceeds `CN_ABS` (default Δ ≥ 10). Flagged sequences are sorted to the top of the comparison table and written to a companion `_flagged_seqids.tsv` file.
+
+**Q: Deduplication runs in reference_module (via DeDup). Why doesn't REVEAL processing deduplicate reads too?**
+reveal_module maps reads fresh from the merged FASTQ against the combined SCG + feature-library reference; it does not run DeDup or any other deduplication tool on that mapping. This is intentional, not an oversight.
+
+The feature library is a many-genomic-copies-to-one-consensus reference: reads from distinct, independent copies of a repeat or transposable element elsewhere in the genome legitimately align to the same consensus coordinate, with the same start position and CIGAR. Deduplicating here would strip real multi-copy signal rather than PCR artifacts, biasing the copy-number/abundance signal REVEAL exists to measure in the first place, in the opposite direction from what dedup is meant to fix.
 
 **Q: Which REVEAL build does pastForward install?**
 `pipeline.reveal_module.settings.version_source` picks which build. The default `"conda"` takes REVEAL from the bioconda-packaged `reveal-tools=1.*`. `"latest_release"` side-loads the newest tagged release from [SarahSaadain/REVEAL](https://github.com/SarahSaadain/REVEAL) instead, in its own conda env. There is also an **experimental** `"dev"` option that tracks the tip of REVEAL's `develop` branch. It is unreleased and untested, so use it at your own risk. The same three options exist for ECMSD via `tools.ecmsd.settings.version_source`, where `"conda"` is the bioconda package `ecmsd=1.*` — the mechanism is identical for both tools.
