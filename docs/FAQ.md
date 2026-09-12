@@ -317,6 +317,32 @@ Peak memory on Linux is sampled every 0.5 seconds for the first 15 seconds of a 
 **Q: Does pastForward support running on an HPC cluster (e.g. via Slurm or PBS)?**
 pastForward is a plain Snakemake workflow, so it should in principle work with Snakemake's [cluster/HPC execution support](https://snakemake.readthedocs.io/en/stable/executing/cluster.html) (e.g. via the Slurm or PBS [executor plugins](https://snakemake.github.io/snakemake-plugin-catalog/)), without any changes to the pipeline itself. This has not yet been specifically tested with pastForward. Testing on a Slurm-based HPC cluster is planned.
 
+pastForward does ship a default memory and wall time request for every step, so jobs are not submitted without one, which on most clusters would mean being killed at the partition's default time limit. See [Running on an HPC Cluster](snakemake.md#running-on-an-hpc-cluster) for the cluster-side profile you still have to write yourself, and for why to build the conda environments on the login node first.
+
+**Q: How do I change how much memory or wall time a step asks for?**
+Those live in `workflow/profiles/default/config.yaml`, a Snakemake profile that ships with the pipeline. It sets a default memory and wall time for every step, plus `--keep-going` and `--rerun-trigger mtime`. Snakemake picks it up on its own, with no flag, because it sits next to the `Snakefile`. (`--use-conda` is deliberately not in it, so you still pass that yourself — it would otherwise make even a dry run depend on a working, recent conda.)
+
+The shipped numbers are a generous floor, not measurements. For numbers that fit your data, run the pipeline once and then `./pastForward benchmark --emit-profile`, which prints a `set-resources:` block measured from that run. Paste it into the same file, below `default-resources:`. A `set-resources:` entry wins over a value written into a rule, which `default-resources:` does not.
+
+For a one-off change, override on the command line instead. This beats the profile:
+
+```bash
+./pastForward run --cores 40 --set-resources run_busco_for_scg_determination:mem_mb=32000
+```
+
+**Q: I put my own `profiles/default/config.yaml` in my project folder and the pipeline stopped working. Why?**
+Because Snakemake uses that file *instead* of the one shipped in `workflow/profiles/default/`, rather than merging the two. Everything the shipped profile set is gone: the memory and wall time defaults, and the rerun behavior. This is the trap: a folder created to change one number silently drops every other setting, and it does so without any error or warning.
+
+There are three safe ways to change something:
+
+- **One setting, one run:** pass it on the command line. `--set-resources <rule>:mem_mb=<N>`, `--set-threads <rule>=<N>`. The command line always wins over a profile.
+- **Settings for your machine** (cluster account, partition, job limits): put them in a profile folder of your own and pass it with `--profile my_profile`. This one *does* merge with the shipped profile, so you only write what is specific to your machine.
+- **Changing the pipeline's own numbers:** edit `workflow/profiles/default/config.yaml` directly. Note that a pipeline update overwrites it, so keep a copy of your changes.
+
+To run with no profile at all, use `--workflow-profile none`.
+
+Whichever you choose, check that it took effect. Snakemake ignores a key it does not recognize without any error or warning, so a misspelled setting looks exactly like a working one. `./pastForward dryrun` prints a `resources:` line per job, which is where the numbers actually show up.
+
 **Q: Can I stop a running pastForward instance without corrupting the results?**
 Yes. You can terminate the process (e.g. with `Ctrl+C` or `kill`) without corrupting results. pastForward leaves behind a lock file so that concurrent runs cannot interfere with each other.
 

@@ -498,6 +498,66 @@ else
 fi
 
 # =============================================================================================
+# Scenario 10: the shipped workflow profile (workflow/profiles/default/config.yaml). Snakemake
+# discovers it by path and by filename, and gets both wrong silently: a profile at the top of the
+# project instead of under workflow/ is never seen from a project root that only symlinks
+# workflow/, and a key Snakemake does not recognize is ignored without a warning. So assert the
+# effect on a real DAG, not the file's existence.
+# =============================================================================================
+S10="$WORKDIR/10_profile"
+make_project "$S10"
+cat > "$S10/config/config.yaml" <<'EOF'
+project_name: "pastForward_Project"
+species:
+  Dmel:
+    name: "Drosophila melanogaster"
+EOF
+mkdir -p "$S10/Dmel"
+make_species_root "$S10/Dmel"
+make_fake_data "$S10/Dmel"
+
+run_dryrun "$S10" "$S10/dryrun.log"
+
+# 10a: found through the workflow/ symlink, from a project root with no profiles/ of its own
+if grep -q "workflow specific profile workflow/profiles/default" "$S10/dryrun.log"; then
+  pass "10a: workflow profile is discovered through the workflow/ symlink"
+else
+  fail "10a: workflow profile is discovered through the workflow/ symlink" \
+       "no discovery line in $S10/dryrun.log - wrong path, or wrong filename for this version"
+fi
+
+# 10b: its default-resources actually reach the jobs. No rule declares a runtime of its own, so
+# every scheduled job must carry the profile's. A typo'd key would leave the line out entirely.
+PROFILE_RUNTIME="$(grep -oE "runtime=[0-9]+" "$S10/dryrun.log" | head -1)"
+if [ "$PROFILE_RUNTIME" = "runtime=240" ]; then
+  pass "10b: the profile's default-resources reach the scheduled jobs ($PROFILE_RUNTIME)"
+else
+  fail "10b: the profile's default-resources reach the scheduled jobs" \
+       "expected runtime=240, got '${PROFILE_RUNTIME:-no runtime in any resources line}'"
+fi
+
+# 10c: the DAG is unchanged by the profile. Resources are requests, not targets - if the job count
+# moves, the profile is doing something it should not.
+S10_JOBS="$(job_total "$S10/dryrun.log")"
+if [ -n "$S1_JOBS" ] && [ "$S1_JOBS" = "$S10_JOBS" ]; then
+  pass "10c: DAG job count unchanged by the profile ($S10_JOBS jobs)"
+else
+  fail "10c: DAG job count unchanged by the profile" "scenario1=$S1_JOBS scenario10=$S10_JOBS"
+fi
+
+# 10d: --workflow-profile none is the documented escape hatch, so it has to still build a DAG
+( cd "$S10" && "$TIMEOUT_CMD" 120 snakemake --cores 4 --dryrun \
+    --workflow-profile none > "$S10/no_profile.log" 2>&1 )
+S10_NONE_EXIT=$?
+S10_NONE_JOBS="$(job_total "$S10/no_profile.log")"
+if [ "$S10_NONE_EXIT" -eq 0 ] && [ "$S10_NONE_JOBS" = "$S10_JOBS" ]; then
+  pass "10d: --workflow-profile none still builds the same DAG"
+else
+  fail "10d: --workflow-profile none still builds the same DAG" \
+       "exit $S10_NONE_EXIT, jobs $S10_NONE_JOBS vs $S10_JOBS, see $S10/no_profile.log"
+fi
+
+# =============================================================================================
 echo ""
 echo "$PASS_COUNT passed, $FAIL_COUNT failed"
 if [ "$FAIL_COUNT" -ne 0 ]; then

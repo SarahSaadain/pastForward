@@ -14,4 +14,10 @@ __pycache__
 # Synthetic test library materialized by tests/build_test_library.py (rebuilt on every
 # test run - see tests/README.md).
 tests/fixtures/
+
+# A project's own config/config.yaml is the user's, never the repo's. The pattern has no
+# leading slash, so it matches at any depth - including the workflow profile shipped with the
+# pipeline, which is a config.yaml by necessity (Snakemake 9.9.0 accepts no other name) and
+# must be tracked.
 config.yaml
+!workflow/profiles/default/config.yaml

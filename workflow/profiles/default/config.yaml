@@ -1,0 +1,76 @@
+# =================================================================================================
+#     pastForward workflow profile
+# =================================================================================================
+# Default command-line arguments for every Snakemake run of this pipeline. Snakemake finds this
+# file on its own, with no flag: it looks for `profiles/default/` next to the current directory
+# and then next to the Snakefile, and the Snakefile lives in `workflow/`. So this applies to a
+# plain `snakemake` call from a project root, to `./pastForward run`, and to `--dryrun`, and it
+# travels with `workflow/` when the pipeline is copied to another machine.
+#
+# Two things about this file's location are load-bearing and easy to undo by accident:
+#
+#   - It must be `workflow/profiles/default/`, not a `profiles/` at the top of the project. A
+#     project root is not the repo checkout (it only needs `workflow/`, `config/` and the species
+#     folders), so a top-level `profiles/` would be missed by every project except a run started
+#     from the repo itself, and by the dry-run scenarios in tests/, which build each project as a
+#     symlink to `workflow/`.
+#   - It must be called `config.yaml`. Snakemake 9.9.0, the minimum this pipeline enforces, accepts
+#     no other name. Newer versions also read `profile.yaml`, but on 9.9.0 a `profiles/default/`
+#     holding no `config*.yaml` is a hard error ("profile given but no config.yaml found") that
+#     kills every invocation before the workflow is even parsed.
+#
+# Note that keys here are Snakemake command-line flags without the leading dashes, and a key
+# Snakemake does not recognize is ignored in silence - no error, no warning. A typo therefore
+# looks exactly like a setting that works. After editing, confirm the change took effect by
+# looking at the `resources:` lines of `./pastForward dryrun`.
+#
+# To run without any of this: `snakemake --workflow-profile none ...`.
+
+# -------------------------------------------------------------------------------------------------
+#     Run defaults
+# -------------------------------------------------------------------------------------------------
+# Two of the flags `./pastForward run` passes itself. They are set in both places on purpose: the
+# CLI keeps working for anyone who disables the profile, and passing a flag twice is harmless.
+# What this adds is that a plain `snakemake` call, which the docs list as the fallback, decides
+# what to re-run and what to do about a failure the same way the CLI does.
+#
+#   keep-going      - carry on after a failed job. Some steps (ECMSD especially) are expected to
+#                     fail on individual low-coverage samples, and that must not stop everything
+#   rerun-triggers  - decide what is out of date by file timestamps only. Snakemake's default also
+#                     re-runs on changed code, params and software environments, which reports a
+#                     near-full rerun whenever a script file is newer than its outputs
+#
+# `use-conda` is deliberately NOT here, even though every rule needs it and `./pastForward run`
+# always passes it. Please do not add it. Unlike the two above, it does something at DAG-build
+# time: Snakemake checks the conda version and resolves every environment, and refuses to do
+# anything at all on conda older than 24.7.1. That would apply to `--dryrun` as well, turning the
+# one cheap check a user has for "did the pipeline find my data" into something that needs a
+# working, new-enough conda toolchain first - and it is what the dry-run scenarios in tests/ rely
+# on not being true. Forgetting `--use-conda` also fails loudly and immediately rather than
+# quietly doing the wrong thing, so it is the flag that least needs defaulting here.
+keep-going: true
+rerun-triggers: mtime
+
+# -------------------------------------------------------------------------------------------------
+#     Resource floor
+# -------------------------------------------------------------------------------------------------
+# Memory (MB) and wall time (minutes) for every rule that does not ask for something itself.
+#
+# These matter on a cluster and nowhere else. A batch system needs a memory and a time request per
+# job, and without this block Snakemake sends neither, so every job inherits the partition's
+# default wall time - often under an hour - and is killed when it runs longer. Locally they change
+# nothing: a declared resource only limits how many jobs run at once if a total budget is given on
+# the command line (`--resources mem_mb=...`), which nothing here does.
+#
+# The two numbers are a deliberately generous floor, not measurements. They are meant to be too
+# much for the many small jobs rather than too little for a few big ones, since asking for more
+# than needed wastes queue time while asking for less kills the job. A rule with its own
+# `resources:` keeps its own value - this only fills in what a rule leaves unsaid.
+#
+# To replace these with real per-rule numbers, run the pipeline once and then
+# `./pastForward benchmark --emit-profile`, which prints a `set-resources:` block measured from
+# that run, ready to paste in below. Unlike `default-resources`, a `set-resources` entry also
+# overrides a value written into a rule.
+default-resources:
+  mem_mb: 8000
+  runtime: 240
