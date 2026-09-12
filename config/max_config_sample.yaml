@@ -298,8 +298,12 @@ pipeline:
         # the score is too noisy to trust below it. "Callable bases" means aligned bases for
         # snp_divergence_method: samtools_stats, and sites at or above
         # snp_divergence_min_depth inside the sampled regions for snp_divergence_method:
-        # bcftools. (Default: 100000)
+        # bcftools. Such an individual gets status insufficient_data. (Default: 100000)
         #snp_divergence_min_callable_bases: 100000
+
+        # Note: scoring is cohort relative, so it also needs at least three usable
+        # individuals mapped to the same reference. With fewer, every individual gets
+        # status insufficient_cohort and nothing is flagged. That minimum is fixed.
 
         # --- the settings below only apply when snp_divergence_method: bcftools ---
 

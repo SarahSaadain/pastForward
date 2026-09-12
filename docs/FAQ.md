@@ -471,6 +471,15 @@ The `latest_release`/`dev` builds of REVEAL and ECMSD are installed by a conda p
 **Q: A step was disabled. Will the report still work?**
 Yes. Each report only requests inputs from enabled steps. Disabled steps are left out, so the report reflects what was run.
 
+**Q: My SNP divergence output says `insufficient_cohort`. What does that mean?**
+The check ran fine, but there were too few individuals to score anyone. `insufficient_cohort` is not a data problem with the individual it is written on.
+
+The outlier test is cohort relative. It takes the median divergence rate across the individuals mapped to that reference, measures the spread around that median with the MAD, and asks how far each individual sits from it. With only two individuals the median is just their midpoint and the MAD is half the gap between them, so the two always score exactly -0.67 and +0.67 no matter how similar or different they really are. That is far below any sensible threshold, so a cohort of two could never flag anything even if it were scored. The check therefore needs at least three usable individuals on the same reference. Below three it writes this status, leaves `cohort_median`, `cohort_mad`, `modified_zscore` and `outlier_threshold_rate` empty, and flags nobody. The minimum of three is fixed and not configurable.
+
+`divergence_rate`, `variant_sites` and `callable_bases` are still filled in, so the per-individual numbers are usable even when no cohort score could be computed.
+
+Do not confuse this with `insufficient_data`, which means one individual fell below `snp_divergence_min_callable_bases` and was skipped. See `config/parameters.md` for all four `status` values.
+
 ---
 
 ## Troubleshooting
