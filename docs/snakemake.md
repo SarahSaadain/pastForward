@@ -54,6 +54,38 @@ If a stale Snakemake lock is left behind by a hard crash, clear it with `--unloc
 
 To redo a specific step, delete its output file and re-run, or use `--forcerun <rule_name>` to force a specific rule. Use `--touch` with `--forceall` to mark all outputs as up to date without re-running (use as a last resort). Check the Snakemake documentation for more options on controlling rule execution.
 
+## Benchmarking a Run
+
+Every step of the pipeline records how long it took and how much memory it used. Snakemake writes one small file per job, named after that step's log file with `.benchmark.jsonl` instead of `.log`, so the measurements sit next to the step they belong to. This is always on and needs no flag. It costs nothing measurable in runtime and one tiny file per job.
+
+Summarize them with:
+
+```bash
+./pastForward benchmark
+```
+
+That prints one row per rule: how many jobs ran, the median and longest wall time, the highest peak memory, total core-hours, and the largest input a job of that rule was given. Rules are listed most expensive first, so the top of the table is where a run spends its time.
+
+```bash
+./pastForward benchmark --emit-profile
+```
+
+adds a Snakemake `set-resources:` block built from those numbers, with the wall time doubled and the memory multiplied by 1.5 for headroom. It is a starting point for the resource requests an HPC cluster needs, not a finished answer. Paste it into a [Snakemake profile](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles), or pass single entries as `--set-resources <rule>:<resource>=<value>`.
+
+**What these numbers can and cannot tell you:**
+
+* **They only cover jobs that actually ran.** A benchmark file is not a pipeline output, so a missing one never causes a re-run. On a project that is already finished, there is nothing to summarize until something runs again. To measure a full pipeline, use a fresh project folder, or add `--forceall`.
+* **A failed step records nothing.** Snakemake writes the file only after a job succeeds, so a step that ran out of memory and was killed leaves no trace. The numbers always come from a run that worked.
+* **On macOS you get wall time only.** Snakemake samples memory through psutil, which macOS does not let a process read for its own children. Every memory, CPU and I/O column comes out as `NA`. For memory numbers, measure on Linux.
+* **Peak memory is a sample, not an exact peak.** It is measured every 0.5 seconds for the first 15 seconds and every 30 seconds after that, so a short spike later in a long job can be missed. It is good enough to size a request with headroom.
+* **The three reference-indexing steps are not measured.** They are marked as eligible for Snakemake's between-workflow caching, and Snakemake does not allow a step to be both cacheable and benchmarked. To measure one of them, remove its `cache:` line in `workflow/rules/reference_module/processing/prepare_reference_for_mapping.smk`.
+
+To delete the files again:
+
+```bash
+find . -name '*.benchmark.jsonl' -delete
+```
+
 ## Running on an HPC Cluster
 
 pastForward is a standard Snakemake workflow, so it should work with Snakemake's [cluster/HPC execution support](https://snakemake.readthedocs.io/en/stable/executing/cluster.html) (for example, Slurm or PBS) via the matching [executor plugin](https://snakemake.github.io/snakemake-plugin-catalog/), with no changes to the pipeline itself. This hasn't been specifically tested yet on a Slurm-based cluster, though that's planned. If you try it, feedback is very welcome.

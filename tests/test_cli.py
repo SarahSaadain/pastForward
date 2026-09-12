@@ -19,6 +19,7 @@ import sys
 import tempfile
 import unittest
 from datetime import datetime
+from pathlib import Path
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO_ROOT, "workflow"))
@@ -665,6 +666,158 @@ workflow/envs/reference_module/environment.yaml\t-\t.snakemake/conda/1c817e9_
             [".snakemake/conda/3f83c79_", ".snakemake/conda/2844fb9_", ".snakemake/conda/1c817e9_"],
         )
         self.assertEqual(envs[0]["env_file"], "workflow/envs/python_and_r.yaml")
+
+
+class BenchmarkRecordTestCase(unittest.TestCase):
+    """Aggregation of the *.benchmark.jsonl files workflow/rules/benchmark.smk attaches to every
+    rule. Field names and the "NA" placeholder mirror snakemake/benchmark.py's extended JSONL
+    format (BenchmarkRecord.to_json with extended_fmt=True)."""
+
+    @staticmethod
+    def _record(rule, seconds, max_rss="NA", threads=1, input_size_mb=None):
+        return {
+            "s": seconds,
+            "h:m:s": "0:00:00",
+            "max_rss": max_rss,
+            "max_vms": "NA",
+            "cpu_time": "NA",
+            "jobid": 1,
+            "rule_name": rule,
+            "wildcards": {},
+            "params": {},
+            "threads": threads,
+            "resources": {"_cores": threads},
+            "input_size_mb": {"in.bam": input_size_mb} if input_size_mb is not None else {},
+        }
+
+    def test_benchmark_number_treats_na_as_missing(self):
+        # Snakemake writes "NA", not 0, for anything it could not sample - reporting it as 0 MB
+        # would read as "this rule needs no memory", which is the opposite of the truth.
+        self.assertIsNone(cli._benchmark_number("NA"))
+        self.assertIsNone(cli._benchmark_number(None))
+        self.assertIsNone(cli._benchmark_number("-"))
+        self.assertEqual(cli._benchmark_number(12), 12.0)
+        self.assertEqual(cli._benchmark_number("3.5"), 3.5)
+
+    def test_summarize_groups_per_rule_and_sorts_by_core_hours(self):
+        records = [
+            self._record("slow_rule", 3600, max_rss=1000, threads=4),
+            self._record("slow_rule", 1800, max_rss=2000, threads=4),
+            self._record("quick_rule", 10, max_rss=50, threads=1),
+        ]
+        rows = cli._summarize_benchmarks(records)
+        self.assertEqual([row["rule"] for row in rows], ["slow_rule", "quick_rule"])
+        slow = rows[0]
+        self.assertEqual(slow["jobs"], 2)
+        self.assertEqual(slow["median_s"], 2700)
+        self.assertEqual(slow["max_s"], 3600)
+        self.assertEqual(slow["max_rss_mb"], 2000)
+        self.assertAlmostEqual(slow["core_hours"], (3600 * 4 + 1800 * 4) / 3600)
+
+    def test_summarize_reports_no_memory_rather_than_zero(self):
+        rows = cli._summarize_benchmarks([self._record("mac_rule", 42)])
+        self.assertIsNone(rows[0]["max_rss_mb"])
+        self.assertEqual(rows[0]["max_s"], 42)
+
+    def test_summarize_takes_largest_total_input_size(self):
+        records = [
+            self._record("map", 10, input_size_mb=100),
+            self._record("map", 10, input_size_mb=250),
+        ]
+        self.assertEqual(cli._summarize_benchmarks(records)[0]["max_input_mb"], 250)
+
+    def test_summarize_labels_records_without_a_rule_name(self):
+        # Pre-extended-format files (or a run where benchmark.smk could not switch the extended
+        # format on) have no rule_name at all. They must not be dropped silently.
+        rows = cli._summarize_benchmarks([{"s": 5, "max_rss": "NA"}])
+        self.assertEqual(rows[0]["rule"], "(unknown rule)")
+
+    def test_emit_profile_skips_mem_mb_when_memory_was_never_measured(self):
+        rows = cli._summarize_benchmarks(
+            [self._record("measured", 60, max_rss=1000), self._record("wall_time_only", 60)]
+        )
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            cli._emit_benchmark_profile(rows)
+        out = buffer.getvalue()
+        self.assertIn("set-resources:", out)
+        # runtime is in minutes at 2x the observed max, mem_mb at 1.5x the observed peak.
+        self.assertIn("    runtime: 2\n", out)
+        self.assertIn("    mem_mb: 1500\n", out)
+        self.assertEqual(out.count("mem_mb:"), 1)
+
+
+class FindBenchmarkFilesTestCase(unittest.TestCase):
+    def setUp(self):
+        self._orig_cwd = os.getcwd()
+        self.project_dir = tempfile.mkdtemp(prefix="pf_test_cli_benchmark_")
+        os.chdir(self.project_dir)
+
+    def tearDown(self):
+        os.chdir(self._orig_cwd)
+        shutil.rmtree(self.project_dir, ignore_errors=True)
+
+    def _touch(self, relative_path):
+        path = os.path.join(self.project_dir, relative_path)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        open(path, "w").close()
+        return path
+
+    def test_finds_benchmark_files_and_ignores_everything_else(self):
+        self._touch("Dmel/processed/reference_module/IND001_sorted.benchmark.jsonl")
+        self._touch("Dmel/processed/reference_module/IND001_sorted.log")
+        self._touch("Dmel/results/summary/Dmel_multiqc.benchmark.jsonl")
+        found = [os.path.basename(p) for p in cli._find_benchmark_files()]
+        self.assertEqual(found, ["IND001_sorted.benchmark.jsonl", "Dmel_multiqc.benchmark.jsonl"])
+
+    def test_skips_the_pipeline_code_and_dot_directories(self):
+        # .snakemake holds its own copies of a lot of things, and workflow/ is pipeline code that
+        # travels between machines - neither ever holds a benchmark belonging to this project.
+        self._touch("workflow/rules/leftover.benchmark.jsonl")
+        self._touch(".snakemake/leftover.benchmark.jsonl")
+        self.assertEqual(cli._find_benchmark_files(), [])
+
+    def test_follows_a_symlinked_processed_directory(self):
+        # species_paths.py turns a configured processed_dir/results_dir into a symlink at the
+        # conventional in-project path, so every benchmark file can sit behind one.
+        external = os.path.join(self.project_dir, "external_store")
+        os.makedirs(external)
+        open(os.path.join(external, "IND001.benchmark.jsonl"), "w").close()
+        os.makedirs(os.path.join(self.project_dir, "Dmel"))
+        os.symlink(external, os.path.join(self.project_dir, "Dmel/processed"))
+        found = cli._find_benchmark_files("Dmel")
+        self.assertEqual([os.path.basename(p) for p in found], ["IND001.benchmark.jsonl"])
+
+    def test_survives_a_symlink_cycle(self):
+        # Following symlinks means a loop is possible; it must not hang the command.
+        os.makedirs(os.path.join(self.project_dir, "Dmel/processed"))
+        os.symlink(os.path.join(self.project_dir, "Dmel"), os.path.join(self.project_dir, "Dmel/processed/loop"))
+        self._touch("Dmel/processed/IND001.benchmark.jsonl")
+        self.assertEqual(len(cli._find_benchmark_files()), 1)
+
+    def test_benchmark_command_explains_an_empty_project(self):
+        os.makedirs(os.path.join(self.project_dir, "workflow"))
+        os.makedirs(os.path.join(self.project_dir, "config"))
+        with self.assertRaises(SystemExit) as caught:
+            cli.cmd_benchmark([])
+        self.assertIn("no", str(caught.exception).lower())
+
+    def test_benchmark_command_rejects_unknown_arguments(self):
+        os.makedirs(os.path.join(self.project_dir, "workflow"))
+        os.makedirs(os.path.join(self.project_dir, "config"))
+        with self.assertRaises(SystemExit):
+            cli.cmd_benchmark(["--emit-profile", "--nonsense"])
+
+    def test_benchmark_command_skips_unreadable_files_instead_of_failing(self):
+        os.makedirs(os.path.join(self.project_dir, "workflow"))
+        os.makedirs(os.path.join(self.project_dir, "config"))
+        good = self._touch("Dmel/processed/good.benchmark.jsonl")
+        Path(good).write_text(json.dumps({"s": 3, "max_rss": 10, "threads": 1, "rule_name": "good"}) + "\n")
+        Path(self._touch("Dmel/processed/bad.benchmark.jsonl")).write_text("{not json\n")
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            cli.cmd_benchmark([])
+        self.assertIn("good", buffer.getvalue())
 
 
 if __name__ == "__main__":

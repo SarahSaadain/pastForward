@@ -109,12 +109,14 @@ if _comp_execute:
             "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta",
         output:
             "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.no_comp.suffixed.fasta",
+        log:
+            "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.no_comp.suffixed.log",
         message:
             "Removing competition sequences from combined library for REVEAL ({wildcards.species})"
         shell:
             # Skip any FASTA entry whose header ends in _comp (header + its sequence lines)
             """
-            awk -f workflow/scripts/reveal_module/mapping/filter_out_comp_fasta_entries.awk "{input}" >"{output}"
+            awk -f workflow/scripts/reveal_module/mapping/filter_out_comp_fasta_entries.awk "{input}" >"{output}" 2>"{log}"
             """
 
     rule prepare_competition_library:
@@ -124,12 +126,14 @@ if _comp_execute:
             temp(
                 "{species}/processed/reveal_module/competition/competition.suffixed.fasta"
             ),
+        log:
+            "{species}/processed/reveal_module/competition/competition.suffixed.log",
         message:
             "Preparing competition library for {wildcards.species}"
         shell:
             # remove trailing whitespace from headers and append _comp to each header
             """
-            sed -E '/^>/ s/[[:space:]]//g; /^>/ s/(_comp)?$/_comp/' "{input}" >"{output}"
+            sed -E '/^>/ s/[[:space:]]//g; /^>/ s/(_comp)?$/_comp/' "{input}" >"{output}" 2>"{log}"
             """
 
 

@@ -293,6 +293,27 @@ Yes, you can run multiple instances of pastForward simultaneously, provided that
 
 The one exception: if you've configured `processed_dir`/`results_dir` (or `species_dir`) to point outside the project directory (see "Can I store a species' data outside the project directory?" above), and two independent projects' configs happen to resolve to the *same* target directory, the second one to start will fail fast with a cross-project lock error instead of racing the first. Instances that keep all data in-project (the default), or whose overrides resolve to different targets, are unaffected.
 
+**Q: What are all these `.benchmark.jsonl` files next to my log files?**
+They are pastForward's timing and memory measurements. Every step writes one after it finishes, recording wall time, peak memory, the number of threads it used, and the size of its inputs. The file is named after that step's log file, so the two sit side by side.
+
+They are always written, they cost no measurable runtime, and they are tiny. They are also not pipeline outputs, so deleting them never makes anything re-run:
+
+```bash
+find . -name '*.benchmark.jsonl' -delete
+```
+
+Read them with `./pastForward benchmark`, which turns them into one row per rule (jobs run, median and longest wall time, peak memory, total core-hours, largest input), ordered by the most expensive rule first.
+
+**Q: `./pastForward benchmark` says it found nothing, or shows far fewer rules than my pipeline has. Why?**
+Because a benchmark file is written only when a job actually runs. Snakemake never re-runs a step just because its benchmark file is missing, which is what keeps this from invalidating existing results, but it also means a finished project has nothing to report until something runs again. To measure a whole pipeline, run it in a fresh project folder, or add `--forceall`.
+
+Two other gaps are expected. A step that failed writes nothing at all, because Snakemake records the measurement only on success, so a step that was killed for using too much memory leaves no trace of that. And the three reference-indexing steps are never measured, because Snakemake does not allow a step to be both benchmarked and eligible for its between-workflow cache.
+
+**Q: Why is every memory column in `./pastForward benchmark` empty?**
+You are almost certainly on macOS. Snakemake measures memory through psutil, and macOS refuses a process access to its own children's memory, so every memory, CPU and I/O value comes back as `NA` and only wall time survives. Nothing is wrong with your run. For real memory numbers, do the measuring run on a Linux machine.
+
+Peak memory on Linux is sampled every 0.5 seconds for the first 15 seconds of a job and every 30 seconds after that, so treat it as a good number to size a request from, with headroom, rather than as an exact peak.
+
 **Q: Does pastForward support running on an HPC cluster (e.g. via Slurm or PBS)?**
 pastForward is a plain Snakemake workflow, so it should in principle work with Snakemake's [cluster/HPC execution support](https://snakemake.readthedocs.io/en/stable/executing/cluster.html) (e.g. via the Slurm or PBS [executor plugins](https://snakemake.github.io/snakemake-plugin-catalog/)), without any changes to the pipeline itself. This has not yet been specifically tested with pastForward. Testing on a Slurm-based HPC cluster is planned.
 

@@ -413,6 +413,91 @@ else
 fi
 
 # =============================================================================================
+# Scenario 9: benchmarking - workflow/rules/benchmark.smk attaches a benchmark file to every
+# rule after the fact, using Snakemake internals (Rule.benchmark, Rule.log_modifier,
+# Workflow.output_settings). A Snakemake upgrade that changes those must fail here rather than
+# in a user's run.
+# =============================================================================================
+S9="$WORKDIR/9_benchmark"
+make_project "$S9"
+cat > "$S9/config/config.yaml" <<'EOF'
+project_name: "pastForward_Project"
+species:
+  Dmel:
+    name: "Drosophila melanogaster"
+EOF
+mkdir -p "$S9/Dmel"
+make_species_root "$S9/Dmel"
+make_fake_data "$S9/Dmel"
+
+run_dryrun "$S9" "$S9/dryrun.log"
+if [ "$DRYRUN_EXIT" -eq 0 ]; then
+  pass "9a: dry-run with benchmarks attached succeeds"
+else
+  fail "9a: dry-run with benchmarks attached succeeds" "exit code $DRYRUN_EXIT, see $S9/dryrun.log"
+fi
+
+# 9b: the DAG job count is unchanged - a benchmark file is not an output, so it adds no job
+S9_JOBS="$(job_total "$S9/dryrun.log")"
+if [ -n "$S1_JOBS" ] && [ "$S1_JOBS" = "$S9_JOBS" ]; then
+  pass "9b: DAG job count unchanged by benchmarks ($S9_JOBS jobs)"
+else
+  fail "9b: DAG job count unchanged by benchmarks" "scenario1=$S1_JOBS scenario9=$S9_JOBS"
+fi
+
+# 9c: every scheduled job carries a benchmark path next to its log path
+if grep -qE "^    benchmark: .*\.benchmark\.jsonl$" "$S9/dryrun.log"; then
+  pass "9c: jobs are scheduled with a .benchmark.jsonl path"
+else
+  fail "9c: jobs are scheduled with a .benchmark.jsonl path" "no benchmark line in $S9/dryrun.log"
+fi
+
+# 9d: rules marked `cache: True` must be skipped. Snakemake rejects a rule that is both
+# cacheable and benchmarked, and does so at DAG build time, which kills the whole run.
+if grep -q "may not be marked as eligible" "$S9/dryrun.log"; then
+  fail "9d: cache-eligible rules are left unbenchmarked" \
+       "Snakemake rejected a cacheable rule carrying a benchmark, see $S9/dryrun.log"
+else
+  pass "9d: cache-eligible rules are left unbenchmarked"
+fi
+
+# 9e: a real (tiny, conda-free) job actually writes the file, in the extended JSON-lines format
+# that `./pastForward benchmark` reads. The dry runs above only prove the paths were attached.
+S9E="$WORKDIR/9_benchmark_write"
+mkdir -p "$S9E"
+cat > "$S9E/Snakefile" <<EOF
+rule all:
+    input:
+        "out.txt",
+
+
+rule make_out:
+    output:
+        "out.txt",
+    log:
+        "out.log",
+    shell:
+        "touch {output} > {log} 2>&1"
+
+
+include: "$REPO_ROOT/workflow/rules/benchmark.smk"
+EOF
+( cd "$S9E" && "$TIMEOUT_CMD" 120 snakemake --cores 1 > "$S9E/run.log" 2>&1 )
+if [ -f "$S9E/out.benchmark.jsonl" ]; then
+  pass "9e: a real job writes out.benchmark.jsonl next to out.log"
+else
+  fail "9e: a real job writes out.benchmark.jsonl next to out.log" "see $S9E/run.log"
+fi
+# rule_name only appears in the extended format, which benchmark.smk switches on for the whole
+# workflow - without it the aggregator cannot tell which rule a file belongs to.
+if grep -q '"rule_name": "make_out"' "$S9E/out.benchmark.jsonl" 2>/dev/null; then
+  pass "9f: the record is in extended format, with no --benchmark-extended flag passed"
+else
+  fail "9f: the record is in extended format, with no --benchmark-extended flag passed" \
+       "$(cat "$S9E/out.benchmark.jsonl" 2>/dev/null || echo "no benchmark file")"
+fi
+
+# =============================================================================================
 echo ""
 echo "$PASS_COUNT passed, $FAIL_COUNT failed"
 if [ "$FAIL_COUNT" -ne 0 ]; then

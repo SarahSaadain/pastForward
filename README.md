@@ -62,12 +62,17 @@ For a new project, run these in order:
 ./pastForward print-log --tail 50  # only the last 50 lines (default 20)
 ./pastForward print-log --live     # tail -f the log (Ctrl-C to stop)
 
+./pastForward benchmark                 # how long each rule took and how much memory it used
+./pastForward benchmark --emit-profile  # same, plus a Snakemake `set-resources:` block built from those numbers
+
 ./pastForward version          # print the pipeline version
 ```
 
 `run` requires `--cores <N>` (or `-j`/`--jobs`). pastForward will not guess a thread count for you. `--use-conda`, `--keep-going`, and `--rerun-trigger mtime` are added automatically, but if you pass one of them yourself, your value is used instead. Any other extra arguments (e.g. `--forceall`) go straight through to Snakemake. `run` also refuses to start if a tracked run is still alive in the same project folder. Stop that one with `abort` first.
 
 `touch` runs `snakemake --touch`: it only updates the timestamps of output files that already exist, so Snakemake treats them as up to date and skips the steps that produced them. Nothing is recomputed and no file content changes. It is meant for cases where the results are fine but their timestamps are not, e.g. after copying results in from another machine. Output files that do not exist yet are skipped with a warning, and by default only files Snakemake already considers out of date are touched. Add `--forcerun <rule>` or `--forceall` to touch the rest as well.
+
+`benchmark` summarizes what a run actually cost. Every step writes a small `*.benchmark.jsonl` file next to its log file, recording wall time, peak memory, threads, and input size, and `benchmark` collects them into one row per rule, ordered by total core-hours. Use it to see where a run spends its time, or, with `--emit-profile`, to turn those measurements into resource requests for an HPC cluster. See [Running with Snakemake](docs/snakemake.md#benchmarking-a-run).
 
 Each `run`/`dryrun`/`touch` writes a timestamped log to `logs/` in your project folder. `status` reads the most recent `run` back out of there.
 
