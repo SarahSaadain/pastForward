@@ -1073,6 +1073,61 @@
                 </label>
                 <label class="lbl" for="cov_samtools_stats">Include samtools stats in MultiQC reports</label>
               </div>
+              <div class="toggle-wrap" style="margin-top:6px">
+                <label class="toggle">
+                  <input type="checkbox" id="cov_snp_div" onchange="render()">
+                  <span class="slider"></span>
+                </label>
+                <label class="lbl" for="cov_snp_div">Flag individuals whose divergence from the reference is a cohort outlier</label>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:420px">
+                <label>Divergence Method</label>
+                <select id="cov_snp_div_method" onchange="render()">
+                  <option value="samtools_stats" selected>samtools_stats &mdash; reuse existing samtools stats, free</option>
+                  <option value="bcftools">bcftools &mdash; call SNPs per individual, adds heterozygosity</option>
+                </select>
+                <p class="hint">Default: samtools_stats. Reuses the per-individual samtools stats file that is already produced, so it costs no extra runtime and no extra dependency. bcftools adds the heterozygous-call rate and a MultiQC panel at real runtime cost.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Outlier Modified Z-Score</label>
+                <input type="number" id="cov_snp_div_z" value="3.5" min="0" step="0.1" oninput="render()">
+                <p class="hint">Default: 3.5. Only the high side is flagged.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Minimum Callable Bases</label>
+                <input type="number" id="cov_snp_div_min_callable" value="100000" min="0" oninput="render()">
+                <p class="hint">Default: 100000. Individuals below this are reported as insufficient_data instead of being scored.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Target Bases (bcftools only)</label>
+                <input type="number" id="cov_snp_div_target" value="10000000" min="0" oninput="render()">
+                <p class="hint">Default: 10000000. Caps runtime so it scales with this budget instead of genome size. 0 uses the whole reference.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Minimum Contig Length (bcftools only)</label>
+                <input type="number" id="cov_snp_div_min_contig" value="10000" min="0" oninput="render()">
+                <p class="hint">Default: 10000. Contigs shorter than this are never picked for the region set.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Minimum Depth (bcftools only)</label>
+                <input type="number" id="cov_snp_div_min_depth" value="3" min="1" oninput="render()">
+                <p class="hint">Default: 3. Minimum read depth for a site to count toward SNP density.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Maximum Depth (bcftools only)</label>
+                <input type="number" id="cov_snp_div_max_depth" value="50" min="1" oninput="render()">
+                <p class="hint">Default: 50. Passed to bcftools mpileup --max-depth.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Minimum Mapping Quality (bcftools only)</label>
+                <input type="number" id="cov_snp_div_mq" value="30" min="0" oninput="render()">
+                <p class="hint">Default: 30.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Minimum Base Quality (bcftools only)</label>
+                <input type="number" id="cov_snp_div_bq" value="30" min="0" oninput="render()">
+                <p class="hint">Default: 30.</p>
+              </div>
             </div>
             </div><!-- /.adv-content -->
           </div>
@@ -1742,6 +1797,20 @@ function buildYAML() {
   kv(8, 'qualimap', gb('cov_qualimap'));
   kv(8, 'samtools_stats', gb('cov_samtools_stats'));
   kv(8, 'qualimap_mem_mb', gn('cov_qualimap_mem'));
+  kv(8, 'snp_divergence_check', gb('cov_snp_div'));
+  if (gb('cov_snp_div')) {
+    kv(8, 'snp_divergence_method', gv('cov_snp_div_method'));
+    kv(8, 'snp_divergence_outlier_zscore', parseFloat(gv('cov_snp_div_z')) || 3.5);
+    kv(8, 'snp_divergence_min_callable_bases', gn('cov_snp_div_min_callable'));
+    if (gv('cov_snp_div_method') === 'bcftools') {
+      kv(8, 'snp_divergence_target_bases', gn('cov_snp_div_target'));
+      kv(8, 'snp_divergence_min_contig_length', gn('cov_snp_div_min_contig'));
+      kv(8, 'snp_divergence_min_depth', gn('cov_snp_div_min_depth'));
+      kv(8, 'snp_divergence_max_depth', gn('cov_snp_div_max_depth'));
+      kv(8, 'snp_divergence_min_mapping_quality', gn('cov_snp_div_mq'));
+      kv(8, 'snp_divergence_min_base_quality', gn('cov_snp_div_bq'));
+    }
+  }
   p(0, ''); p(0, '');
   p(2, 'reveal_module:');
   kv(4, 'execute', gb('rv_exec'));
@@ -2015,6 +2084,16 @@ function populateForm(c) {
   sb('cov_qualimap',      rpas.qualimap);
   sb('cov_samtools_stats',rpas.samtools_stats);
   sv('cov_qualimap_mem',  rpas.qualimap_mem_mb);
+  sb('cov_snp_div',              rpas.snp_divergence_check);
+  sv('cov_snp_div_method',       rpas.snp_divergence_method);
+  sv('cov_snp_div_z',            rpas.snp_divergence_outlier_zscore);
+  sv('cov_snp_div_min_callable', rpas.snp_divergence_min_callable_bases);
+  sv('cov_snp_div_target',       rpas.snp_divergence_target_bases);
+  sv('cov_snp_div_min_contig',   rpas.snp_divergence_min_contig_length);
+  sv('cov_snp_div_min_depth',    rpas.snp_divergence_min_depth);
+  sv('cov_snp_div_max_depth',    rpas.snp_divergence_max_depth);
+  sv('cov_snp_div_mq',           rpas.snp_divergence_min_mapping_quality);
+  sv('cov_snp_div_bq',           rpas.snp_divergence_min_base_quality);
 
   sb('rv_exec', reveal.execute);
   toggleStage('rv_body', document.getElementById('rv_exec'));
@@ -2117,7 +2196,7 @@ function resetDefaults() {
         deduplication: { execute: true, settings: { min_contigs_per_cluster: 1, max_contigs_per_cluster: 500 } },
         damage_rescaling: { execute: true },
         filter_unmapped_reads: { execute: false, settings: { action: 'keep' } },
-        analysis: { execute: true, settings: { damage_analysis: true, create_plots: true, individual_multiqc: true, species_multiqc: true, preseq_complexitiy_curve: true, qualimap: true, samtools_stats: true } }
+        analysis: { execute: true, settings: { damage_analysis: true, create_plots: true, individual_multiqc: true, species_multiqc: true, preseq_complexitiy_curve: true, qualimap: true, samtools_stats: true, snp_divergence_check: false } }
       },
       reveal_module: {
         execute: true,

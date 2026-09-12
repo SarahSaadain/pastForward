@@ -272,6 +272,52 @@ pipeline:
         # Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources.
         #qualimap_mem_mb: 4096
 
+        # When true, measure how far each individual diverges from the reference and flag
+        # individuals whose divergence is an outlier compared to the rest of the cohort.
+        # A flagged individual can mean a wrong reference genome, cross-species
+        # contamination, or a mislabeled individual. Flagging is a warning only, the run
+        # continues. This is NOT related to reveal_module's snp_analysis, which is a
+        # different feature computing SNP stats on feature libraries. (Default: false)
+        snp_divergence_check: false
+
+        # Optional: how the per-individual divergence number is obtained.
+        #   samtools_stats -- reuse the per-individual samtools stats file that is already
+        #                     produced (mismatches / bases mapped). Free, runs in seconds,
+        #                     no extra dependency, but gives no heterozygous-call rate.
+        #   bcftools       -- call SNPs per individual with bcftools mpileup/call. Adds the
+        #                     heterozygous-call rate and a MultiQC panel, costs real runtime.
+        # (Default: samtools_stats)
+        #snp_divergence_method: samtools_stats
+
+        # Optional: modified z-score above which an individual is flagged as an outlier.
+        # Only the high side is flagged, an unusually low divergence is not suspicious.
+        # (Default: 3.5)
+        #snp_divergence_outlier_zscore: 3.5
+
+        # Optional: skip flagging any individual with fewer callable bases than this, since
+        # the score is too noisy to trust below it. "Callable bases" means aligned bases for
+        # snp_divergence_method: samtools_stats, and sites at or above
+        # snp_divergence_min_depth inside the sampled regions for snp_divergence_method:
+        # bcftools. (Default: 100000)
+        #snp_divergence_min_callable_bases: 100000
+
+        # --- the settings below only apply when snp_divergence_method: bcftools ---
+
+        # Optional: how many reference bases to call per individual. Caps runtime so it
+        # scales with this budget instead of with genome size. The same deterministic region
+        # set is used for every individual of the cohort, so the scores stay comparable.
+        # Set to 0 to use the whole reference. (Default: 10000000)
+        #snp_divergence_target_bases: 10000000
+        # Optional: contigs shorter than this are never picked for the region set (Default: 10000)
+        #snp_divergence_min_contig_length: 10000
+        # Optional: minimum read depth for a site to count toward SNP density (Default: 3)
+        #snp_divergence_min_depth: 3
+        # Optional: maximum per-site depth passed to bcftools mpileup --max-depth (Default: 50)
+        #snp_divergence_max_depth: 50
+        # Optional: minimum mapping and base quality passed to mpileup --min-MQ / --min-BQ (Default: 30)
+        #snp_divergence_min_mapping_quality: 30
+        #snp_divergence_min_base_quality: 30
+
 
   reveal_module:
     # When true, this stage will be executed (Default: true)

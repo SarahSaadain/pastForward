@@ -359,6 +359,26 @@ def create_multiqc_reference_input(wildcards):
                     file_list.append(
                         f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/samtools_stats/{individual}_{reference}_final.bam.stats"
                     )
+                # Only the bcftools tier of the SNP divergence check produces a file
+                # MultiQC can render. The samtools_stats tier reuses the samtools stats
+                # file already added above, so it needs nothing here.
+                if (
+                    config.get("pipeline", {})
+                    .get("reference_module", {})
+                    .get("analysis", {})
+                    .get("settings", {})
+                    .get("snp_divergence_check", False)
+                    == True
+                    and config.get("pipeline", {})
+                    .get("reference_module", {})
+                    .get("analysis", {})
+                    .get("settings", {})
+                    .get("snp_divergence_method", "samtools_stats")
+                    == "bcftools"
+                ):
+                    file_list.append(
+                        f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/snp_divergence/{individual}_{reference}.bcftools_stats.txt"
+                    )
                 file_list.append(
                     f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/multiqc_custom_content/{individual}_{reference}_reads_processing_summary.tsv"
                 )

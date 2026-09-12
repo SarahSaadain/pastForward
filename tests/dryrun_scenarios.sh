@@ -316,6 +316,103 @@ else
 fi
 
 # =============================================================================================
+# Scenario 8: the SNP divergence check is off by default and, when switched on, its
+# snp_divergence_method picks which per-individual rules end up in the DAG.
+# =============================================================================================
+make_snp_project() {  # make_snp_project <dir> <extra_analysis_settings_yaml_or_empty>
+  make_project "$1"
+  cat > "$1/config/config.yaml" <<EOF
+project_name: "pastForward_Project"
+pipeline:
+  reference_module:
+    analysis:
+      settings:
+$2
+species:
+  Dmel:
+    name: "Drosophila melanogaster"
+EOF
+  mkdir -p "$1/Dmel"
+  make_species_root "$1/Dmel"
+  make_fake_data "$1/Dmel"
+}
+
+# 8a: default config (check off) must not pull any snp_divergence rule into the DAG
+if grep -qE "^(combine_snp_divergence|call_snps_for_divergence|plot_snp_divergence_bar)[[:space:]]" "$S1/dryrun.log"; then
+  fail "8a: snp divergence check is off by default" "a snp_divergence rule appeared in $S1/dryrun.log"
+else
+  pass "8a: snp divergence check is off by default"
+fi
+
+# 8b: samtools_stats tier reuses the existing samtools stats files, no bcftools rules
+S8B="$WORKDIR/8_snp_samtools_stats"
+make_snp_project "$S8B" "        snp_divergence_check: true"
+run_dryrun "$S8B" "$S8B/dryrun.log"
+if [ "$DRYRUN_EXIT" -eq 0 ]; then
+  pass "8b: samtools_stats tier dry-run succeeds"
+else
+  fail "8b: samtools_stats tier dry-run succeeds" "exit code $DRYRUN_EXIT, see $S8B/dryrun.log"
+fi
+if grep -qE "^combine_snp_divergence[[:space:]]" "$S8B/dryrun.log" &&
+   grep -qE "^plot_snp_divergence_bar[[:space:]]" "$S8B/dryrun.log"; then
+  pass "8c: samtools_stats tier schedules the combine and plot rules"
+else
+  fail "8c: samtools_stats tier schedules the combine and plot rules" "see $S8B/dryrun.log"
+fi
+if grep -qE "^(build_snp_divergence_regions|call_snps_for_divergence|count_snp_divergence_callable_bases|compute_snp_divergence_stats)[[:space:]]" "$S8B/dryrun.log"; then
+  fail "8d: samtools_stats tier pulls in no bcftools rule" "a bcftools-tier rule appeared in $S8B/dryrun.log"
+else
+  pass "8d: samtools_stats tier pulls in no bcftools rule"
+fi
+
+# 8e: bcftools tier adds the region BED, calling, callable-bases and stats rules
+S8E="$WORKDIR/8_snp_bcftools"
+make_snp_project "$S8E" "        snp_divergence_check: true
+        snp_divergence_method: bcftools"
+run_dryrun "$S8E" "$S8E/dryrun.log"
+if [ "$DRYRUN_EXIT" -eq 0 ]; then
+  pass "8e: bcftools tier dry-run succeeds"
+else
+  fail "8e: bcftools tier dry-run succeeds" "exit code $DRYRUN_EXIT, see $S8E/dryrun.log"
+fi
+S8E_MISSING=""
+for expected_rule in build_snp_divergence_regions call_snps_for_divergence \
+                     count_snp_divergence_callable_bases compute_snp_divergence_stats \
+                     combine_snp_divergence; do
+  grep -qE "^${expected_rule}[[:space:]]" "$S8E/dryrun.log" || S8E_MISSING="$S8E_MISSING $expected_rule"
+done
+if [ -z "$S8E_MISSING" ]; then
+  pass "8f: bcftools tier schedules every bcftools-tier rule"
+else
+  fail "8f: bcftools tier schedules every bcftools-tier rule" "missing:$S8E_MISSING, see $S8E/dryrun.log"
+fi
+
+# 8g: target_bases 0 means call the whole reference, so no region BED is built
+S8G="$WORKDIR/8_snp_bcftools_whole_reference"
+make_snp_project "$S8G" "        snp_divergence_check: true
+        snp_divergence_method: bcftools
+        snp_divergence_target_bases: 0"
+run_dryrun "$S8G" "$S8G/dryrun.log"
+if [ "$DRYRUN_EXIT" -eq 0 ] && ! grep -qE "^build_snp_divergence_regions[[:space:]]" "$S8G/dryrun.log"; then
+  pass "8g: target_bases 0 skips the region BED rule"
+else
+  fail "8g: target_bases 0 skips the region BED rule" \
+       "exit=$DRYRUN_EXIT, see $S8G/dryrun.log"
+fi
+
+# 8h: an unknown method fails fast instead of silently doing nothing
+S8H="$WORKDIR/8_snp_bad_method"
+make_snp_project "$S8H" "        snp_divergence_check: true
+        snp_divergence_method: nonsense"
+run_dryrun "$S8H" "$S8H/dryrun.log"
+if [ "$DRYRUN_EXIT" -ne 0 ] && grep -q "Unknown snp_divergence_method" "$S8H/dryrun.log"; then
+  pass "8h: an unknown snp_divergence_method fails with a clear error"
+else
+  fail "8h: an unknown snp_divergence_method fails with a clear error" \
+       "exit=$DRYRUN_EXIT, see $S8H/dryrun.log"
+fi
+
+# =============================================================================================
 echo ""
 echo "$PASS_COUNT passed, $FAIL_COUNT failed"
 if [ "$FAIL_COUNT" -ne 0 ]; then

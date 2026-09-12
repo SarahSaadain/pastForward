@@ -25,6 +25,8 @@ include: "reference_module/analytics/analyze_bam_with_samtools_stats.smk"
 include: "reference_module/analytics/analyze_bam_with_qualimap.smk"
 # Calculate additional mapping statistics using preseq
 include: "reference_module/analytics/analyze_bam_with_preseq_lc_extrap.smk"
+# Flag individuals whose divergence from the reference is a cohort outlier
+include: "reference_module/analytics/analyze_snp_divergence.smk"
 # Prepare custom content for MultiQC reports
 include: "reference_module/analytics/create_multiqc_prepare_custom_data_breadth.smk"
 include: "reference_module/analytics/create_multiqc_prepare_custom_data_depth.smk"
@@ -44,6 +46,8 @@ include: "reference_module/plotting/plot_coverage_breadth.smk"
 include: "reference_module/plotting/plot_coverage_depth.smk"
 # Plot raw and endogenous reads
 include: "reference_module/plotting/plot_raw_and_endogenous_reads.smk"
+# Plot per-individual SNP divergence from the reference
+include: "reference_module/plotting/plot_snp_divergence.smk"
 
 
 # =================================================================================================
