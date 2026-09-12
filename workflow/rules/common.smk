@@ -6,43 +6,8 @@
 # rules and functions" guidance) so their originating rule files stay
 # rules-only. Small one-off helpers stay inline as lambdas at their call site.
 
-import gzip
 import glob
 import os
-
-
-def get_fastq_read_count(fastq_file):
-    """
-    counted reads in a FASTQ file (handles gzipped files).
-    Each read is 4 lines, so counted lines and divide by 4.
-    """
-
-    logger.info(f"Counting reads in {fastq_file}")
-
-    count = 0
-
-    if fastq_file is None:
-        return 0
-
-    if fastq_file.endswith(".gz"):
-        with gzip.open(fastq_file, "rt") as f:
-            count = sum(1 for _ in f) // 4
-    else:
-        with open(fastq_file, "r") as f:
-            count = sum(1 for _ in f) // 4
-
-    logger.debug(f"Found {count} reads in {fastq_file}")
-    return count
-
-
-def write_count_from_source(source, output_file):
-    """Copy a .count file or count reads from a fastq and write the result."""
-    if source.endswith(".count"):
-        shell(f"cp {source} {output_file}")
-    else:
-        count = get_fastq_read_count(source)
-        with open(output_file, "w") as f:
-            f.write(str(count))
 
 
 def determine_reads_trimmed_final_input(wildcards):
