@@ -51,16 +51,16 @@ For a new project, run these in order:
 ./pastForward resume --cores 40          # like run, but also picks back up rules left incomplete by a crash/kill
 
 ./pastForward status           # project, config, PID, progress bar, and the last few pipeline steps of the tracked background run
-./pastForward status --watch   # same, plus a log tail, reprinted every 5s until the run ends (Ctrl-C to stop early)
+./pastForward status --watch   # (or -w) same, plus a log tail, reprinted every 5s until the run ends (Ctrl-C to stop early)
 ./pastForward abort            # stop it gracefully (SIGTERM; snakemake shuts down its own subprocesses)
-./pastForward abort --force    # or kill it and everything it started, immediately
+./pastForward abort --force    # (or -f) or kill it and everything it started, immediately
 ./pastForward unlock           # clear a stale lock left by a crashed run
 ./pastForward touch            # mark existing output files as up to date, so the next run skips the steps that made them
 ./pastForward doctor                        # list conda envs and whether each is built
 ./pastForward doctor --rebuild-envs ecmsd   # force one (or, with no names, all) to be recreated
 ./pastForward print-log        # print the most recently written log from logs/
-./pastForward print-log --tail 50  # only the last 50 lines (default 20)
-./pastForward print-log --live     # tail -f the log (Ctrl-C to stop)
+./pastForward print-log --tail 50  # (or -t) only the last 50 lines (default 20)
+./pastForward print-log --live     # (or -l) tail -f the log (Ctrl-C to stop)
 
 ./pastForward benchmark                 # how long each rule took and how much memory it used
 ./pastForward benchmark --emit-profile  # same, plus a Snakemake `set-resources:` block built from those numbers
@@ -69,6 +69,7 @@ For a new project, run these in order:
 
 ./pastForward tools                         # list the setup helper tools
 ./pastForward tools create-species Dmel     # make Dmel's input folders and print a config snippet for it
+./pastForward tools link-reads --source /data/run1 --species Dmel  # symlink every read file in /data/run1 into Dmel's read folder
 ```
 
 `run` requires `--cores <N>` (or `-j`/`--jobs`). pastForward will not guess a thread count for you. `--software-deployment-method conda`, `--keep-going`, and `--rerun-trigger mtime` are added automatically, but if you pass one of them yourself, your value is used instead. (Any spelling of the deployment flag counts, including `--sdm` and the deprecated `--use-conda`.) Any other extra arguments (e.g. `--forceall`) go straight through to Snakemake. `run` also refuses to start if a tracked run is still alive in the same project folder. Stop that one with `abort` first.
@@ -78,6 +79,8 @@ For a new project, run these in order:
 `benchmark` summarizes what a run actually cost. Every step writes a small `*.benchmark.jsonl` file next to its log file, recording wall time, peak memory, threads, and input size, and `benchmark` collects them into one row per rule, ordered by total core-hours. Use it to see where a run spends its time, or, with `--emit-profile`, to turn those measurements into resource requests for an HPC cluster. See [Running with Snakemake](docs/snakemake.md#benchmarking-a-run).
 
 `tools create-species <species> [<species> ...]` sets up a new species. It creates the species folder with all its `input/` subfolders in the project root and prints a `species:` block you can paste into `config/config.yaml`. Folders that already exist are left alone, so it is safe to run again. `processed/` and `results/` are not created, since the pipeline makes those itself. See [Add a Species](config/README.md#add-a-species).
+
+`tools link-reads --source <folder> --species <species>` brings in reads that already live somewhere else. The short forms are `-d` and `-s`, so `-d /data/run1 -s Dmel` works too, in either order. Every `*.fastq.gz` and `*.fq.gz` file directly inside the source folder gets a symlink in `<species>/input/read_module/`. Each link points to the file's absolute path and keeps its original name, so the names must already follow the [raw read naming convention](config/README.md#naming-your-read-files). Files whose names don't follow it are still linked, but listed in a warning, with the reason the pipeline would ignore or reject each one. Subfolders and hidden files are not searched. A file that is already in the read folder under the same name is left alone, so it is safe to run again. The species folder must exist, so run `create-species` first.
 
 Each `run`/`dryrun`/`touch` writes a timestamped log to `logs/` in your project folder. `status` reads the most recent `run` back out of there.
 

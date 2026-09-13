@@ -75,6 +75,22 @@ class TestReadDiscovery(FileManagerTestCase):
         unmatched = fm._discover_unmatched_read_files_for_species("Dmel")
         self.assertEqual([os.path.basename(f) for f in unmatched], ["IND004_readme.fastq.gz"])
 
+    def test_read_name_problem_matches_discovery(self):
+        for name in ("IND001_R1.fastq.gz", "IND002_lib1_2.fq.gz", "IND_1_box-3_R2.fastq.gz"):
+            self.assertIsNone(fm.get_read_name_problem(name), name)
+        self.assertIn("ignores", fm.get_read_name_problem("IND004_readme.fastq.gz"))
+        # Discovery raises on these, so they must be reported, not silently accepted.
+        for name in ("IND_R1_x_R1.fastq.gz", "IND_2_x_2.fq.gz"):
+            self.assertIn("error", fm.get_read_name_problem(name), name)
+
+    def test_unmatched_read_files_include_ambiguous_names_without_raising(self):
+        open("Dmel/input/read_module/IND009_R1_L1_R1.fastq.gz", "w").close()
+        unmatched = fm._discover_unmatched_read_files_for_species("Dmel")
+        self.assertEqual(
+            sorted(os.path.basename(f) for f in unmatched),
+            ["IND004_readme.fastq.gz", "IND009_R1_L1_R1.fastq.gz"],
+        )
+
     def test_uncompressed_fastq_is_discovered_but_not_processed(self):
         uncompressed = fm._discover_uncompressed_fastq_files_for_species("Dmel")
         self.assertEqual([os.path.basename(f) for f in uncompressed], ["IND005_R1.fastq"])

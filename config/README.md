@@ -86,6 +86,8 @@ If you want to put the files straight into their final location, put them here:
 
 If your files are large, shared with other tools, or already live somewhere else on disk, you don't need to copy them. Place a **symlink** in the expected location instead, and pastForward will use it directly. The symlink's name must follow pastForward's naming convention (below), but the real file it points to can keep its own name and live anywhere.
 
+For reads, `./pastForward tools link-reads --source /path/to/reads --species Dmel` makes those symlinks for you. It links every `*.fastq.gz` and `*.fq.gz` file in that folder into `Dmel/input/read_module/`, keeping the original file names. It warns about any name that doesn't follow the convention below, so you can rename those links.
+
 #### Storing Species Data Elsewhere
 
 > This is an optional, advanced feature. Skip this section if your data lives inside the project folder as shown above. That's the default, and most people don't need to change it.
@@ -150,6 +152,8 @@ Pattern:
 * **`<FreeText>`** (optional, can appear before or after the read number) is any extra label you want, e.g. a protocol name. Useful when the same individual was extracted twice with different methods.
 * **`<ReadNumber>`** marks which read of the pair this file is: `R1`/`R2`, or a plain `1`/`2`. It can sit in the middle of the filename (followed by more `<FreeText>`) or be the last part, right before the extension, as in the second and third examples above. A plain `1` or `2` must stand on its own between underscores or right before the file extension. It won't be picked up inside a longer number like `_10_` or `_21`. In case you provide single end data, use `1` or `R1` as well.
 * The file must end in **`.fastq.gz`** or **`.fq.gz`** (compressed FASTQ). Uncompressed `.fastq`/`.fq` files are not supported.
+
+Run `./pastForward check` to see whether your names work. It lists every read file whose name doesn't fit under a `WARNING` line, with the reason. A name with no read number is ignored. A name with more than one read number (e.g. `Dmel01_R1_L1_R1.fastq.gz`) stops the run with an error.
 
 ## Configuration (`config.yaml`)
 

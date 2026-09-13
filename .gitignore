@@ -6,7 +6,7 @@ __pycache__
 .snakemake/
 *.bkp
 
-# pastForward CLI (workflow/scripts/cli.py): .pastforward/ holds the tracked-run state file,
+# pastForward CLI (workflow/scripts/cli/): .pastforward/ holds the tracked-run state file,
 # logs/ holds timestamped run/dryrun logs - both per project root.
 .pastforward/
 /logs/

@@ -169,6 +169,18 @@ def _find_read_marker(filename: str, read_num: str):
     return bare_matches[0] if bare_matches else None
 
 # -----------------------------------------------------------------------------------------------
+# Why the pipeline can't use a raw read file name, or None if the name is fine. Shared by
+# `pastForward check` (check.py) and `pastForward tools link-reads` (cli/tools.py), so both report
+# exactly what discovery above does with the file.
+def get_read_name_problem(filename: str):
+    try:
+        if _find_read_marker(filename, "1") or _find_read_marker(filename, "2"):
+            return None
+    except ValueError:
+        return "more than one read marker, the pipeline stops with an error"
+    return "no read marker, the pipeline ignores it"
+
+# -----------------------------------------------------------------------------------------------
 # (internal) Discover all R1 raw read files from disk without applying any config filter
 def _discover_all_r1_read_files_for_species(species: str) -> list[str]:
     files = get_read_files_for_species(species)
@@ -191,19 +203,16 @@ def _discover_all_r1_read_files_for_species(species: str) -> list[str]:
     return r1_files
 
 # -----------------------------------------------------------------------------------------------
-# (internal) Discover raw read files on disk that don't match the naming convention (i.e. have
-# no recognizable R1/R2 or standalone 1/2 marker per _READ_R_MARKER_RE/_READ_BARE_MARKER_RE) and are therefore ignored
-# by the pipeline instead of being paired into a sample's reads.
+# (internal) Discover raw read files on disk whose names the pipeline can't use (see
+# get_read_name_problem): no R1/R2 or standalone 1/2 marker, so they are ignored instead of
+# being paired into a sample's reads, or more than one marker, which stops discovery with an error.
 def _discover_unmatched_read_files_for_species(species: str) -> list[str]:
     try:
         files = get_read_files_for_species(species)
     except Exception:
         return []
 
-    unmatched = [
-        f for f in files
-        if not _find_read_marker(os.path.basename(f), "1") and not _find_read_marker(os.path.basename(f), "2")
-    ]
+    unmatched = [f for f in files if get_read_name_problem(os.path.basename(f))]
 
     logger.debug(f"Read files ignored (naming convention) for species {species}: {unmatched}")
     return unmatched

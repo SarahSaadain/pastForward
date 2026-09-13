@@ -9,7 +9,7 @@ expected_output_manager_summary_module_processing.py can call `logging.info(...)
 importing `logging` itself - it relies on an earlier included file having already done so
 (reproduced here by loading the files in the same order).
 
-This lets `pastForward check`/`preview` (workflow/scripts/cli.py) and
+This lets `pastForward check`/`preview` (workflow/scripts/cli/) and
 tests/test_expected_output_manager.py run the real discovery / DAG-target-computation logic
 without starting Snakemake or conda.
 
