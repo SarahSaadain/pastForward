@@ -71,6 +71,8 @@ To add a new species:
 1. Create a folder for it in the project root. The folder name must exactly (case sensitive) match the species key you'll use under `species:` in `config.yaml` (see [Configuration](#configuration-configyaml) below).
 2. Put your raw read files and reference genome inside that folder (see below).
 
+Or let pastForward do step 1 for you. Run `./pastForward tools create-species Dmel` from the project root. It creates `Dmel/` with every `input/` subfolder listed below, and prints a `species:` block to copy into `config.yaml`.
+
 #### Providing Your Data
 
 The simplest option: drop your raw read files and reference genome inside the `<species>` folder. The first time you run pastForward, it finds them and moves them to the right place. This shortcut only works for reads and the reference genome. REVEAL input files (feature library, and optionally SCG) must go in their specific folders, not just anywhere in `<species>`.

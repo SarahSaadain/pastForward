@@ -933,6 +933,91 @@ def cmd_version(argv):
     print(__version__)
 
 
+# The input folders file_manager.py scans. processed/ and results/ are left out on purpose:
+# the pipeline creates them itself, and a real folder there would block a later
+# processed_dir/results_dir override (species_paths.py refuses to replace a real directory).
+SPECIES_INPUT_DIRS = (
+    "input/read_module",
+    "input/reference_module",
+    "input/reveal_module/scg",
+    "input/reveal_module/feature_library",
+    "input/reveal_module/competition",
+)
+# The species key becomes a folder name and a path component in every output, so no
+# separators, spaces, or leading dot/dash.
+SPECIES_KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+# Top-level project folders a species folder must not land in.
+RESERVED_SPECIES_KEYS = {"workflow", "config", "logs", "docs", "tests", STATE_DIR.name}
+
+
+def _species_config_snippet(species_keys):
+    lines = ["species:"]
+    for key in species_keys:
+        lines += [
+            f"  {key}:",
+            f'    name: "{key}"  # full species name, e.g. "Drosophila melanogaster"',
+            "    # BUSCO lineage, only needed for REVEAL SCG auto-determination.",
+            "    # Find yours at https://busco.ezlab.org/, e.g. drosophilidae_odb12",
+            '    #lineage: ""',
+        ]
+    return "\n".join(lines)
+
+
+def tool_create_species(argv):
+    if not argv or any(a.startswith("-") for a in argv):
+        _die("Usage: ./pastForward tools create-species <species> [<species> ...]")
+    _ensure_project_root(require_snakemake=False)
+    for key in argv:
+        if not SPECIES_KEY_RE.match(key) or key.lower() in RESERVED_SPECIES_KEYS:
+            _die(
+                f"pastForward: '{key}' can't be used as a species name. Use letters, digits, "
+                "'_', '.' or '-', start with a letter or digit, and don't reuse a project "
+                "folder name like workflow or config."
+            )
+    for key in argv:
+        print(_color(CYAN, f"{key}/"))
+        for sub in SPECIES_INPUT_DIRS:
+            path = Path(key) / sub
+            state = _color(DIM, "exists") if path.is_dir() else _color(GREEN, "created")
+            path.mkdir(parents=True, exist_ok=True)
+            print(f"  {sub + '/':<40}{state}")
+    print()
+    print("Put raw reads in <species>/input/read_module/ and reference genomes in")
+    print("<species>/input/reference_module/. The reveal_module folders are optional.")
+    print()
+    print(_color(CYAN, f"Add this to {DEFAULT_CONFIGFILE} (merge into an existing species: block):"))
+    print()
+    print(_species_config_snippet(argv))
+
+
+TOOLS = {
+    "create-species": tool_create_species,
+}
+
+TOOLS_HELP = """Usage: ./pastForward tools <tool> [args...]
+
+Tools:
+  create-species <species> [<species> ...]
+                                Create the input folder structure for one or
+                                more species in the project root, and print a
+                                config snippet to paste into config.yaml.
+                                Existing folders are left untouched.
+"""
+
+
+def cmd_tools(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(TOOLS_HELP)
+        return
+    func = TOOLS.get(argv[0])
+    if func is None:
+        print(_color(RED, f"pastForward: unknown tool '{argv[0]}'"))
+        print()
+        print(TOOLS_HELP)
+        sys.exit(1)
+    func(argv[1:])
+
+
 COMMANDS = {
     "run": cmd_run,
     "resume": cmd_resume,
@@ -947,6 +1032,7 @@ COMMANDS = {
     "print-log": cmd_print_log,
     "benchmark": cmd_benchmark,
     "version": cmd_version,
+    "tools": cmd_tools,
 }
 
 HELP = """pastForward — CLI wrapper around the pastForward Snakemake pipeline.
@@ -1019,6 +1105,11 @@ Commands:
                                 `set-resources:` block derived from those numbers,
                                 as a starting point for cluster resource requests.
   version                       Print the pastForward pipeline version.
+  tools <tool> [args...]        Helper tools for setting up a project. Run
+                                `./pastForward tools` for the list. Currently:
+                                create-species <species> [<species> ...]
+                                makes a species' input folders and prints a
+                                config snippet for it.
 
 Run from a project root: the folder containing workflow/ and config/.
 Logs for `run`/`dryrun`/`touch` are written to logs/<command>_<timestamp>.log.

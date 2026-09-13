@@ -846,5 +846,53 @@ class FindBenchmarkFilesTestCase(unittest.TestCase):
         self.assertIn("good", buffer.getvalue())
 
 
+class CreateSpeciesToolTestCase(unittest.TestCase):
+    def setUp(self):
+        self._orig_cwd = os.getcwd()
+        self.project_dir = tempfile.mkdtemp(prefix="pf_test_cli_tools_")
+        os.makedirs(os.path.join(self.project_dir, "workflow"))
+        os.makedirs(os.path.join(self.project_dir, "config"))
+        os.chdir(self.project_dir)
+
+    def tearDown(self):
+        os.chdir(self._orig_cwd)
+        shutil.rmtree(self.project_dir, ignore_errors=True)
+
+    def _run(self, argv):
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            cli.main(["tools", "create-species", *argv])
+        return buffer.getvalue()
+
+    def test_creates_every_input_folder_and_prints_a_loadable_config(self):
+        import yaml
+
+        output = self._run(["Dmel", "Dsim"])
+        for key in ("Dmel", "Dsim"):
+            for sub in cli.SPECIES_INPUT_DIRS:
+                self.assertTrue(Path(key, sub).is_dir(), f"{key}/{sub}")
+            # Left for the pipeline, see SPECIES_INPUT_DIRS.
+            self.assertFalse(Path(key, "processed").exists())
+        snippet = output[output.index("\nspecies:") :]
+        self.assertEqual(set(yaml.safe_load(snippet)["species"]), {"Dmel", "Dsim"})
+
+    def test_is_idempotent_and_keeps_existing_files(self):
+        self._run(["Dmel"])
+        reads = Path("Dmel/input/read_module/IND001_R1.fastq.gz")
+        reads.write_text("x")
+        self._run(["Dmel"])
+        self.assertEqual(reads.read_text(), "x")
+
+    def test_rejects_unsafe_names_before_creating_anything(self):
+        for bad in (["../Dmel"], ["Dm el"], ["workflow"], ["Dmel", ".hidden"], []):
+            with self.assertRaises(SystemExit):
+                self._run(bad)
+        self.assertFalse(Path("Dmel").exists())
+
+    def test_unknown_tool_exits(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stdout(io.StringIO()):
+            cli.main(["tools", "nonsense"])
+
+
 if __name__ == "__main__":
     unittest.main()
