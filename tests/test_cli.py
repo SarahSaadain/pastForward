@@ -165,6 +165,10 @@ class ArgvValidationTestCase(unittest.TestCase):
         self.project_dir = tempfile.mkdtemp(prefix="pf_test_cli_project_")
         os.makedirs(os.path.join(self.project_dir, "workflow"))
         os.makedirs(os.path.join(self.project_dir, "config"))
+        # The commands that build a DAG refuse to start without one (_ensure_project_root).
+        self.configfile = os.path.join(self.project_dir, cli.DEFAULT_CONFIGFILE)
+        with open(self.configfile, "w") as f:
+            f.write("project_name: test\n")
         os.chdir(self.project_dir)
 
     def tearDown(self):
@@ -192,6 +196,15 @@ class ArgvValidationTestCase(unittest.TestCase):
         finally:
             cli._run_background = orig
         self.assertIn("--rerun-incomplete", captured["cmd"])
+
+    def test_run_without_a_configfile_exits_before_spawning_anything(self):
+        # config/config.yaml is the user's own file and not part of the repository, so a fresh
+        # checkout has none - say so here rather than let snakemake fail while building the DAG.
+        os.remove(self.configfile)
+        with self.assertRaises(SystemExit) as cm:
+            cli.cmd_run(["--cores", "4"])
+        self.assertIn(cli.DEFAULT_CONFIGFILE, str(cm.exception))
+        self.assertFalse(cli.STATE_FILE.exists())
 
     def test_run_refuses_when_a_tracked_run_is_still_alive(self):
         cli.STATE_DIR.mkdir(parents=True, exist_ok=True)

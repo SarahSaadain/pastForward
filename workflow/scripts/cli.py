@@ -141,11 +141,20 @@ def _die(msg):
     sys.exit(_color(RED, msg))
 
 
-def _ensure_project_root(require_snakemake=True):
+def _ensure_project_root(require_snakemake=True, require_config=False):
     if not Path("workflow").is_dir() or not Path("config").is_dir():
         _die(
             "pastForward: this isn't a project root (needs workflow/ and config/ in the "
             "current directory). cd into your project folder first."
+        )
+    # Only for the commands that read the config. The workflow itself no longer insists on
+    # config/config.yaml being there (see the `configfile:` comment in initialize.smk), so
+    # without this a missing config would surface as a Snakemake traceback instead.
+    if require_config and not Path(DEFAULT_CONFIGFILE).is_file():
+        _die(
+            f"pastForward: no {DEFAULT_CONFIGFILE} found in this project root. Copy "
+            "config/min_config_sample.yaml there and edit it, or generate one with "
+            "config/config_designer.html."
         )
     # check/preview/version/print-log never spawn snakemake. check/preview still need PyYAML to
     # read config.yaml, so they fail later on ImportError instead; version and print-log need
@@ -242,7 +251,7 @@ def _run_background(cmd, log_path):
 
 
 def cmd_run(argv, extra_flags=(), name="run"):
-    _ensure_project_root()
+    _ensure_project_root(require_config=True)
     # --fg/--foreground is pastForward's own flag, not snakemake's - pulled out here rather
     # than by argparse so it can sit anywhere among the passed-through snakemake args.
     extra = [a for a in argv if a not in ("--fg", "--foreground")]
@@ -266,14 +275,14 @@ def cmd_resume(argv):
 
 
 def cmd_dryrun(argv):
-    _ensure_project_root()
+    _ensure_project_root(require_config=True)
     cmd = _build_dryrun_cmd(argv)
     log_path = LOG_DIR / f"dryrun_{_timestamp()}.log"
     sys.exit(_run_foreground(cmd, log_path))
 
 
 def cmd_touch(argv):
-    _ensure_project_root()
+    _ensure_project_root(require_config=True)
     cmd = _build_touch_cmd(argv)
     log_path = LOG_DIR / f"touch_{_timestamp()}.log"
     sys.exit(_run_foreground(cmd, log_path))
@@ -615,9 +624,7 @@ def _capture_pipeline_log(include_check):
     include_check=False calls get_expected_outputs_from_pipeline() (the Requesting/Skipping
     lines). Neither needs Snakemake: no DAG, no conda envs, no directory lock.
     """
-    _ensure_project_root(require_snakemake=False)
-    if not Path(DEFAULT_CONFIGFILE).is_file():
-        _die(f"pastForward: no {DEFAULT_CONFIGFILE} found in this project root.")
+    _ensure_project_root(require_snakemake=False, require_config=True)
     sys.path.insert(0, "workflow")
     try:
         import yaml
