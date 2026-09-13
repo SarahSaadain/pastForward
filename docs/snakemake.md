@@ -8,17 +8,17 @@ Run these commands from your **project folder**, the folder that directly contai
 
 ```bash
 # minimum command to run the pipeline
-snakemake --cores <number_of_threads> --use-conda
+snakemake --cores <number_of_threads> --software-deployment-method conda
 
 # suggested command to run the pipeline
-snakemake --cores <number_of_threads> --use-conda --keep-going --rerun-trigger mtime
+snakemake --cores <number_of_threads> --software-deployment-method conda --keep-going --rerun-trigger mtime
 ```
 
 Replace `<number_of_threads>` with the number of CPU threads you want to give the pipeline.
 
 **What the suggested flags do:**
 
-* `--use-conda` lets Snakemake install and use the software each step needs automatically.
+* `--software-deployment-method conda` lets Snakemake install and use the software each step needs automatically. `--sdm conda` is the same flag, spelled short. Older guides write this as `--use-conda`, which still works but is deprecated since Snakemake 8.
 * `--keep-going` lets the pipeline carry on if one step fails, instead of stopping everything. This matters because the taxonomic screening tool ECMSD sometimes fails on individual samples with low-quality or low-coverage data. With this flag, the rest of the pipeline still runs.
 * `--rerun-trigger mtime` re-runs a step only when its input files have changed since the last run, instead of Snakemake's more thorough (and slower) default checks.
 
@@ -37,7 +37,7 @@ For the full list of Snakemake's command-line options, see the [Snakemake docume
 Large datasets can take a while to process, so it's often best to run pastForward in the background. That way it keeps running even if you close your terminal window. `./pastForward run` does this by default. The equivalent with plain `snakemake` is:
 
 ```bash
-nohup snakemake --cores 40 --use-conda --keep-going --rerun-trigger mtime > pipeline.log 2>&1 &
+nohup snakemake --cores 40 --software-deployment-method conda --keep-going --rerun-trigger mtime > pipeline.log 2>&1 &
 ```
 
 This starts the pipeline and sends all its output to a file called `pipeline.log`. Check progress any time with `tail -f pipeline.log`.
@@ -90,7 +90,7 @@ find . -name '*.benchmark.jsonl' -delete
 
 pastForward ships a [Snakemake profile](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) at `workflow/profiles/default/config.yaml`. Snakemake finds it by itself, with no flag, because it sits next to the `Snakefile`. It does two things:
 
-* It sets `--keep-going` and `--rerun-trigger mtime` from the suggested command above, so a plain `snakemake` call decides what to re-run, and what to do about a failed step, the same way `./pastForward run` does. You still have to pass `--use-conda` yourself (see below).
+* It sets `--keep-going` and `--rerun-trigger mtime` from the suggested command above, so a plain `snakemake` call decides what to re-run, and what to do about a failed step, the same way `./pastForward run` does. You still have to pass `--software-deployment-method conda` yourself (see below).
 * It gives every step a default memory (8 GB) and wall time (4 hours) request, for steps that don't ask for something specific themselves.
 
 The memory and time defaults only matter on a cluster, where every job has to say how much it needs (see below). On a single machine they change nothing: Snakemake only limits how many jobs run at once if you give it a total budget with `--resources mem_mb=<N>`, which nothing does by default.
@@ -110,10 +110,10 @@ This prints a `set-resources:` block measured from that run, which you can paste
 snakemake --cores 40 --set-resources run_busco_for_scg_determination:mem_mb=32000
 
 # ignore the shipped profile completely
-snakemake --cores 40 --use-conda --workflow-profile none
+snakemake --cores 40 --software-deployment-method conda --workflow-profile none
 ```
 
-`--use-conda` is deliberately left out of the profile, so it is still the one flag you always have to type. The reason is that Snakemake checks your conda version and resolves every environment while it builds the job graph, and refuses to run at all on conda older than 24.7.1. Defaulting it would apply that to `--dryrun` too, so checking whether the pipeline found your data would need a working conda first. Leaving it out keeps a dry run free of all that.
+`--software-deployment-method conda` is deliberately left out of the profile, so it is still the one flag you always have to type. The reason is that Snakemake checks your conda version and resolves every environment while it builds the job graph, and refuses to run at all on conda older than 24.7.1. Defaulting it would apply that to `--dryrun` too, so checking whether the pipeline found your data would need a working conda first. Leaving it out keeps a dry run free of all that.
 
 Do **not** create your own `profiles/default/` folder in your project folder to change one value. Snakemake uses that one *instead* of the shipped one rather than merging the two, so you would silently lose every other setting. See [the FAQ](FAQ.md) for the safe ways to override.
 

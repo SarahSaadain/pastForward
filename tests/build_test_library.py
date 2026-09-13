@@ -6,7 +6,7 @@ three individuals' worth of raw reads for one species ("Dmel" by default), wired
 config.yaml and a workflow/ symlink so it can be pointed at directly:
 
     python3 tests/build_test_library.py
-    cd tests/fixtures/pf_test_library && snakemake --cores 2 --use-conda --dryrun
+    cd tests/fixtures/pf_test_library && snakemake --cores 2 --software-deployment-method conda --dryrun
 
 Complements the hermetic tempdir-based fixtures used by test_file_manager.py and
 test_expected_output_manager.py (which build/discard their own copies per test) - this one

@@ -58,8 +58,18 @@ DEFAULT_TAIL_LINES = 20
 WATCH_TAIL_LINES = 10
 FAILED_JOB_LOG_TAIL_LINES = 20
 
+# Snakemake 8 replaced `--use-conda` with `--software-deployment-method conda`. The old spelling
+# still works in 9.x and is not warned about, but the migration guide calls it deprecated, so the
+# new one is what we pass and what the docs teach.
+SDM_FLAG = "--software-deployment-method"
+# Every spelling Snakemake accepts for that same setting. `--deployment-method`/`--deployment`/
+# `--sdm` are its documented aliases; `--use-conda` is the deprecated flag, which just adds conda
+# to the same set. Repeating the option does NOT union: argparse keeps only the last occurrence,
+# so passing ours alongside a user's `--sdm apptainer` would silently drop their choice.
+DEPLOYMENT_FLAGS = (SDM_FLAG, "--deployment-method", "--deployment", "--sdm", "--use-conda")
+
 # Matches CLAUDE.md's documented "real run" command.
-DEFAULT_RUN_FLAGS = [("--use-conda", None), ("--keep-going", None), ("--rerun-trigger", "mtime")]
+DEFAULT_RUN_FLAGS = [(SDM_FLAG, "conda"), ("--keep-going", None), ("--rerun-trigger", "mtime")]
 
 PROGRESS_RE = re.compile(r"(\d+) of (\d+) steps \(([\d.]+)%\) done")
 # Both lines below come from Snakemake's own per-job log records (jobs.py Job.log_info /
@@ -151,7 +161,10 @@ def _timestamp():
 def _build_run_cmd(extra_args, defaults=DEFAULT_RUN_FLAGS):
     cmd = ["snakemake"]
     for flag, value in defaults:
-        if flag not in extra_args:
+        # Any spelling of the deployment flag counts as the user overriding our default, so we
+        # step aside rather than append a second, conflicting one (see DEPLOYMENT_FLAGS).
+        overrides = DEPLOYMENT_FLAGS if flag == SDM_FLAG else (flag,)
+        if not any(a in extra_args for a in overrides):
             cmd.append(flag)
             if value is not None:
                 cmd.append(value)
@@ -175,7 +188,7 @@ def _build_dryrun_cmd(extra_args):
 
 
 def _build_touch_cmd(extra_args):
-    # Deliberately not --use-conda: snakemake builds every rule's conda env before the touch
+    # Deliberately no conda deployment: snakemake builds every rule's conda env before the touch
     # executor ever runs (workflow.py calls dag.create_conda_envs() whenever conda deployment
     # is on, touch or not), which is a long detour for a command that only stamps mtimes on
     # files that already exist. --rerun-trigger mtime stays, so "out of date" means the same
@@ -526,7 +539,7 @@ def _list_conda_envs():
     # holds it. --dryrun is required, not just belt-and-suspenders.
     # --nolock: read-only, like check/preview - must not be blocked by, or block, a real run.
     proc = subprocess.run(
-        ["snakemake", "--dryrun", "--use-conda", "--list-conda-envs", "--cores", "1", "--nolock"],
+        ["snakemake", "--dryrun", SDM_FLAG, "conda", "--list-conda-envs", "--cores", "1", "--nolock"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -589,8 +602,8 @@ def cmd_doctor(argv):
         print(_color(DIM, "Nothing to remove - target environment(s) not yet built."))
 
     print()
-    print(_color(DIM, "Recreating via snakemake --use-conda --conda-create-envs-only..."))
-    sys.exit(subprocess.call(["snakemake", "--use-conda", "--conda-create-envs-only", "--cores", "1"]))
+    print(_color(DIM, f"Recreating via snakemake {SDM_FLAG} conda --conda-create-envs-only..."))
+    sys.exit(subprocess.call(["snakemake", SDM_FLAG, "conda", "--conda-create-envs-only", "--cores", "1"]))
 
 
 def _capture_pipeline_log(include_check):

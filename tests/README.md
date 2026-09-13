@@ -60,7 +60,7 @@ documented behavior in.
 
 ```bash
 python3 tests/build_test_library.py
-cd tests/fixtures/pf_test_library && snakemake --cores 2 --use-conda --dryrun
+cd tests/fixtures/pf_test_library && snakemake --cores 2 --software-deployment-method conda --dryrun
 ```
 
 Builds the same synthetic species library (via `pf_test_library.py`) as a persistent project

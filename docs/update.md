@@ -9,7 +9,7 @@ Your project folder holds two kinds of things:
 
 1. Note the version you are on:
    * From 2.1.0 on: `./pastForward version`.
-   * Before that there is no `pastForward` CLI. Start a dry run instead, `snakemake --cores 1 --use-conda --dryrun`, and read the first log line, which says `pastForward <version> run:`.
+   * Before that there is no `pastForward` CLI. Start a dry run instead, `snakemake --cores 1 --software-deployment-method conda --dryrun`, and read the first log line, which says `pastForward <version> run:`.
    * If `workflow/scripts/version.py` does not exist at all, you are on a 1.x version. `git describe --tags` tells you which one, if you have a git clone.
 2. Make sure nothing is running: `./pastForward status`, and `./pastForward abort` if a run is still alive. Before 2.1.0 there is no tracked background run, so stop the `snakemake` process yourself if one is still going.
 3. Read [CHANGELOG.md](../CHANGELOG.md) for everything between your version and the new one. Config keys and output folders are occasionally renamed, and those entries tell you what to adjust.

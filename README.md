@@ -68,7 +68,7 @@ For a new project, run these in order:
 ./pastForward version          # print the pipeline version
 ```
 
-`run` requires `--cores <N>` (or `-j`/`--jobs`). pastForward will not guess a thread count for you. `--use-conda`, `--keep-going`, and `--rerun-trigger mtime` are added automatically, but if you pass one of them yourself, your value is used instead. Any other extra arguments (e.g. `--forceall`) go straight through to Snakemake. `run` also refuses to start if a tracked run is still alive in the same project folder. Stop that one with `abort` first.
+`run` requires `--cores <N>` (or `-j`/`--jobs`). pastForward will not guess a thread count for you. `--software-deployment-method conda`, `--keep-going`, and `--rerun-trigger mtime` are added automatically, but if you pass one of them yourself, your value is used instead. (Any spelling of the deployment flag counts, including `--sdm` and the deprecated `--use-conda`.) Any other extra arguments (e.g. `--forceall`) go straight through to Snakemake. `run` also refuses to start if a tracked run is still alive in the same project folder. Stop that one with `abort` first.
 
 `touch` runs `snakemake --touch`: it only updates the timestamps of output files that already exist, so Snakemake treats them as up to date and skips the steps that produced them. Nothing is recomputed and no file content changes. It is meant for cases where the results are fine but their timestamps are not, e.g. after copying results in from another machine. Output files that do not exist yet are skipped with a warning, and by default only files Snakemake already considers out of date are touched. Add `--forcerun <rule>` or `--forceall` to touch the rest as well.
 

@@ -32,28 +32,41 @@ class BuildCmdTestCase(unittest.TestCase):
         cmd = cli._build_run_cmd(["--cores", "8"])
         self.assertEqual(
             cmd,
-            ["snakemake", "--use-conda", "--keep-going", "--rerun-trigger", "mtime", "--cores", "8"],
+            ["snakemake", "--software-deployment-method", "conda", "--keep-going", "--rerun-trigger", "mtime", "--cores", "8"],
         )
 
     def test_run_cmd_does_not_duplicate_user_supplied_flags(self):
-        cmd = cli._build_run_cmd(["--use-conda", "--cores", "4", "--forceall", "count_reads_raw"])
-        self.assertEqual(cmd.count("--use-conda"), 1)
+        cmd = cli._build_run_cmd(["--software-deployment-method", "conda", "--cores", "4", "--forceall", "count_reads_raw"])
+        self.assertEqual(cmd.count("--software-deployment-method"), 1)
         self.assertEqual(cmd.count("--cores"), 1)
         self.assertIn("--forceall", cmd)
         self.assertIn("count_reads_raw", cmd)
+
+    def test_run_cmd_yields_to_any_spelling_of_the_deployment_flag(self):
+        # Snakemake keeps only the LAST --software-deployment-method it sees, so appending our
+        # own next to a user's would silently drop theirs. Every alias, plus the deprecated
+        # --use-conda, has to count as an override.
+        for user_flag in ("--sdm", "--deployment", "--deployment-method", "--software-deployment-method"):
+            with self.subTest(user_flag=user_flag):
+                cmd = cli._build_run_cmd([user_flag, "apptainer", "--cores", "4"])
+                self.assertNotIn("--software-deployment-method", cmd[: cmd.index(user_flag)])
+                self.assertNotIn("conda", cmd)
+        cmd = cli._build_run_cmd(["--use-conda", "--cores", "4"])
+        self.assertNotIn("--software-deployment-method", cmd)
+        self.assertEqual(cmd.count("--use-conda"), 1)
 
     def test_dryrun_cmd_defaults_cores(self):
         cmd = cli._build_dryrun_cmd([])
         self.assertEqual(
             cmd,
-            ["snakemake", "--use-conda", "--keep-going", "--rerun-trigger", "mtime", "--cores", "1", "--dryrun"],
+            ["snakemake", "--software-deployment-method", "conda", "--keep-going", "--rerun-trigger", "mtime", "--cores", "1", "--dryrun"],
         )
 
     def test_dryrun_cmd_respects_user_cores(self):
         cmd = cli._build_dryrun_cmd(["-j", "8"])
         self.assertEqual(
             cmd,
-            ["snakemake", "--use-conda", "--keep-going", "--rerun-trigger", "mtime", "-j", "8", "--dryrun"],
+            ["snakemake", "--software-deployment-method", "conda", "--keep-going", "--rerun-trigger", "mtime", "-j", "8", "--dryrun"],
         )
 
     def test_dryrun_cmd_uses_same_rerun_trigger_as_run(self):
@@ -70,7 +83,7 @@ class BuildCmdTestCase(unittest.TestCase):
         self.assertNotIn("mtime", cmd)
 
     def test_touch_cmd_defaults_cores_and_skips_conda(self):
-        # --use-conda would make Snakemake build every rule's environment before touching
+        # Conda deployment would make Snakemake build every rule's environment before touching
         # anything, which a touch has no use for.
         cmd = cli._build_touch_cmd([])
         self.assertEqual(cmd, ["snakemake", "--rerun-trigger", "mtime", "--cores", "1", "--touch"])
@@ -91,7 +104,7 @@ class StatusHelpersTestCase(unittest.TestCase):
         self.assertEqual(cli._format_duration(90000), "1d 1h 0m 0s")
 
     def test_cores_from_cmd(self):
-        self.assertEqual(cli._cores_from_cmd(["snakemake", "--use-conda", "--cores", "8", "--forceall"]), "8")
+        self.assertEqual(cli._cores_from_cmd(["snakemake", "--software-deployment-method", "conda", "--cores", "8", "--forceall"]), "8")
         self.assertEqual(cli._cores_from_cmd(["snakemake", "-j", "all"]), "all")
         self.assertIsNone(cli._cores_from_cmd(["snakemake"]))
 

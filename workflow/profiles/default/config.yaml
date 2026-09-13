@@ -40,13 +40,14 @@
 #                     re-runs on changed code, params and software environments, which reports a
 #                     near-full rerun whenever a script file is newer than its outputs
 #
-# `use-conda` is deliberately NOT here, even though every rule needs it and `./pastForward run`
-# always passes it. Please do not add it. Unlike the two above, it does something at DAG-build
+# `software-deployment-method: conda` (the post-Snakemake-8 spelling of `use-conda`) is
+# deliberately NOT here, even though every rule needs it and `./pastForward run` always passes it.
+# Please do not add it under either name. Unlike the two above, it does something at DAG-build
 # time: Snakemake checks the conda version and resolves every environment, and refuses to do
 # anything at all on conda older than 24.7.1. That would apply to `--dryrun` as well, turning the
 # one cheap check a user has for "did the pipeline find my data" into something that needs a
 # working, new-enough conda toolchain first - and it is what the dry-run scenarios in tests/ rely
-# on not being true. Forgetting `--use-conda` also fails loudly and immediately rather than
+# on not being true. Forgetting the flag also fails loudly and immediately rather than
 # quietly doing the wrong thing, so it is the flag that least needs defaulting here.
 keep-going: true
 rerun-triggers: mtime

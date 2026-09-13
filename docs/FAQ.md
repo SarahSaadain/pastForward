@@ -8,13 +8,13 @@ For a full step-by-step walkthrough, including installing conda and Snakemake fr
 Version 9.9.0 or newer. pastForward checks this automatically at startup and won't run on an older version.
 
 **Q: What version of conda do I need?**
-24.7.1 or newer is recommended (or a compatible tool such as Mamba or Miniforge). Conda installs and manages all the other software the pipeline needs, through the `--use-conda` flag.
+24.7.1 or newer is recommended (or a compatible tool such as Mamba or Miniforge). Conda installs and manages all the other software the pipeline needs, through the `--software-deployment-method conda` flag (`--sdm conda` for short; the older `--use-conda` spelling still works but is deprecated since Snakemake 8).
 
 **Q: Do I need to install all the bioinformatics tools myself?**
-No. As long as you run with `--use-conda`, Snakemake installs everything each step needs automatically, the first time you run it.
+No. As long as you run with `--software-deployment-method conda`, Snakemake installs everything each step needs automatically, the first time you run it.
 
 **Q: Can I run pastForward without conda?**
-Not reliably. Every step is tied to a specific conda environment, which keeps software versions consistent and reproducible. Without `--use-conda`, you'd need to install every required tool yourself, with matching versions, and put them all on your PATH.
+Not reliably. Every step is tied to a specific conda environment, which keeps software versions consistent and reproducible. Without `--software-deployment-method conda`, you'd need to install every required tool yourself, with matching versions, and put them all on your PATH.
 
 **Q: Where does pastForward live relative to my input/output data? Do I need a separate copy for each project?**
 A pastForward **project** is a single folder containing the `workflow/` and `config/` folders (a copy of the pastForward repository) plus one `<species>/` folder for each species you want to process. By default, the pipeline code and your data live side by side in that same folder. To start a new project, copy pastForward into a new folder and add your species folders there.
@@ -147,7 +147,7 @@ You can see the skipped files in pastForward log (use a dry run to check).
 **Q: How can I validate that my input files are correctly formatted and will be processed by pastForward?**
 You can perform a dry run of pastForward using the command:
 ```bash
-snakemake --cores <N> --use-conda --dryrun
+snakemake --cores <N> --software-deployment-method conda --dryrun
 ```
 
 At the beginning of each run, pastForward performs an input validation step that checks for the presence and correct formatting of all required input files. It will print a summary of the detected files and any issues found. 
@@ -233,7 +233,7 @@ Three other situations cause the same kind of cascade without an obvious setting
 - **A new step needs a file that was already cleaned up.** Enabling taxonomic screening after the first run (see the example above) is one case. Adding FastQC reports for trimmed/quality-filtered reads is another: if even one sample's report is missing, Snakemake has to regenerate the intermediate file behind it, which pulls mapping and everything after it back in for that sample.
 - **Adding samples changes a shared file every individual maps against.** This is intentional: with automatic SCG selection (`pipeline.reveal_module.scg_selector.execute: true`), ranking which single-copy genes to use is a species-wide decision, not a per-individual one. Add individuals, and the ranking can legitimately change, which rewrites the shared SCG file, the combined SCG/feature-library reference, and its index, so every individual gets re-mapped and re-analyzed against the updated version. Providing your own fixed SCG FASTA under `{species}/input/reveal_module/scg/` avoids this, at the cost of losing the automatic per-species ranking.
 
-**Before flipping one of these settings on a project that already has results, do a dry run first** (`snakemake --cores <N> --use-conda --dryrun`) and check how many jobs it plans. If the count is much larger than the change seems to justify, one of these chains is almost always why.
+**Before flipping one of these settings on a project that already has results, do a dry run first** (`snakemake --cores <N> --software-deployment-method conda --dryrun`) and check how many jobs it plans. If the count is much larger than the change seems to justify, one of these chains is almost always why.
 
 **Q: Can I store a species' data outside the project directory?**
 Yes. By default a species' data must live at `<species>/input`, `<species>/processed`, and `<species>/results` inside the project directory. To point some or all of it elsewhere, set one or more of the following optional keys under `species.<key>` in `config.yaml`: `species_dir` (whole species root, which sets the default for everything below), `reads_dir`, `reference_dir`, `scg_dir`, `feature_library_dir`, `competition_dir`, `processed_dir`, `results_dir`. An explicit key always wins over a path derived from `species_dir`.
@@ -256,28 +256,28 @@ If none of these are set for a species, nothing on disk is touched beyond what p
 
 **Q: What is the recommended command to run pastForward?**
 ```bash
-snakemake --cores <N> --use-conda --keep-going --rerun-trigger mtime
+snakemake --cores <N> --software-deployment-method conda --keep-going --rerun-trigger mtime
 ```
 
 `--keep-going` lets pastForward continue past individual rule failures (e.g., ECMSD failing on low-coverage samples). `--rerun-trigger mtime` re-runs only rules whose inputs have changed since the last run.
 
 **Q: How do I run pastForward in the background so I can close my terminal?**
 ```bash
-nohup snakemake --cores 40 --use-conda --keep-going --rerun-trigger mtime > pipeline.log 2>&1 &
+nohup snakemake --cores 40 --software-deployment-method conda --keep-going --rerun-trigger mtime > pipeline.log 2>&1 &
 ```
 
 Monitor progress with `tail -f pipeline.log`.
 
 **Q: How do I do a dry run to see what would be executed without actually running anything?**
 ```bash
-snakemake --cores <N> --use-conda --dryrun
+snakemake --cores <N> --software-deployment-method conda --dryrun
 ```
 
 **Q: pastForward crashed midway. How do I resume?**
 Re-run with `--rerun-incomplete` to pick up where it left off:
 
 ```bash
-snakemake --cores <N> --use-conda --keep-going --rerun-trigger mtime --rerun-incomplete
+snakemake --cores <N> --software-deployment-method conda --keep-going --rerun-trigger mtime --rerun-incomplete
 ```
 
 **Q: How do I force a specific rule or file to be regenerated?**
@@ -320,7 +320,7 @@ pastForward is a plain Snakemake workflow, so it should in principle work with S
 pastForward does ship a default memory and wall time request for every step, so jobs are not submitted without one, which on most clusters would mean being killed at the partition's default time limit. See [Running on an HPC Cluster](snakemake.md#running-on-an-hpc-cluster) for the cluster-side profile you still have to write yourself, and for why to build the conda environments on the login node first.
 
 **Q: How do I change how much memory or wall time a step asks for?**
-Those live in `workflow/profiles/default/config.yaml`, a Snakemake profile that ships with the pipeline. It sets a default memory and wall time for every step, plus `--keep-going` and `--rerun-trigger mtime`. Snakemake picks it up on its own, with no flag, because it sits next to the `Snakefile`. (`--use-conda` is deliberately not in it, so you still pass that yourself — it would otherwise make even a dry run depend on a working, recent conda.)
+Those live in `workflow/profiles/default/config.yaml`, a Snakemake profile that ships with the pipeline. It sets a default memory and wall time for every step, plus `--keep-going` and `--rerun-trigger mtime`. Snakemake picks it up on its own, with no flag, because it sits next to the `Snakefile`. (`--software-deployment-method conda` is deliberately not in it, so you still pass that yourself — it would otherwise make even a dry run depend on a working, recent conda.)
 
 The shipped numbers are a generous floor, not measurements. For numbers that fit your data, run the pipeline once and then `./pastForward benchmark --emit-profile`, which prints a `set-resources:` block measured from that run. Paste it into the same file, below `default-resources:`. A `set-resources:` entry wins over a value written into a rule, which `default-resources:` does not.
 
@@ -458,7 +458,7 @@ The `latest_release`/`dev` builds of REVEAL and ECMSD are installed by a conda p
 ./pastForward doctor --rebuild-envs ecmsd_git_release   # or: ecmsd_git_development, reveal_git_release, reveal_git_development
 ./pastForward doctor --rebuild-envs                      # rebuilds every conda env, not just these
 ```
-`./pastForward doctor` on its own lists every conda environment the pipeline uses and whether each is currently built, without changing anything. Under the hood this deletes that environment's folder under `.snakemake/conda/` and runs `snakemake --use-conda --conda-create-envs-only` to recreate it. That is the same thing you'd do by hand with plain `snakemake --cores <N> --use-conda --conda-create-envs-only --conda-cleanup-envs`. This is intentional: it keeps a single pipeline run reproducible even when `version_source` is set to a moving target, at the cost of not auto-updating mid-project.
+`./pastForward doctor` on its own lists every conda environment the pipeline uses and whether each is currently built, without changing anything. Under the hood this deletes that environment's folder under `.snakemake/conda/` and runs `snakemake --software-deployment-method conda --conda-create-envs-only` to recreate it. That is the same thing you'd do by hand with plain `snakemake --cores <N> --software-deployment-method conda --conda-create-envs-only --conda-cleanup-envs`. This is intentional: it keeps a single pipeline run reproducible even when `version_source` is set to a moving target, at the cost of not auto-updating mid-project.
 
 ---
 
@@ -509,6 +509,6 @@ Workaround: force conda to resolve Intel (`osx-64`) packages and let macOS run t
    export CONDA_SUBDIR=osx-64
    ```
    This applies to every conda environment Snakemake creates in that shell session, not just Centrifuge's, so the whole pipeline runs under Rosetta emulation for that run.
-3. If a Centrifuge env was already partially created under `osx-arm64`, clear it out first by removing the `.snakemake` folder in the project directory, then re-run with `--use-conda` as usual.
+3. If a Centrifuge env was already partially created under `osx-arm64`, clear it out first by removing the `.snakemake` folder in the project directory, then re-run with `--software-deployment-method conda` as usual.
 
 Alternatively, if Centrifuge isn't required for your analysis, disable it in the config instead (`pipeline.read_module.taxonomic_screening.tools.centrifuge.execute: false`, see `config/parameters.md`).
