@@ -400,6 +400,26 @@ else
        "exit=$DRYRUN_EXIT, see $S8G/dryrun.log"
 fi
 
+# 8i: method "both" runs the two methods side by side, each writing its own files
+S8I="$WORKDIR/8_snp_both"
+make_snp_project "$S8I" "        snp_divergence_check: true
+        snp_divergence_method: both"
+run_dryrun "$S8I" "$S8I/dryrun.log"
+if [ "$DRYRUN_EXIT" -eq 0 ]; then
+  pass "8i: method both dry-run succeeds"
+else
+  fail "8i: method both dry-run succeeds" "exit code $DRYRUN_EXIT, see $S8I/dryrun.log"
+fi
+S8I_COMBINE=$(awk '$1 == "combine_snp_divergence" { print $2 }' "$S8I/dryrun.log" | head -n 1)
+S8I_PLOT=$(awk '$1 == "plot_snp_divergence_bar" { print $2 }' "$S8I/dryrun.log" | head -n 1)
+if [ "$S8I_COMBINE" = "2" ] && [ "$S8I_PLOT" = "2" ] &&
+   grep -qE "^call_snps_for_divergence[[:space:]]" "$S8I/dryrun.log"; then
+  pass "8j: method both schedules one combine and one plot per method, plus the bcftools rules"
+else
+  fail "8j: method both schedules one combine and one plot per method, plus the bcftools rules" \
+       "combine=$S8I_COMBINE, plot=$S8I_PLOT, see $S8I/dryrun.log"
+fi
+
 # 8h: an unknown method fails fast instead of silently doing nothing
 S8H="$WORKDIR/8_snp_bad_method"
 make_snp_project "$S8H" "        snp_divergence_check: true

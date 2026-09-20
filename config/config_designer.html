@@ -1085,8 +1085,9 @@
                 <select id="cov_snp_div_method" onchange="render()">
                   <option value="samtools_stats" selected>samtools_stats &mdash; reuse existing samtools stats, free</option>
                   <option value="bcftools">bcftools &mdash; call SNPs per individual, adds heterozygosity</option>
+                  <option value="both">both &mdash; run samtools_stats and bcftools side by side</option>
                 </select>
-                <p class="hint">Default: samtools_stats. Reuses the per-individual samtools stats file that is already produced, so it costs no extra runtime and no extra dependency. bcftools adds the heterozygous-call rate and a MultiQC panel at real runtime cost.</p>
+                <p class="hint">Default: samtools_stats. Reuses the per-individual samtools stats file that is already produced, so it costs no extra runtime and no extra dependency. bcftools adds the heterozygous-call rate and a MultiQC panel at real runtime cost. both runs the two side by side, each writing its own files.</p>
               </div>
               <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
                 <label>Outlier Modified Z-Score</label>
@@ -1802,7 +1803,7 @@ function buildYAML() {
     kv(8, 'snp_divergence_method', gv('cov_snp_div_method'));
     kv(8, 'snp_divergence_outlier_zscore', parseFloat(gv('cov_snp_div_z')) || 3.5);
     kv(8, 'snp_divergence_min_callable_bases', gn('cov_snp_div_min_callable'));
-    if (gv('cov_snp_div_method') === 'bcftools') {
+    if (gv('cov_snp_div_method') !== 'samtools_stats') {
       kv(8, 'snp_divergence_target_bases', gn('cov_snp_div_target'));
       kv(8, 'snp_divergence_min_contig_length', gn('cov_snp_div_min_contig'));
       kv(8, 'snp_divergence_min_depth', gn('cov_snp_div_min_depth'));

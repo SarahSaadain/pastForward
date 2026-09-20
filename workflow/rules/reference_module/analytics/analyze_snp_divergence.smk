@@ -12,6 +12,12 @@
 #     extra dependency. It gives no heterozygous-call rate.
 #   bcftools calls SNPs per individual on a fixed, shared, budget-capped slice of
 #     the reference. It adds the heterozygous-call rate at real but bounded cost.
+#   both runs the two side by side, so the cheap number and the called number can be
+#     compared on the same cohort.
+#
+# Every species-level output carries the method in its filename. Two methods can
+# therefore coexist, and a file left over from an earlier method is never mistaken
+# for the current one when the config changes.
 ####################################################
 
 _snp_divergence_settings = (
@@ -55,10 +61,11 @@ _SNP_DIVERGENCE_MIN_CALLABLE_BASES = int(
 if _SNP_DIVERGENCE_ENABLED and _SNP_DIVERGENCE_METHOD not in (
     "samtools_stats",
     "bcftools",
+    "both",
 ):
     raise ConfigValidationError(
         f"Unknown snp_divergence_method '{_SNP_DIVERGENCE_METHOD}'. "
-        "Valid options are 'samtools_stats' and 'bcftools'."
+        "Valid options are 'samtools_stats', 'bcftools' and 'both'."
     )
 
 # A base budget of 0 means call across the whole reference, so no region BED is
@@ -70,16 +77,15 @@ if _SNP_DIVERGENCE_TARGET_BASES > 0:
 else:
     _SNP_DIVERGENCE_REGIONS = []
 
-# Which per-individual file the species-level combine rule reads. Snakemake
-# resolves backwards from it, so switching the method switches which rules run.
-if _SNP_DIVERGENCE_METHOD == "bcftools":
-    _SNP_DIVERGENCE_INDIVIDUAL_STATS = "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/snp_divergence/{individual}_{reference}.bcftools_stats.txt"
-    _SNP_DIVERGENCE_INDIVIDUAL_CALLABLE = [
-        "{species}/processed/reference_module/{reference}/snp_divergence/{individual}/{individual}_{reference}_callable_bases.txt"
-    ]
-else:
-    _SNP_DIVERGENCE_INDIVIDUAL_STATS = "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/samtools_stats/{individual}_{reference}_final.bam.stats"
-    _SNP_DIVERGENCE_INDIVIDUAL_CALLABLE = []
+# Which per-individual file the species-level combine rule reads, per method. The
+# method is a wildcard of the combine rule, so Snakemake resolves backwards from the
+# requested output to whichever per-individual rules that method needs.
+_SNP_DIVERGENCE_INDIVIDUAL_STATS = {
+    "bcftools": "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/snp_divergence/{individual}_{reference}.bcftools_stats.txt",
+    "samtools_stats": "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/samtools_stats/{individual}_{reference}_final.bam.stats",
+}
+
+_SNP_DIVERGENCE_INDIVIDUAL_CALLABLE = "{species}/processed/reference_module/{reference}/snp_divergence/{individual}/{individual}_{reference}_callable_bases.txt"
 
 
 ####################################################
@@ -210,22 +216,32 @@ rule compute_snp_divergence_stats:
 rule combine_snp_divergence:
     input:
         stats=lambda wildcards: expand(
-            _SNP_DIVERGENCE_INDIVIDUAL_STATS,
+            _SNP_DIVERGENCE_INDIVIDUAL_STATS[wildcards.method],
             species=wildcards.species,
             reference=wildcards.reference,
             individual=get_individuals_for_species(wildcards.species),
         ),
-        callable_bases=lambda wildcards: expand(
-            _SNP_DIVERGENCE_INDIVIDUAL_CALLABLE,
-            species=wildcards.species,
-            reference=wildcards.reference,
-            individual=get_individuals_for_species(wildcards.species),
+        # Only the bcftools method measures its own denominator. The samtools_stats
+        # method takes it from the same stats file as the numerator.
+        callable_bases=lambda wildcards: (
+            expand(
+                _SNP_DIVERGENCE_INDIVIDUAL_CALLABLE,
+                species=wildcards.species,
+                reference=wildcards.reference,
+                individual=get_individuals_for_species(wildcards.species),
+            )
+            if wildcards.method == "bcftools"
+            else []
         ),
     output:
-        combined="{species}/results/reference_module/{reference}/analytics/species_level/{species}/snp_divergence/{reference}_combined_snp_divergence.csv",
-        detailed="{species}/results/reference_module/{reference}/analytics/species_level/{species}/snp_divergence/{reference}_combined_snp_divergence_detailed.csv",
+        combined="{species}/results/reference_module/{reference}/analytics/species_level/{species}/snp_divergence/{reference}_combined_snp_divergence_{method}.csv",
+        detailed="{species}/results/reference_module/{reference}/analytics/species_level/{species}/snp_divergence/{reference}_combined_snp_divergence_{method}_detailed.csv",
     log:
-        "{species}/results/reference_module/{reference}/analytics/species_level/{species}/snp_divergence/{reference}_combined_snp_divergence.log",
+        "{species}/results/reference_module/{reference}/analytics/species_level/{species}/snp_divergence/{reference}_combined_snp_divergence_{method}.log",
+    # Reference names may contain underscores, so the method has to be pinned down
+    # for Snakemake to split {reference}_combined_snp_divergence_{method} correctly.
+    wildcard_constraints:
+        method="samtools_stats|bcftools",
     conda:
         "../../../envs/python_and_r.yaml"
     params:
@@ -233,10 +249,10 @@ rule combine_snp_divergence:
         # inputs above, so the combine script can pair files to individuals
         # without parsing IDs back out of filenames.
         individuals=lambda wildcards: get_individuals_for_species(wildcards.species),
-        method=_SNP_DIVERGENCE_METHOD,
+        method=lambda wildcards: wildcards.method,
         outlier_zscore=_SNP_DIVERGENCE_OUTLIER_ZSCORE,
         min_callable_bases=_SNP_DIVERGENCE_MIN_CALLABLE_BASES,
     message:
-        "Combining SNP divergence results for species {wildcards.species} and reference {wildcards.reference}"
+        "Combining {wildcards.method} SNP divergence results for species {wildcards.species} and reference {wildcards.reference}"
     script:
         "../../../scripts/reference_module/analytics/statistics/combine_snp_divergence.py"

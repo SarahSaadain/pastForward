@@ -59,6 +59,21 @@ def merge_reads_by_individual_input(wildcards):
     return quality_filtered_files
 
 
+def get_snp_divergence_methods(analysis_settings):
+    """
+    The SNP divergence methods to run, from analysis.settings.snp_divergence_method.
+
+    "both" runs samtools_stats and bcftools side by side. Every species-level output
+    carries the method in its filename, so the two never collide and a file written by
+    an earlier method is never picked up as if the current one had produced it.
+    Validation of the value lives in analyze_snp_divergence.smk.
+    """
+    method = analysis_settings.get("snp_divergence_method", "samtools_stats")
+    if method == "both":
+        return ["samtools_stats", "bcftools"]
+    return [method]
+
+
 def create_multiqc_bam_individual_input(wildcards):
 
     species = wildcards.species
@@ -324,22 +339,19 @@ def create_multiqc_reference_input(wildcards):
                     file_list.append(
                         f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/samtools_stats/{individual}_{reference}_final.bam.stats"
                     )
-                # Only the bcftools tier of the SNP divergence check produces a file
-                # MultiQC can render. The samtools_stats tier reuses the samtools stats
+                # Only the bcftools method of the SNP divergence check produces a file
+                # MultiQC can render. The samtools_stats method reuses the samtools stats
                 # file already added above, so it needs nothing here.
-                if (
+                analysis_settings = (
                     config.get("pipeline", {})
                     .get("reference_module", {})
                     .get("analysis", {})
                     .get("settings", {})
-                    .get("snp_divergence_check", False)
-                    == True
-                    and config.get("pipeline", {})
-                    .get("reference_module", {})
-                    .get("analysis", {})
-                    .get("settings", {})
-                    .get("snp_divergence_method", "samtools_stats")
-                    == "bcftools"
+                )
+                if analysis_settings.get(
+                    "snp_divergence_check", False
+                ) == True and "bcftools" in get_snp_divergence_methods(
+                    analysis_settings
                 ):
                     file_list.append(
                         f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/snp_divergence/{individual}_{reference}.bcftools_stats.txt"

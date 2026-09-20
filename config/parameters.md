@@ -145,7 +145,7 @@ Optionally removes or extracts reads that did not map to the reference. Default:
 | `analysis.settings.samtools_stats` | on | Include samtools stats data in MultiQC reports. |
 | `analysis.settings.qualimap_mem_mb` | `4096` | Memory (MB) requested from the cluster scheduler for Qualimap. Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources. |
 | `analysis.settings.snp_divergence_check` | `false` | When `true`, measure how far each individual diverges from the reference and flag individuals whose divergence is a cohort outlier. Flags a possible wrong reference genome, cross-species contamination, or mislabeled individual. Warning only, the run continues. Unrelated to `reveal_module`'s `snp_analysis`. |
-| `analysis.settings.snp_divergence_method` | `samtools_stats` | How the divergence number is obtained. `samtools_stats` reuses the per-individual samtools stats file that is already produced (mismatches / bases mapped), costs no extra runtime and adds no dependency, but gives no heterozygous-call rate. `bcftools` calls SNPs per individual, adding the heterozygous-call rate and a MultiQC panel at real runtime cost. |
+| `analysis.settings.snp_divergence_method` | `samtools_stats` | How the divergence number is obtained. `samtools_stats` reuses the per-individual samtools stats file that is already produced (mismatches / bases mapped), costs no extra runtime and adds no dependency, but gives no heterozygous-call rate. `bcftools` calls SNPs per individual, adding the heterozygous-call rate and a MultiQC panel at real runtime cost. `both` runs the two side by side. Each method writes its own files, named after it, so switching this setting never reuses another method's result. |
 | `analysis.settings.snp_divergence_outlier_zscore` | `3.5` | Modified z-score above which an individual is flagged. Only the high side is flagged. |
 | `analysis.settings.snp_divergence_min_callable_bases` | `100000` | Individuals with fewer callable bases are reported as `insufficient_data` instead of being scored, and are left out of the cohort median. |
 | `analysis.settings.snp_divergence_target_bases` | `10000000` | `bcftools` method only. Reference bases to call per individual, so runtime scales with this budget instead of genome size. The same region set is used for every individual. `0` uses the whole reference. |
@@ -155,7 +155,9 @@ Optionally removes or extracts reads that did not map to the reference. Default:
 | `analysis.settings.snp_divergence_min_mapping_quality` | `30` | `bcftools` method only. Minimum mapping quality passed to `mpileup --min-MQ` and `samtools depth --min-MQ`. |
 | `analysis.settings.snp_divergence_min_base_quality` | `30` | `bcftools` method only. Minimum base quality passed to `mpileup --min-BQ` and `samtools depth --min-BQ`. |
 
-The `status` column of `{reference}_combined_snp_divergence.csv` holds one of four values:
+Each method writes its own set of files, with the method in the filename: `{reference}_combined_snp_divergence_{method}.csv`, `{reference}_combined_snp_divergence_{method}_detailed.csv` and, with `create_plots` on, `{species}_{reference}_snp_divergence_{method}_bar.png`.
+
+The `status` column of `{reference}_combined_snp_divergence_{method}.csv` holds one of four values:
 
 | Status | Meaning |
 |---|---|

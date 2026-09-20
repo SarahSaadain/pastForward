@@ -286,7 +286,10 @@ pipeline:
         #                     no extra dependency, but gives no heterozygous-call rate.
         #   bcftools       -- call SNPs per individual with bcftools mpileup/call. Adds the
         #                     heterozygous-call rate and a MultiQC panel, costs real runtime.
-        # (Default: samtools_stats)
+        #   both           -- run both of the above side by side on the same cohort.
+        # Each method writes its own files, with the method in the filename, so the two never
+        # overwrite each other and changing this setting never reuses the other method's
+        # result. (Default: samtools_stats)
         #snp_divergence_method: samtools_stats
 
         # Optional: modified z-score above which an individual is flagged as an outlier.

@@ -10,6 +10,7 @@ library(readr)
 input_file <- snakemake@input[[1]]
 output_file <- snakemake@output[[1]]
 species <- snakemake@params[["species"]]
+method <- snakemake@params[["method"]]
 
 df <- read_csv(input_file, show_col_types = FALSE)
 if (nrow(df) == 0) stop("Input file is empty.")
@@ -43,7 +44,7 @@ bar_plot <- ggplot(df, aes(x = reorder(individual, -divergence_rate),
   theme_bw() +
   ylab("Divergence from reference [mismatches / base]") +
   xlab("Individual") +
-  ggtitle(paste0("SNP Divergence per Individual: ", species)) +
+  ggtitle(paste0("SNP Divergence per Individual: ", species, " (", method, ")")) +
   theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
         axis.text.y = element_text(size = 12),
         axis.title.x = element_text(size = 12, face = "bold"),

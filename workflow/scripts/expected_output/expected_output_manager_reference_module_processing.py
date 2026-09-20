@@ -50,13 +50,14 @@ def get_expected_output_reference_module(species):
                 expected_outputs.append(f"{species}/results/reference_module/{reference}/analytics/species_level/{species}_{reference}_multiqc.html")
 
             # Opt-in, matching the reveal_module snp_analysis/indel_analysis precedent for
-            # extra SNP-style analyses. Only the species-level combine target is requested:
-            # Snakemake resolves backwards from it to whichever per-individual inputs the
-            # configured snp_divergence_method needs, so the tier switch needs no branch here.
+            # extra SNP-style analyses. Only the species-level combine target is requested
+            # per method: Snakemake resolves backwards from it to whichever per-individual
+            # inputs that method needs, so the method switch needs no branch here.
             if analysis_settings.get("snp_divergence_check", False) == True:
-                expected_outputs.append(f"{species}/results/reference_module/{reference}/analytics/species_level/{species}/snp_divergence/{reference}_combined_snp_divergence.csv")
-                if analysis_settings.get("create_plots", True) == True:
-                    expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/snp_divergence/{species}_{reference}_snp_divergence_bar.png")
+                for snp_divergence_method in get_snp_divergence_methods(analysis_settings):
+                    expected_outputs.append(f"{species}/results/reference_module/{reference}/analytics/species_level/{species}/snp_divergence/{reference}_combined_snp_divergence_{snp_divergence_method}.csv")
+                    if analysis_settings.get("create_plots", True) == True:
+                        expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/snp_divergence/{species}_{reference}_snp_divergence_{snp_divergence_method}_bar.png")
         else:
             logging.info(f"Skipping analysis for species {species} and reference {reference}. Disabled in config.")
 
