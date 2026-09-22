@@ -136,10 +136,77 @@ def _read_project_name(configfile):
     return m.group(1) if m else None
 
 
-def _progress_bar(percent, width=30):
+RESUME_HINT = "Resume with: ./pastForward resume --cores <N>"
+
+# Icon, label and color per run state. The icons are plain Unicode symbols rather than emoji so
+# they stay one column wide and the header lines keep aligning.
+STATE_DISPLAY = {
+    "running": ("▶", "Running", CYAN, None),
+    "aborting": ("⏳", "Aborting", YELLOW, "Will exit after finishing currently running jobs (scheduler)."),
+    "unknown": ("?", "Unknown", DIM, "No log file yet."),
+    "dryrun_done": ("✔", "Dry run finished", GREEN, "Nothing was executed, so there is nothing to resume."),
+    "completed": ("✔", "Completed", GREEN, None),
+    "failed": ("✖", "Failed", RED, "At least one job did not complete successfully."),
+    "locked": ("✖", "Locked", RED, "Directory is locked (stale lock from a killed run or power loss)."),
+    "aborted": ("■", "Aborted", YELLOW, "Stopped on request before all jobs were done."),
+    "interrupted": (
+        "⚠",
+        "Interrupted",
+        YELLOW,
+        "Not running, and the log shows neither success nor a recorded failure - likely "
+        "force-killed (SIGKILL/OOM) rather than a normal error exit.",
+    ),
+}
+# A terminal without a UTF-8 locale (LANG=C on some servers) would raise UnicodeEncodeError on
+# the icons, so drop them there rather than crash the whole status output.
+UNICODE_OK = (sys.stdout.encoding or "").lower().replace("-", "").startswith("utf")
+
+
+def _run_state(alive, dryrun, text, progress):
+    """Which STATE_DISPLAY key describes the tracked run. `text` is None when no log exists yet."""
+    if alive:
+        return "aborting" if text and ABORTING_RE.search(text) else "running"
+    if text is None:
+        return "unknown"
+    if dryrun:
+        return "dryrun_done"
+    if LOCK_RE.search(text):
+        return "locked"
+    # An abort the user asked for also leaves failed/unfinished jobs behind, so it is checked
+    # before those - "you stopped it" explains the outcome better than "a job failed" does.
+    if ABORTING_RE.search(text):
+        return "aborted"
+    if FAILED_RE.search(text):
+        return "failed"
+    # A DAG with nothing left to run prints "Nothing to be done" instead of a progress line at
+    # all, which would otherwise look identical to a run that never got going.
+    if (progress is not None and float(progress.group(3)) == 100.0) or NOTHING_TO_DO_RE.search(text):
+        return "completed"
+    return "interrupted"
+
+
+# Width of the "Project:   " / "Status:    " label column, so continuation lines line up under
+# the values rather than starting back at the left margin.
+LABEL_INDENT = " " * 11
+
+
+def _print_hint(text):
+    print(_color(DIM, LABEL_INDENT + text))
+
+
+def _print_state_line(state_key):
+    icon, label, color, hint = STATE_DISPLAY[state_key]
+    prefix = f"{icon} " if UNICODE_OK else ""
+    print(f"{_color(CYAN, 'Status:')}    {_color(color, prefix + label)}")
+    if hint:
+        _print_hint(hint)
+
+
+def _progress_bar(percent, color=CYAN, width=24):
+    """A one-line bar, colored to match the run's state so it reads as part of the Status line."""
+    full, empty = ("█", "░") if UNICODE_OK else ("#", "-")
     filled = round(width * percent / 100)
-    bar = "#" * filled + "-" * (width - filled)
-    return f"{_color(GREEN if percent >= 100 else CYAN, '[' + bar + ']')} {percent:.1f}%"
+    return f"{_color(color, full * filled)}{_color(DIM, empty * (width - filled))} {percent:5.1f}%"
 
 
 def cmd_status(argv):
@@ -191,37 +258,46 @@ def _print_status(tail=None):
     # tracks a dry run in the state file. A dry run executes nothing, so none of the progress
     # or exit-classification reporting below applies to it.
     dryrun = any(a in DRYRUN_FLAGS for a in state["cmd"])
+    text = log_path.read_text(errors="replace") if log_path.exists() else None
+    progress = None
+    for progress in PROGRESS_RE.finditer(text or ""):
+        pass
+    state_key = _run_state(alive, dryrun, text, progress)
+
+    # Two blocks: the facts about the run first, then how it is going. Keeping Status and
+    # Progress together at the end, behind a blank line, stops the bar from getting lost in
+    # the middle of the header.
     print(f"{_color(CYAN, 'Project:')}   {project_name}")
     print(f"{_color(CYAN, 'Config:')}    {configfile}")
-    print(f"{_color(CYAN, 'PID:')}       {pid} ({_color(GREEN, 'running') if alive else _color(RED, 'not running')})")
+    # The PID line stays neutral: the Status line below already says how the run ended, so a red
+    # "not running" here would flag every clean finish as if something went wrong.
+    print(f"{_color(CYAN, 'PID:')}       {pid} ({_color(GREEN, 'running') if alive else _color(DIM, 'not running')})")
     print(f"{_color(CYAN, 'Started:')}   {state['started_at']}")
     print(f"{_color(CYAN, 'Runtime:')}   {runtime}")
     print(f"{_color(CYAN, 'Cores:')}     {cores}")
     print(f"{_color(CYAN, 'Log:')}       {state['log_file']}")
-
     if dryrun:
         print(f"{_color(CYAN, 'Mode:')}      {_color(YELLOW, 'dry run (--dryrun) - no jobs are executed')}")
 
-    if not log_path.exists():
-        print(_color(DIM, "(log file not found yet)"))
+    print()
+    _print_state_line(state_key)
+
+    if text is None:
         return alive
-    text = log_path.read_text(errors="replace")
 
     if dryrun:
-        print(_color(DIM, "(dry run in progress)") if alive else _color(GREEN, "Dry run finished. Nothing was executed, so there is nothing to resume."))
         _print_log_tail(text, log_path, tail)
         return alive
 
-    progress = None
-    for progress in PROGRESS_RE.finditer(text):
-        pass
-    progress_str = f"{progress.group(1)}/{progress.group(2)} steps ({progress.group(3)}%)" if progress else _color(DIM, "(not available yet)")
-    print(_progress_bar(float(progress.group(3))) if progress else _color(DIM, "[" + "-" * 30 + "] (no progress yet)"))
+    if progress:
+        bar = _progress_bar(float(progress.group(3)), STATE_DISPLAY[state_key][2])
+        steps = _color(DIM, f"{progress.group(1)}/{progress.group(2)} steps")
+    else:
+        bar = _progress_bar(0.0, DIM)
+        steps = _color(DIM, "(no progress logged yet)")
+    print(f"{_color(CYAN, 'Progress:')}  {bar}  {steps}")
 
-    if alive and ABORTING_RE.search(text):
-        print(_color(YELLOW, "Aborting:   will exit after finishing currently running jobs (scheduler)."))
-    elif not alive and FAILED_RE.search(text):
-        print(_color(RED, "Failed:     at least one job did not complete successfully."))
+    if state_key == "failed":
         errors = _parse_job_errors(text)
         if errors:
             print(_color(RED, f"\nErrors ({len(errors)}):"))
@@ -232,20 +308,11 @@ def _print_status(tail=None):
                     print(f"  {_color(DIM, line)}")
                 for job_log_path in _job_log_paths(block):
                     _print_failed_job_log(job_log_path)
-        print(_color(DIM, "Resume with: ./pastForward resume --cores <N>"))
-    elif not alive and LOCK_RE.search(text):
-        print(_color(RED, "Locked:     directory is locked (stale lock from a killed run or power loss)."))
-        print(_color(DIM, "Fix with: ./pastForward unlock, then ./pastForward resume --cores <N>"))
-    elif not alive and (progress is None or float(progress.group(3)) != 100.0) and not NOTHING_TO_DO_RE.search(text):
-        # Died before 100% with no "did not complete successfully" marker either - Snakemake
-        # never got the chance to log a reason, so this is most likely a force-kill (SIGKILL,
-        # `abort --force`, OOM-killer) rather than a graceful failure. Exception: a DAG with
-        # nothing left to run prints "Nothing to be done" instead of a progress line at all,
-        # which would otherwise look identical to a run that never got going.
-        print(_color(YELLOW, "Interrupted: not running, and the log shows neither success nor a recorded failure - likely force-killed (SIGKILL/OOM) rather than a normal error exit."))
-        print(_color(DIM, "Resume with: ./pastForward resume --cores <N>"))
-
-    print(f"{_color(CYAN, 'Progress:')}  {progress_str}")
+        _print_hint(RESUME_HINT)
+    elif state_key == "locked":
+        _print_hint("Fix with: ./pastForward unlock, then ./pastForward resume --cores <N>")
+    elif state_key in ("aborted", "interrupted"):
+        _print_hint(RESUME_HINT)
 
     # Once the process is dead, "currently running" is meaningless and "last finished" is a
     # stale snapshot rather than live progress - the Failed/Locked/Interrupted messaging above

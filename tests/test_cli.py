@@ -123,12 +123,39 @@ class StatusHelpersTestCase(unittest.TestCase):
             self.assertEqual(cli.monitor._read_project_name(cfg), "Demo Project")
             self.assertIsNone(cli.monitor._read_project_name(os.path.join(d, "missing.yaml")))
 
+    def test_run_state_covers_every_outcome(self):
+        done = cli.monitor.PROGRESS_RE.search("177 of 177 steps (100%) done")
+        partial = cli.monitor.PROGRESS_RE.search("31 of 210 steps (15%) done")
+        aborting = "Will exit after finishing currently running jobs (scheduler)."
+        cases = [
+            # (alive, dryrun, log text, progress match) -> expected state key
+            ((True, False, "", None), "running"),
+            ((True, False, aborting, partial), "aborting"),
+            ((True, False, None, None), "running"),  # log file not created yet
+            ((False, False, None, None), "unknown"),
+            ((False, True, "This was a dry-run (flag -n).", None), "dryrun_done"),
+            ((False, False, "", done), "completed"),
+            ((False, False, "Nothing to be done (all requested files are present and up to date).", None), "completed"),
+            ((False, False, "At least one job did not complete successfully.", partial), "failed"),
+            ((False, False, "[ERROR] LockException:", None), "locked"),
+            # An abort leaves failed jobs behind too, but "you stopped it" is the better answer.
+            ((False, False, aborting + "\nAt least one job did not complete successfully.", partial), "aborted"),
+            ((False, False, "", partial), "interrupted"),
+        ]
+        for args, expected in cases:
+            with self.subTest(expected=expected):
+                self.assertEqual(cli.monitor._run_state(*args), expected)
+                self.assertIn(expected, cli.monitor.STATE_DISPLAY)
+
     def test_progress_bar(self):
+        full_char, empty_char = ("█", "░") if cli.monitor.UNICODE_OK else ("#", "-")
         bar = cli.monitor._progress_bar(50.0, width=10)
         self.assertIn("50.0%", bar)
-        self.assertIn("#####", bar)
+        self.assertIn(full_char * 5, bar)
+        self.assertIn(empty_char * 5, bar)
         full = cli.monitor._progress_bar(100.0, width=10)
         self.assertIn("100.0%", full)
+        self.assertNotIn(empty_char, full)
 
     def test_job_log_paths_extracts_single_and_multiple(self):
         block = (
@@ -294,7 +321,8 @@ class ArgvValidationTestCase(unittest.TestCase):
             cli.monitor.cmd_status([])
         output = out.getvalue()
         self.assertIn("50.0%", output)
-        self.assertIn("[", output)
+        self.assertIn("5/10 steps", output)
+        self.assertIn("█" if cli.monitor.UNICODE_OK else "#", output)
 
     def test_status_last_finished_and_running_labels_say_jobs(self):
         cli.common.STATE_DIR.mkdir(parents=True, exist_ok=True)
