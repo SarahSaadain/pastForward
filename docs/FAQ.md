@@ -46,11 +46,15 @@ Reads must be compressed FASTQ (`.fastq.gz`). The filename must follow the conve
 
 Everything before the first underscore is treated as the individual identifier and is used to group samples for merging.
 
+The sample name is the whole filename with only the read number taken out, so `Bger3_D_340269_S41_R1_set1_lane6.fastq.gz` is sample `Bger3_D_340269_S41_set1_lane6`. Anything else in the name, such as a lane or a run, therefore keeps one file apart from the next.
+
 **Q: My data is single-end. Does pastForward support that?**
 Yes. pastForward auto-detects single-end vs. paired-end by checking whether a matching read 2 file (`R2` or a standalone `2`) exists for each read 1 file. Both modes are handled automatically.
 
 **Q: Can I have multiple sequencing runs for the same individual?**
 Yes. All samples belonging to the same individual (same prefix before the first underscore) are merged into a single FASTQ during the "Merge by Individual" step. You can place all run files in `<species>/input/read_module/` and they will be processed and concatenated automatically.
+
+Each run or lane is its own sample up to that point, as long as its filename says so somewhere other than the read number. Files that differ only in the read number are the R1/R2 pair of one sample, and two files that end up with the same sample name stop the run with an error rather than being silently merged into one.
 
 **Q: Where do I put the reference genome?**
 Place it in `<species>/input/reference_module/`. pastForward accepts `.fa`, `.fasta`, and `.fna` extensions and normalises them internally. Multiple reference genomes per species are supported. Each is processed independently.

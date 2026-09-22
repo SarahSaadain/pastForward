@@ -232,15 +232,26 @@ def get_r1_read_files_for_species(species: str) -> list[str]:
     return r1_files
 
 # -----------------------------------------------------------------------------------------------
+# (internal) The sample ID a raw read filename belongs to: the filename stem (extension removed)
+# with just the read-number marker cut out, keeping everything on both sides of it. Anything the
+# name carries besides R1/R2 - lane, set, run - therefore still separates one sample from another,
+# e.g. "X_R1_set1_lane6.fastq.gz" and "X_R1_set2_lane6.fastq.gz" are two samples rather than two
+# files claiming to be the same one. Returns None if the filename has no marker for that read
+# number. The marker's offsets are taken on the full filename, but the marker always sits before
+# the extension, so they index the stem just as well.
+def _sample_id_from_filename(filename: str, read_num: str):
+    marker = _find_read_marker(filename, read_num)
+    if not marker:
+        return None
+    stem = strip_raw_read_extension(filename)
+    return stem[: marker.start()] + stem[marker.end() :]
+
+# -----------------------------------------------------------------------------------------------
 # (internal) Discover all sample IDs from disk without applying any config filter
 def _discover_all_sample_ids_for_species(species):
     files = _discover_all_r1_read_files_for_species(species)
 
-    samples = []
-    for raw_file in files:
-        filename = os.path.basename(raw_file)
-        marker = _find_read_marker(filename, "1")
-        samples.append(filename[:marker.start()])
+    samples = [_sample_id_from_filename(os.path.basename(f), "1") for f in files]
 
     logger.debug(f"Discovered sample IDs for species {species}: {samples}")
 
@@ -269,14 +280,9 @@ def get_sample_ids_for_species(species):
 
 # -----------------------------------------------------------------------------------------------
 # (internal) Filter read_files down to those belonging to `sample` for the given read number,
-# i.e. files where the read marker (see _READ_R_MARKER_RE/_READ_BARE_MARKER_RE) is immediately preceded by `sample`.
+# i.e. files whose sample ID (see _sample_id_from_filename) is `sample`.
 def _read_files_for_sample(read_files, sample, read_num):
-    matches = []
-    for f in read_files:
-        marker = _find_read_marker(f, read_num)
-        if marker and f[:marker.start()] == sample:
-            matches.append(f)
-    return matches
+    return [f for f in read_files if _sample_id_from_filename(f, read_num) == sample]
 
 def get_raw_reads_for_sample(species, sample):
 
@@ -291,16 +297,22 @@ def get_raw_reads_for_sample(species, sample):
     candidates_r1 = _read_files_for_sample(read_files, sample, "1")
 
     if not candidates_r1:
-        logger.warning(f"No R1 found for {sample}. Expected pattern: {sample}_R1* or {sample}_1*, with extension {' or '.join(RAW_READ_EXTENSIONS)}, in {reads_dir}. Found files: {read_files}")
-        raise FileNotFoundError(f"No R1 found for {sample}. Expected pattern: {sample}_R1* or {sample}_1*, with extension {' or '.join(RAW_READ_EXTENSIONS)}, in {reads_dir}. Found files: {read_files}")
+        message = (
+            f"No R1 found for {sample}. Expected the name '{sample}' with an _R1 (or _1) marker inserted, "
+            f"with extension {' or '.join(RAW_READ_EXTENSIONS)}, in {reads_dir}. Found files: {read_files}"
+        )
+        logger.warning(message)
+        raise FileNotFoundError(message)
     if len(candidates_r1) > 1:
         # Silently picking one (e.g. via sorted()[0]) would mean two different physical
-        # files - almost certainly two different specimens/libraries - get merged into one
-        # sample, with the other one silently dropped.
+        # files get merged into one sample, with the other one silently dropped. The sample ID
+        # keeps everything but the read marker (see _sample_id_from_filename), so lane/set/run
+        # suffixes no longer land here - what does is two files with the same name apart from
+        # the extension, or two names that only differ in where the marker sits.
         raise ValueError(
             f"Sample {sample} has more than one R1 candidate, cannot pick unambiguously: {sorted(candidates_r1)}. "
-            f"Rename these files so each individual/library has a distinct sample prefix "
-            f"(e.g. append the box/replicate number to the individual ID) and re-run."
+            f"These names collapse to the same sample once the read marker is removed. "
+            f"Rename or remove one of them so each file has its own sample name, and re-run."
         )
 
     r1 = os.path.join(reads_dir, candidates_r1[0])
@@ -313,8 +325,8 @@ def get_raw_reads_for_sample(species, sample):
     if len(candidates_r2) > 1:
         raise ValueError(
             f"Sample {sample} has more than one R2 candidate, cannot pick unambiguously: {sorted(candidates_r2)}. "
-            f"Rename these files so each individual/library has a distinct sample prefix "
-            f"(e.g. append the box/replicate number to the individual ID) and re-run."
+            f"These names collapse to the same sample once the read marker is removed. "
+            f"Rename or remove one of them so each file has its own sample name, and re-run."
         )
 
     r2 = os.path.join(reads_dir, candidates_r2[0])
@@ -449,8 +461,8 @@ def get_samples_for_species_individual(species, individual):
     # (but unselected) individual into an error.
     samples = _discover_all_sample_ids_for_species(species)
 
-    # Currently, a sample is everything before the first read-number marker (see _READ_R_MARKER_RE/_READ_BARE_MARKER_RE)
-    # in the filename, e.g. _R1/_R2 or a standalone _1/_2.
+    # Currently, a sample is the filename stem with the read-number marker (see
+    # _READ_R_MARKER_RE/_READ_BARE_MARKER_RE) cut out, e.g. _R1/_R2 or a standalone _1/_2.
     # The first part of the sample name (before the first "_") is considered the individual ID.
     # The sample might contain additional information after the individual ID, 
     # but we only want to match the samples with the individual ID at the start of the sample name.

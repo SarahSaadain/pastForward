@@ -149,7 +149,8 @@ Pattern:
 ```
 
 * **`<Individual>`** is a unique ID for the sample, e.g. `Dmel01`. It's everything **before the first underscore**, and pastForward uses it to group files that belong together.
-* **`<FreeText>`** (optional, can appear before or after the read number) is any extra label you want, e.g. a protocol name. Useful when the same individual was extracted twice with different methods.
+* **`<FreeText>`** (optional, can appear before or after the read number) is any extra label you want, e.g. a protocol name or a lane. Useful when the same individual was extracted twice with different methods, or sequenced across several lanes.
+* **The sample** is the whole filename with only the read number taken out, e.g. `Dmel01_DabneyProtocol_R1_006.fastq.gz` is sample `Dmel01_DabneyProtocol_006`. Everything you put in the name apart from `R1`/`R2` therefore keeps one file apart from the next, so several lanes of the same individual stay separate samples and are only brought together at the merge step.
 * **`<ReadNumber>`** marks which read of the pair this file is: `R1`/`R2`, or a plain `1`/`2`. It can sit in the middle of the filename (followed by more `<FreeText>`) or be the last part, right before the extension, as in the second and third examples above. A plain `1` or `2` must stand on its own between underscores or right before the file extension. It won't be picked up inside a longer number like `_10_` or `_21`. In case you provide single end data, use `1` or `R1` as well.
 * The file must end in **`.fastq.gz`** or **`.fq.gz`** (compressed FASTQ). Uncompressed `.fastq`/`.fq` files are not supported.
 

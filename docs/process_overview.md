@@ -25,7 +25,7 @@ After adapter removal, reads go through a second dedicated quality filtering ste
 
 ### Merge by Individual
 
-Many sequencing projects split a single individual across multiple sequencing runs or lanes, each producing a separate FASTQ file. This step concatenates all quality-filtered samples belonging to the same individual into a single merged FASTQ. Individual identity is derived from the sample filename. Everything before the first underscore is treated as the individual identifier. The merged file is the single input to all downstream reference mapping and REVEAL analyses.
+Many sequencing projects split a single individual across multiple sequencing runs or lanes, each producing a separate FASTQ file. This step concatenates all quality-filtered samples belonging to the same individual into a single merged FASTQ. Each run or lane is handled as its own sample beforehand, since the sample name keeps everything in the filename except the read number. Individual identity is derived from the sample filename. Everything before the first underscore is treated as the individual identifier. The merged file is the single input to all downstream reference mapping and REVEAL analyses.
 
 ### Read Count Statistics
 

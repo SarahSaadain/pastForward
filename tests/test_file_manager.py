@@ -379,12 +379,32 @@ class TestReadMarkerRPrefersOverBare(unittest.TestCase):
             "DfunF2_B_3_box-3-219_R1.fastq.gz",
             "DfunF2_B_3_box-3-219_R2.fastq.gz",
         ]
-        r1_files = [f for f in files if fm._find_read_marker(f, "1")]
-        samples = [f[: fm._find_read_marker(f, "1").start()] for f in r1_files]
+        samples = [fm._sample_id_from_filename(f, "1") for f in files]
         self.assertEqual(
-            sorted(samples),
+            sorted(s for s in samples if s),
             sorted(["DfunF2_B_1_box-3-227", "DfunF2_B_2_box-3-231", "DfunF2_B_3_box-3-219"]),
         )
+
+    def test_sample_id_keeps_text_after_the_read_marker(self):
+        # Lane/set suffixes sit *after* the R1/R2 marker, so truncating at the marker used to
+        # collapse every lane of an individual into one sample ID and error out as ambiguous.
+        # The suffix has to survive into the sample ID for the lanes to stay separate samples.
+        self.assertEqual(
+            fm._sample_id_from_filename("Bger3_D_340269_S41_R1_set1_lane6.fastq.gz", "1"),
+            "Bger3_D_340269_S41_set1_lane6",
+        )
+        self.assertEqual(
+            fm._sample_id_from_filename("Bger3_D_340269_S41_R2_set2_lane8.fq.gz", "2"),
+            "Bger3_D_340269_S41_set2_lane8",
+        )
+
+    def test_sample_id_with_no_text_after_the_marker(self):
+        self.assertEqual(fm._sample_id_from_filename("IND001_R1.fastq.gz", "1"), "IND001")
+        self.assertEqual(fm._sample_id_from_filename("IND002_lib1_1.fastq.gz", "1"), "IND002_lib1")
+
+    def test_sample_id_is_none_without_a_marker(self):
+        self.assertIsNone(fm._sample_id_from_filename("IND004_readme.fastq.gz", "1"))
+        self.assertIsNone(fm._sample_id_from_filename("IND001_R1.fastq.gz", "2"))
 
 
 class TestOneReadFileOrPairPerSample(unittest.TestCase):
@@ -411,19 +431,46 @@ class TestOneReadFileOrPairPerSample(unittest.TestCase):
         self.assertTrue(r1.endswith("IND001_R1.fastq.gz"))
         self.assertTrue(r2.endswith("IND001_R2.fastq.gz"))
 
+    def test_lanes_of_one_individual_resolve_as_separate_samples(self):
+        # Six files, one individual, two sets x three lanes. Each must come back as its own
+        # sample with its own R1/R2 pair, instead of colliding under "IND001".
+        for set_id in ("set1", "set2"):
+            for lane in ("lane6", "lane7", "lane8"):
+                for read in ("R1", "R2"):
+                    testlib.write_fastq_gz(
+                        os.path.join(self.reads_dir, f"IND001_{read}_{set_id}_{lane}.fastq.gz")
+                    )
+
+        self.assertEqual(
+            sorted(fm._discover_all_sample_ids_for_species("Dmel")),
+            sorted(
+                f"IND001_{set_id}_{lane}"
+                for set_id in ("set1", "set2")
+                for lane in ("lane6", "lane7", "lane8")
+            ),
+        )
+
+        r1, r2 = fm.get_raw_reads_for_sample("Dmel", "IND001_set2_lane7")
+        self.assertTrue(r1.endswith("IND001_R1_set2_lane7.fastq.gz"))
+        self.assertTrue(r2.endswith("IND001_R2_set2_lane7.fastq.gz"))
+
+        # They still belong to one individual, so the merge step still pulls them together.
+        self.assertEqual(fm._discover_all_individuals_for_species("Dmel"), ["IND001"])
+        self.assertEqual(len(fm.get_samples_for_species_individual("Dmel", "IND001")), 6)
+
     def test_two_r1_candidates_for_same_sample_raises(self):
         # Same sample, same read number, two extensions on disk - ambiguous, must not
         # silently pick one.
         testlib.write_fastq_gz(os.path.join(self.reads_dir, "IND001_R1.fastq.gz"))
         testlib.write_fastq_gz(os.path.join(self.reads_dir, "IND001_R1.fq.gz"))
-        with self.assertRaisesRegex(ValueError, "Rename these files"):
+        with self.assertRaisesRegex(ValueError, "Rename or remove one of them"):
             fm.get_raw_reads_for_sample("Dmel", "IND001")
 
     def test_two_r2_candidates_for_same_sample_raises(self):
         testlib.write_fastq_gz(os.path.join(self.reads_dir, "IND001_R1.fastq.gz"))
         testlib.write_fastq_gz(os.path.join(self.reads_dir, "IND001_R2.fastq.gz"))
         testlib.write_fastq_gz(os.path.join(self.reads_dir, "IND001_R2.fq.gz"))
-        with self.assertRaisesRegex(ValueError, "Rename these files"):
+        with self.assertRaisesRegex(ValueError, "Rename or remove one of them"):
             fm.get_raw_reads_for_sample("Dmel", "IND001")
 
 
