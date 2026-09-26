@@ -185,10 +185,11 @@ rule count_snp_divergence_callable_bases:
         "Counting callable bases for SNP divergence check on {input.bam}"
     shell:
         """
+        # Short flags on purpose. Older samtools depth has no --min-MQ/--min-BQ.
         samtools depth \
             {params.regions_arg} \
-            --min-MQ {params.min_mapping_quality} \
-            --min-BQ {params.min_base_quality} \
+            -Q {params.min_mapping_quality} \
+            -q {params.min_base_quality} \
             "{input.bam}" 2>"{log}" \
             | awk -v min_depth={params.min_depth} '$3 >= min_depth {{ callable_bases++ }} END {{ print callable_bases + 0 }}' >"{output.txt}"
         """
