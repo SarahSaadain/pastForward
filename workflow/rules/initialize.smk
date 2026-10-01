@@ -54,8 +54,15 @@ snakemake.utils.min_version("9.9.0")
 # =================================================================================================
 #     Configuration Files and Reporting
 # =================================================================================================
-# Specify the main configuration file for the workflow
-configfile: "config/config.yaml"
+# Specify the main configuration file for the workflow.
+# config/config.yaml belongs to the project, not to the repository (see docs/update.md), so a
+# fresh checkout of pastForward has none. Load it only when it is there, so parsing the
+# workflow still works without it - that is what `snakemake --lint` does, and it is what the
+# Snakemake workflow catalog runs on every clone. A real run without a config stops with a
+# clear message from get_expected_outputs_from_pipeline() instead.
+if os.path.exists("config/config.yaml"):
+
+    configfile: "config/config.yaml"
 
 
 # Rewrite deprecated config keys onto their current names before any other file reads
@@ -76,12 +83,9 @@ apply_config_key_aliases(config)
 # depends on and Snakemake (re)creates/reuses envs accordingly, same as any other conda env.
 from scripts.config_validation import resolve_ecmsd_conda_env, resolve_reveal_conda_env
 
-ECMSD_CONDA_ENV = os.path.join(
-    workflow.basedir, "envs", resolve_ecmsd_conda_env(config)
-)
-REVEAL_CONDA_ENV = os.path.join(
-    workflow.basedir, "envs", resolve_reveal_conda_env(config)
-)
+_ENVS_DIR = os.path.join(workflow.basedir, "envs")
+ECMSD_CONDA_ENV = os.path.join(_ENVS_DIR, resolve_ecmsd_conda_env(config))
+REVEAL_CONDA_ENV = os.path.join(_ENVS_DIR, resolve_reveal_conda_env(config))
 
 
 # =================================================================================================
@@ -141,14 +145,11 @@ if workflow.exec_mode != ExecMode.SUBPROCESS:
             pastForward_git_hash not in pastForward_version
             or pastForward_git_state.endswith("-dirty")
         ):
-            pastForward_version = (
-                f"{pastForward_version} (git: {pastForward_git_state})"
-            )
+            pastForward_version += f" (git: {pastForward_git_state})"
         del process, out, err, pastForward_git_state, pastForward_git_hash
     except Exception:
         pass
 
-    # --- Platform ---
     pltfrm = f"{platform.platform()}; {platform.version()}"
     try:
         ld = platform.linux_distribution()
@@ -175,15 +176,12 @@ if workflow.exec_mode != ExecMode.SUBPROCESS:
     except:
         pass
 
-    # --- User / host ---
     username = pwd.getpwuid(os.getuid())[0]
     hostname = socket.gethostname()
     node_name = platform.node()
-    hostname = (
-        f"{hostname}; {node_name}" if node_name != socket.gethostname() else hostname
-    )
+    if node_name != hostname:
+        hostname = f"{hostname}; {node_name}"
 
-    # --- Conda ---
     try:
         process = subprocess.Popen(
             ["conda", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -203,7 +201,6 @@ if workflow.exec_mode != ExecMode.SUBPROCESS:
     if conda_env == " ()":
         conda_env = "n/a"
 
-    # --- Command line ---
     cmdline = " ".join(sys.argv)
 
     # --- Config file paths ---
@@ -232,7 +229,6 @@ if workflow.exec_mode != ExecMode.SUBPROCESS:
         config.get("pipeline", {}), sort_keys=False, default_flow_style=False
     )
     logging.info("Loaded configuration:\n%s", config_str)
-
 # =================================================================================================
 # End of initialize.smk
 # =================================================================================================

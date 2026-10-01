@@ -4,7 +4,6 @@ import logging
 from typing import List, Tuple
 import pysam
 import pandas as pd
-from snakemake.script import snakemake
 
 
 logging.basicConfig(

@@ -272,23 +272,74 @@ pipeline:
         # Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources.
         #qualimap_mem_mb: 4096
 
+        # When true, measure how far each individual diverges from the reference and flag
+        # individuals whose divergence is an outlier compared to the rest of the cohort.
+        # A flagged individual can mean a wrong reference genome, cross-species
+        # contamination, or a mislabeled individual. Flagging is a warning only, the run
+        # continues. This is NOT related to reveal_module's snp_analysis, which is a
+        # different feature computing SNP stats on feature libraries. (Default: false)
+        snp_divergence_check: false
+
+        # Optional: how the per-individual divergence number is obtained.
+        #   samtools_stats -- reuse the per-individual samtools stats file that is already
+        #                     produced (mismatches / bases mapped). Free, runs in seconds,
+        #                     no extra dependency, but gives no heterozygous-call rate.
+        #   bcftools       -- call SNPs per individual with bcftools mpileup/call. Adds the
+        #                     heterozygous-call rate and a MultiQC panel, costs real runtime.
+        #   both           -- run both of the above side by side on the same cohort.
+        # Each method writes its own files, with the method in the filename, so the two never
+        # overwrite each other and changing this setting never reuses the other method's
+        # result. (Default: samtools_stats)
+        #snp_divergence_method: samtools_stats
+
+        # Optional: modified z-score above which an individual is flagged as an outlier.
+        # Only the high side is flagged, an unusually low divergence is not suspicious.
+        # (Default: 3.5)
+        #snp_divergence_outlier_zscore: 3.5
+
+        # Optional: skip flagging any individual with fewer callable bases than this, since
+        # the score is too noisy to trust below it. "Callable bases" means aligned bases for
+        # snp_divergence_method: samtools_stats, and sites at or above
+        # snp_divergence_min_depth inside the sampled regions for snp_divergence_method:
+        # bcftools. Such an individual gets status insufficient_data. (Default: 100000)
+        #snp_divergence_min_callable_bases: 100000
+
+        # Note: scoring is cohort relative, so it also needs at least three usable
+        # individuals mapped to the same reference. With fewer, every individual gets
+        # status insufficient_cohort and nothing is flagged. That minimum is fixed.
+
+        # --- the settings below only apply when snp_divergence_method: bcftools ---
+
+        # Optional: how many reference bases to call per individual. Caps runtime so it
+        # scales with this budget instead of with genome size. The same deterministic region
+        # set is used for every individual of the cohort, so the scores stay comparable.
+        # Set to 0 to use the whole reference. (Default: 10000000)
+        #snp_divergence_target_bases: 10000000
+        # Optional: contigs shorter than this are never picked for the region set (Default: 10000)
+        #snp_divergence_min_contig_length: 10000
+        # Optional: minimum read depth for a site to count toward SNP density (Default: 3)
+        #snp_divergence_min_depth: 3
+        # Optional: maximum per-site depth passed to bcftools mpileup --max-depth (Default: 50)
+        #snp_divergence_max_depth: 50
+        # Optional: minimum mapping and base quality passed to mpileup --min-MQ / --min-BQ (Default: 30)
+        #snp_divergence_min_mapping_quality: 30
+        #snp_divergence_min_base_quality: 30
+
 
   reveal_module:
     # When true, this stage will be executed (Default: true)
     execute: true
 
     #settings:
-      # Where to get the REVEAL toolkit from (not yet on bioconda, always side-loaded)
-      # (Default: "conda"). Options:
-      #   "conda"           -- whatever the conda package provides (default). No bioconda package
-      #                        exists yet, so this currently side-loads the newest tagged release
+      # Where to get the REVEAL toolkit from (Default: "conda"). Options:
+      #   "conda"           -- the bioconda package reveal-tools=1.* (default)
       #   "latest_release"  -- always side-load the newest tagged release from
       #                        https://github.com/SarahSaadain/REVEAL (unpinned by design)
       #   "dev"             -- [experimental] side-load the tip of REVEAL's "develop" branch.
       #                        Unreleased and untested -- use at your own risk.
       # Each option has its own conda env file, so switching this builds/reuses that env
-      # automatically; picking up a newer release/commit on an already-built unpinned env
-      # still needs a manual rebuild (see FAQ.md).
+      # automatically; picking up a newer release/commit on an already-built unpinned
+      # latest_release/dev env still needs a manual rebuild (see FAQ.md).
       #version_source: "conda"
 
     # ── SCG Selector ──────────────────────────────────────────────────────────
@@ -380,6 +431,10 @@ pipeline:
         end_distance: 100
         # Exclude the most extreme coverage quantiles for normalization (Default: 25)
         exclude_quantile: 25
+        # When an individual's SCG coverage is too low to normalize, exclude that
+        # individual instead of failing the whole species-level comparison/plot.
+        # Excluded individuals are listed in *_excluded_individuals.tsv (Default: false)
+        skip_low_coverage_individuals: false
 
     visualization:
       # When true, this sub-stage will be executed (Default: true)

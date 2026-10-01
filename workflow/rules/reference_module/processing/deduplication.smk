@@ -127,7 +127,7 @@ rule dedup_deduplicate_bam_cluster:
         dedup_hist="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}/{individual}_{reference}_cluster_{start}_{end}.hist",
         dedup_json="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}/{individual}_{reference}_cluster_{start}_{end}.dedup.json",
     log:
-        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}/{individual}_{reference}_{start}_{end}.dedup.log",
+        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}.dedup.log",
     conda:
         "../../../envs/dedup.yaml"
     resources:

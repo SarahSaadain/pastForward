@@ -25,6 +25,7 @@ rule estimate_visualization_of_individual:
 rule calculate_visualization_normalized_stats_of_individual:
     input:
         coverage="{species}/results/reveal_module/{feature_library}/visualization/individual_level/{individual}_coverage.normalized.tsv.gz",
+        exclusion_reason="{species}/results/reveal_module/{feature_library}/visualization/individual_level/{individual}_coverage.normalized.exclusion_reason.txt",
     output:
         stats="{species}/results/reveal_module/{feature_library}/visualization/individual_level/{individual}_coverage.normalized.stats.tsv",
     log:
@@ -35,10 +36,15 @@ rule calculate_visualization_normalized_stats_of_individual:
         "Calculating normalized stats for {wildcards.individual} of {wildcards.species}."
     shell:
         """
-        REVEAL covstats \
-            --so "{input.coverage}" \
-            --outfile "{output.stats}" \
-            --sample-id "{wildcards.individual}" >"{log}" 2>&1
+        if [ -s "{input.exclusion_reason}" ]; then
+            echo "Skipping REVEAL covstats for {wildcards.individual}: excluded due to low coverage (see {input.exclusion_reason})" >"{log}"
+            printf 'seqid\\tsampleid\\tseq_len\\tmedian_cov\\tmad_cov\\tcv_cov\\tmax_cov\\tfrac_low\\tn_snps\\tsnp_density\\tmedian_alt\\n' >"{output.stats}"
+        else
+            REVEAL covstats \
+                --so "{input.coverage}" \
+                --outfile "{output.stats}" \
+                --sample-id "{wildcards.individual}" >"{log}" 2>&1
+        fi
         """
 
 
@@ -106,7 +112,21 @@ rule compare_visualization_stats_accross_individuals_of_species:
         "Running REVEAL coverage comparison for {wildcards.species}."
     shell:
         """
-        REVEAL covcompare --stats {input} --outfile "{output.stats}" >"{log}" 2>&1
+        stats_files=""
+        stats_count=0
+        for f in {input}; do
+            if [ "$(wc -l <"$f")" -gt 1 ]; then
+                stats_files="$stats_files $f"
+                stats_count=$((stats_count + 1))
+            fi
+        done
+
+        if [ "$stats_count" -lt 2 ]; then
+            : >"{output.stats}"
+            echo "Fewer than two individuals with usable coverage stats for {wildcards.species}/{wildcards.feature_library} (low-coverage individuals excluded); skipping REVEAL covcompare." >"{log}"
+        else
+            REVEAL covcompare --stats $stats_files --outfile "{output.stats}" >"{log}" 2>&1
+        fi
         """
 
 
@@ -130,9 +150,23 @@ rule compare_visualization_snp_stats_across_individuals_of_species:
         "Comparing SNP stats across individuals of {wildcards.species}."
     shell:
         """
-        REVEAL snpcompare \
-            --snpstats {input} \
-            --outfile "{output.comparison}" >"{log}" 2>&1
+        snp_files=""
+        snp_count=0
+        for f in {input}; do
+            if [ "$(zcat "$f" | wc -l)" -gt 1 ]; then
+                snp_files="$snp_files $f"
+                snp_count=$((snp_count + 1))
+            fi
+        done
+
+        if [ "$snp_count" -lt 2 ]; then
+            : >"{output.comparison}"
+            echo "Fewer than two individuals with usable SNP stats for {wildcards.species}/{wildcards.feature_library} (low-coverage individuals excluded); skipping REVEAL snpcompare." >"{log}"
+        else
+            REVEAL snpcompare \
+                --snpstats $snp_files \
+                --outfile "{output.comparison}" >"{log}" 2>&1
+        fi
         """
 
 
@@ -156,9 +190,23 @@ rule compare_visualization_indel_stats_across_individuals_of_species:
         "Comparing indel stats across individuals of {wildcards.species}."
     shell:
         """
-        REVEAL indelcompare \
-            --indelstats {input} \
-            --outfile "{output.comparison}" >"{log}" 2>&1
+        indel_files=""
+        indel_count=0
+        for f in {input}; do
+            if [ "$(zcat "$f" | wc -l)" -gt 1 ]; then
+                indel_files="$indel_files $f"
+                indel_count=$((indel_count + 1))
+            fi
+        done
+
+        if [ "$indel_count" -lt 2 ]; then
+            : >"{output.comparison}"
+            echo "Fewer than two individuals with usable indel stats for {wildcards.species}/{wildcards.feature_library} (low-coverage individuals excluded); skipping REVEAL indelcompare." >"{log}"
+        else
+            REVEAL indelcompare \
+                --indelstats $indel_files \
+                --outfile "{output.comparison}" >"{log}" 2>&1
+        fi
         """
 
 
@@ -196,6 +244,28 @@ rule extract_flagged_seqids:
         "../../envs/python_and_r.yaml"
     script:
         "../../scripts/reveal_module/extract_flagged_seqids.py"
+
+
+rule collect_excluded_individuals_of_species:
+    input:
+        reasons=lambda wildcards: expand(
+            "{species}/results/reveal_module/{feature_library}/visualization/individual_level/{individual}_coverage.normalized.exclusion_reason.txt",
+            species=wildcards.species,
+            feature_library=wildcards.feature_library,
+            individual=get_individuals_for_species(wildcards.species),
+        ),
+    output:
+        tsv="{species}/results/reveal_module/{feature_library}/visualization/species_level/{species}_{feature_library}_excluded_individuals.tsv",
+    log:
+        "{species}/results/reveal_module/{feature_library}/visualization/species_level/{species}_{feature_library}_excluded_individuals.log",
+    conda:
+        "../../envs/python_and_r.yaml"
+    params:
+        individuals=lambda wildcards: get_individuals_for_species(wildcards.species),
+    message:
+        "Collecting individuals excluded from REVEAL normalization for {wildcards.species}."
+    script:
+        "../../scripts/reveal_module/collect_excluded_individuals.py"
 
 
 rule compress_visualization_snp_stats_of_individual:

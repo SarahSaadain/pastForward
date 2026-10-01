@@ -141,3 +141,5 @@ score = score_breadth + score_depth_variation + score_depth_consistency
 | `{species}/results/reveal_module/scg/{species}_relevant_scg.fasta` | Top-ranked SCG sequences passed to the REVEAL mapping step |
 | `{species}/processed/reveal_module/scg/{species}_relevant_scg.txt` | Plain list of retained SCG IDs |
 | `{species}/processed/reveal_module/scg/{species}_relevant_scg.bed` | BED file of retained SCG regions |
+
+If an individual's SCG coverage is still too low for REVEAL to normalize against (e.g. `Insufficient coverage to normalize: ...% of single-copy-gene positions have zero read depth`), set `pipeline.reveal_module.normalization.settings.skip_low_coverage_individuals: true` to exclude that individual from the normalized comparison/plots instead of failing the whole species. Excluded individuals are listed, with the reason, in `{species}/results/reveal_module/{feature_library}/visualization/species_level/{species}_{feature_library}_excluded_individuals.tsv`.

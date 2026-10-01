@@ -203,6 +203,8 @@ if _comp_execute:
             "{species}/processed/reveal_module/{feature_library}/mapped/{individual}_{feature_library}_and_scg.sorted.with_unmapped.bam",
         output:
             bam=temp(_MAPPED_BAM_PRECOMP),
+        log:
+            "{species}/processed/reveal_module/{feature_library}/mapped/{individual}_{feature_library}_remove_unmapped.log",
         threads: 2
         params:
             extra="-b -F 4",

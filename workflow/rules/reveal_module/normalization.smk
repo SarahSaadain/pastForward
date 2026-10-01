@@ -10,6 +10,7 @@ rule normalize_visualization_of_individual:
         normalized=temp(
             "{species}/results/reveal_module/{feature_library}/visualization/individual_level/{individual}_coverage.normalized.tsv"
         ),
+        exclusion_reason="{species}/results/reveal_module/{feature_library}/visualization/individual_level/{individual}_coverage.normalized.exclusion_reason.txt",
     log:
         "{species}/results/reveal_module/{feature_library}/visualization/individual_level/{individual}_coverage.normalized.log",
     conda:
@@ -25,15 +26,34 @@ rule normalize_visualization_of_individual:
         .get("normalization", {})
         .get("settings", {})
         .get("exclude_quantile", 25),
+        skip_low_coverage=lambda _: config.get("pipeline", {})
+        .get("reveal_module", {})
+        .get("normalization", {})
+        .get("settings", {})
+        .get("skip_low_coverage_individuals", False),
     message:
         "Normalizing REVEAL coverage for {wildcards.individual} of {wildcards.species}."
     shell:
         """
+        set +e
         REVEAL normalize \
             --so "{input.coverage}" \
             --outfile "{output.normalized}" \
             --end-distance {params.end_distance} \
             --exclude-quantile {params.exclude_quantile} >"{log}" 2>&1
+        rc=$?
+        set -e
+
+        if [ $rc -ne 0 ]; then
+            if [ "{params.skip_low_coverage}" = "True" ]; then
+                echo "$(tail -n 1 "{log}")" >"{output.exclusion_reason}"
+                : >"{output.normalized}"
+            else
+                exit $rc
+            fi
+        else
+            : >"{output.exclusion_reason}"
+        fi
         """
 
 

@@ -71,22 +71,25 @@ if not _is_snakemake_subprocess:
                 lines.append(f"    Individuals ignored ({len(ignored_individuals)}) [not selected in config]:")
                 for ind in ignored_individuals:
                     lines.append(f"      - {ind}")
-            unmatched_reads = _discover_unmatched_read_files_for_species(sname)
-            if unmatched_reads:
-                lines.append(f"    Reads ignored ({len(unmatched_reads)}) [do not match naming convention]:")
-                for r in unmatched_reads:
-                    lines.append(f"      - {r}")
-            uncompressed_reads = _discover_uncompressed_fastq_files_for_species(sname)
-            if uncompressed_reads:
-                lines.append(f"    Reads ignored ({len(uncompressed_reads)}) [uncompressed .fastq/.fq — pipeline only processes {' or '.join(RAW_READ_EXTENSIONS)}]:")
-                for r in uncompressed_reads:
-                    lines.append(f"      - {r}")
         except ConfigValidationError:
             raise
         except ValueError as e:
             lines.append(f"    Individuals: (ERROR — {e})")
         except Exception:
             lines.append("    Individuals: (none found)")
+
+        # Outside the try above on purpose: when every read name is bad, individual discovery
+        # finds nothing (or raises), and these lists are exactly what explains why.
+        unmatched_reads = _discover_unmatched_read_files_for_species(sname)
+        if unmatched_reads:
+            lines.append(f"    WARNING: reads not used ({len(unmatched_reads)}), names don't follow the raw read naming convention:")
+            for r in unmatched_reads:
+                lines.append(f"      - {r} ({get_read_name_problem(os.path.basename(r))})")
+        uncompressed_reads = _discover_uncompressed_fastq_files_for_species(sname)
+        if uncompressed_reads:
+            lines.append(f"    Reads ignored ({len(uncompressed_reads)}) [uncompressed .fastq/.fq — pipeline only processes {' or '.join(RAW_READ_EXTENSIONS)}]:")
+            for r in uncompressed_reads:
+                lines.append(f"      - {r}")
 
         try:
             all_feat_libs = _discover_all_feature_library_file_list_for_species(sname)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Entry point shim — real logic lives in workflow/scripts/cli.py so it can be
+"""Entry point shim — real logic lives in workflow/scripts/cli/ so it can be
 unit-tested the same way as the rest of workflow/scripts/ (see tests/test_cli.py)."""
 import os
 import sys

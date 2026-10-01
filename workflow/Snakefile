@@ -41,6 +41,11 @@ include: "rules/reveal_module_processing.smk"
 # create_multiqc_species_individual.smk
 # Contains rules for generating MultiQC reports for each species and individual.
 include: "rules/summary_module_processing.smk"
+# rules/benchmark.smk: Attaches a benchmark file to every rule defined above, so each run
+# records how long every job took and how much memory it used. Must be included after all
+# four module files, since it walks the rules that already exist. `rule all` below needs no
+# benchmark: it produces nothing and does no work.
+include: "rules/benchmark.smk"
 
 
 # Define the all rule to specify the final targets of the workflow

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Side-loads the latest tagged GitHub release of REVEAL (https://github.com/SarahSaadain/REVEAL)
-into this conda environment, since REVEAL is not yet published on bioconda.
+into this conda environment, bypassing the bioconda package (see reveal.yaml) for whoever
+explicitly wants to track GitHub releases instead.
 
 Snakemake runs this once, automatically, right after creating the conda environment from the
 neighboring reveal_git_release.yaml (see "Post-Deployment Scripts for Conda Environments" in the

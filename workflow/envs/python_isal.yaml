@@ -1,0 +1,7 @@
+name: python_isal
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - python-isal
