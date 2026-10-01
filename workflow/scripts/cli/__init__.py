@@ -103,7 +103,7 @@ SECTIONS = {
         ),
     },
     "Fix problems": {
-        "unlock": (cmd_unlock, "", "Run `snakemake --unlock` to clear a stale Snakemake lock left by a crashed run."),
+        "unlock": (cmd_unlock, "", "Run `unlock` to clear a stale Snakemake lock left by a crashed run."),
         "touch": (
             cmd_touch,
             "[snakemake-args...]",
