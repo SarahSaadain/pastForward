@@ -149,9 +149,10 @@ To fix this, you can either:
 You can see the skipped files in pastForward log (use a dry run to check). 
 
 **Q: How can I validate that my input files are correctly formatted and will be processed by pastForward?**
-You can perform a dry run of pastForward using the command:
+Run these from the project root:
 ```bash
-snakemake --cores <N> --software-deployment-method conda --dryrun
+./pastForward check     # what the config finds on disk: species, individuals, references, and badly named reads
+./pastForward dryrun    # full Snakemake dry run
 ```
 
 At the beginning of each run, pastForward performs an input validation step that checks for the presence and correct formatting of all required input files. It will print a summary of the detected files and any issues found. 
@@ -235,9 +236,9 @@ Most `execute: false` toggles only affect their own step's output. A handful of 
 Three other situations cause the same kind of cascade without an obvious setting to blame:
 
 - **A new step needs a file that was already cleaned up.** Enabling taxonomic screening after the first run (see the example above) is one case. Adding FastQC reports for trimmed/quality-filtered reads is another: if even one sample's report is missing, Snakemake has to regenerate the intermediate file behind it, which pulls mapping and everything after it back in for that sample.
-- **Adding samples changes a shared file every individual maps against.** This is intentional: with automatic SCG selection (`pipeline.reveal_module.scg_selector.execute: true`), ranking which single-copy genes to use is a species-wide decision, not a per-individual one. Add individuals, and the ranking can legitimately change, which rewrites the shared SCG file, the combined SCG/feature-library reference, and its index, so every individual gets re-mapped and re-analyzed against the updated version. Providing your own fixed SCG FASTA under `{species}/input/reveal_module/scg/` avoids this, at the cost of losing the automatic per-species ranking.
+- **Adding samples changes a shared file every individual maps against.** With automatic SCG selection (`pipeline.reveal_module.scg_selector.execute: true`), ranking which single-copy genes to use is a species-wide decision, not a per-individual one. Add individuals, and the ranking can change, which rewrites the shared SCG file, the combined SCG/feature-library reference, and its index, so every individual gets re-mapped and re-analyzed against the updated version. Providing your own fixed SCG FASTA under `{species}/input/reveal_module/scg/` avoids this, at the cost of losing the automatic per-species ranking.
 
-**Before flipping one of these settings on a project that already has results, do a dry run first** (`snakemake --cores <N> --software-deployment-method conda --dryrun`) and check how many jobs it plans. If the count is much larger than the change seems to justify, one of these chains is almost always why.
+**Before flipping one of these settings on a project that already has results, do a dry run first** (`./pastForward dryrun`) and check how many jobs it plans. If the count is much larger than the change seems to justify, one of these chains is usually the reason.
 
 **Q: Can I store a species' data outside the project directory?**
 Yes. By default a species' data must live at `<species>/input`, `<species>/processed`, and `<species>/results` inside the project directory. To point some or all of it elsewhere, set one or more of the following optional keys under `species.<key>` in `config.yaml`: `species_dir` (whole species root, which sets the default for everything below), `reads_dir`, `reference_dir`, `scg_dir`, `feature_library_dir`, `competition_dir`, `processed_dir`, `results_dir`. An explicit key always wins over a path derived from `species_dir`.
@@ -252,7 +253,7 @@ species:
 
 If none of these are set for a species, nothing on disk is touched beyond what pastForward already does by default. When one is set, pastForward creates a symlink at the conventional in-project location (e.g. `Dmel/input/read_module`) pointing at the configured path, once at startup. This is idempotent (safe to re-run), and pastForward refuses to overwrite anything that already exists there (a real folder, or a symlink pointing elsewhere) rather than risk clobbering existing data. See [Project Structure](../config/README.md#storing-species-data-elsewhere) for the full list of keys.
 
-`processed_dir` and `results_dir` are additionally protected by a **cross-project lock**: a `.pastforward.lock` file written inside the resolved target directory itself, recording the owning project's working directory, PID, hostname, and start time. This is separate from Snakemake's own lock (see "pastForward says it is locked" below). It exists because two *different* project directories/configs could otherwise resolve to the same `processed_dir`/`results_dir` and run concurrently without Snakemake's own per-project lock ever seeing the conflict. It's released automatically when a run finishes (success or error). If a run is killed hard enough that it can't release its own lock (e.g. `kill -9`, a crashed machine), the next run on the *same* host detects that the recorded PID is no longer running and takes over automatically, logging a warning. If the lock was written on a *different* host, pastForward can't verify whether that PID is still alive and fails with an error instead of guessing. If you're sure that run is no longer active, delete the `.pastforward.lock` file inside the target directory manually. Unlike Snakemake's lock, `snakemake --unlock` does **not** clear this one.
+`processed_dir` and `results_dir` are additionally protected by a **cross-project lock**: a `.pastforward.lock` file written inside the resolved target directory itself, recording the owning project's working directory, PID, hostname, and start time. This is separate from Snakemake's own lock (see "pastForward says it is locked" below). It exists because two *different* project directories/configs could otherwise resolve to the same `processed_dir`/`results_dir` and run concurrently without Snakemake's own per-project lock ever seeing the conflict. It's released automatically when a run finishes (success or error). If a run is killed hard enough that it can't release its own lock (e.g. `kill -9`, a crashed machine), the next run on the *same* host detects that the recorded PID is no longer running and takes over automatically, logging a warning. If the lock was written on a *different* host, pastForward can't verify whether that PID is still alive and fails with an error instead of guessing. If you're sure that run is no longer active, delete the `.pastforward.lock` file inside the target directory manually. Unlike Snakemake's lock, `./pastForward unlock` does **not** clear this one.
 
 ---
 
@@ -260,32 +261,34 @@ If none of these are set for a species, nothing on disk is touched beyond what p
 
 **Q: What is the recommended command to run pastForward?**
 ```bash
-snakemake --cores <N> --software-deployment-method conda --keep-going --rerun-trigger mtime
+./pastForward run --cores <N>
 ```
 
-`--keep-going` lets pastForward continue past individual rule failures (e.g., ECMSD failing on low-coverage samples). `--rerun-trigger mtime` re-runs only rules whose inputs have changed since the last run.
+It adds `--software-deployment-method conda`, `--keep-going` and `--rerun-trigger mtime` for you. `--keep-going` lets pastForward continue past individual rule failures (e.g., ECMSD failing on low-coverage samples). `--rerun-trigger mtime` re-runs only rules whose inputs have changed since the last run. To call `snakemake` directly instead, see [Running with Snakemake](snakemake.md).
 
 **Q: How do I run pastForward in the background so I can close my terminal?**
-```bash
-nohup snakemake --cores 40 --software-deployment-method conda --keep-going --rerun-trigger mtime > pipeline.log 2>&1 &
-```
+`./pastForward run` already runs in the background. Add `--fg` to keep it in the foreground. Check on it with:
 
-Monitor progress with `tail -f pipeline.log`.
+```bash
+./pastForward status            # progress and how the run ended
+./pastForward status --watch    # same, refreshed every 5 seconds
+./pastForward print-log --live  # follow the log
+```
 
 **Q: How do I do a dry run to see what would be executed without actually running anything?**
 ```bash
-snakemake --cores <N> --software-deployment-method conda --dryrun
+./pastForward dryrun
 ```
 
 **Q: pastForward crashed midway. How do I resume?**
-Re-run with `--rerun-incomplete` to pick up where it left off:
+`resume` works like `run` and adds `--rerun-incomplete`, so it picks up where it left off:
 
 ```bash
-snakemake --cores <N> --software-deployment-method conda --keep-going --rerun-trigger mtime --rerun-incomplete
+./pastForward resume --cores <N>
 ```
 
 **Q: How do I force a specific rule or file to be regenerated?**
-Delete the output file and re-run, or use `--forcerun <rule_name>` to force a specific rule. Use `--touch` with `--forceall` to mark all outputs as up to date without re-running (use as a last resort). Check the Snakemake documentation for more options on controlling rule execution.
+Delete the output file and re-run, or pass `--forcerun <rule_name>` to `./pastForward run` to force a specific rule. To do the opposite and mark existing outputs as up to date without re-running, use `./pastForward touch` (add `--forceall` to include everything, as a last resort). Check the Snakemake documentation for more options on controlling rule execution.
 
 **Q: I have lots of data. How does pastForward manage disk space?**
 pastForward deletes intermediate files as soon as they are no longer needed. The final outputs (e.g. `_final.bam`, summary reports) are kept, while temporary files (e.g. raw mappings, rescaled BAMs) are removed once they have been processed. Where possible, outputs are also compressed.
@@ -314,7 +317,7 @@ Because a benchmark file is written only when a job actually runs. Snakemake nev
 Two other gaps are expected. A step that failed writes nothing at all, because Snakemake records the measurement only on success, so a step that was killed for using too much memory leaves no trace of that. And the three reference-indexing steps are never measured, because Snakemake does not allow a step to be both benchmarked and eligible for its between-workflow cache.
 
 **Q: Why is every memory column in `./pastForward benchmark` empty?**
-You are almost certainly on macOS. Snakemake measures memory through psutil, and macOS refuses a process access to its own children's memory, so every memory, CPU and I/O value comes back as `NA` and only wall time survives. Nothing is wrong with your run. For real memory numbers, do the measuring run on a Linux machine.
+You are most likely on macOS. Snakemake measures memory through psutil, and macOS refuses a process access to its own children's memory, so every memory, CPU and I/O value comes back as `NA` and only wall time survives. Nothing is wrong with your run. For real memory numbers, do the measuring run on a Linux machine.
 
 Peak memory on Linux is sampled every 0.5 seconds for the first 15 seconds of a job and every 30 seconds after that, so treat it as a good number to size a request from, with headroom, rather than as an exact peak.
 
@@ -324,7 +327,7 @@ pastForward is a plain Snakemake workflow, so it should in principle work with S
 pastForward does ship a default memory and wall time request for every step, so jobs are not submitted without one, which on most clusters would mean being killed at the partition's default time limit. See [Running on an HPC Cluster](snakemake.md#running-on-an-hpc-cluster) for the cluster-side profile you still have to write yourself, and for why to build the conda environments on the login node first.
 
 **Q: How do I change how much memory or wall time a step asks for?**
-Those live in `workflow/profiles/default/config.yaml`, a Snakemake profile that ships with the pipeline. It sets a default memory and wall time for every step, plus `--keep-going` and `--rerun-trigger mtime`. Snakemake picks it up on its own, with no flag, because it sits next to the `Snakefile`. (`--software-deployment-method conda` is deliberately not in it, so you still pass that yourself — it would otherwise make even a dry run depend on a working, recent conda.)
+Those live in `workflow/profiles/default/config.yaml`, a Snakemake profile that ships with the pipeline. It sets a default memory and wall time for every step, plus `--keep-going` and `--rerun-trigger mtime`. Snakemake picks it up on its own, with no flag, because it sits next to the `Snakefile`. (`--software-deployment-method conda` is not in it, so you still pass that yourself. Otherwise even a dry run would need a working, recent conda.)
 
 The shipped numbers are a generous floor, not measurements. For numbers that fit your data, run the pipeline once and then `./pastForward benchmark --emit-profile`, which prints a `set-resources:` block measured from that run. Paste it into the same file, below `default-resources:`. A `set-resources:` entry wins over a value written into a rule, which `default-resources:` does not.
 
@@ -335,7 +338,7 @@ For a one-off change, override on the command line instead. This beats the profi
 ```
 
 **Q: I put my own `profiles/default/config.yaml` in my project folder and the pipeline stopped working. Why?**
-Because Snakemake uses that file *instead* of the one shipped in `workflow/profiles/default/`, rather than merging the two. Everything the shipped profile set is gone: the memory and wall time defaults, and the rerun behavior. This is the trap: a folder created to change one number silently drops every other setting, and it does so without any error or warning.
+Because Snakemake uses that file *instead* of the one shipped in `workflow/profiles/default/`, rather than merging the two. Everything the shipped profile set is gone: the memory and wall time defaults, and the rerun behavior. So a folder created to change one number drops every other setting, without any error or warning.
 
 There are three safe ways to change something:
 
@@ -348,11 +351,9 @@ To run with no profile at all, use `--workflow-profile none`.
 Whichever you choose, check that it took effect. Snakemake ignores a key it does not recognize without any error or warning, so a misspelled setting looks exactly like a working one. `./pastForward dryrun` prints a `resources:` line per job, which is where the numbers actually show up.
 
 **Q: Can I stop a running pastForward instance without corrupting the results?**
-Yes. You can terminate the process (e.g. with `Ctrl+C` or `kill`) without corrupting results. pastForward leaves behind a lock file so that concurrent runs cannot interfere with each other.
+Yes. Use `./pastForward abort`, which stops the background run gracefully. `./pastForward abort --force` kills it and everything it started at once. A foreground run (`--fg`) can be stopped with `Ctrl+C`.
 
-In case you run pastForward in the background, you can stop it using `kill -SIGINT <PID>` where `<PID>` is the process ID of the running instance (you can get it with `head <pipeline.log>`).
-
-When you are ready to resume, run pastForward again with the same command. It will detect the existing lock file and prompt you to unlock it using `snakemake --unlock`. After unlocking, you can re-run pastForward, and it will pick up where it left off without corrupting any results.
+To continue later, run `./pastForward resume --cores <N>`. If it reports a lock, run `./pastForward unlock` first. It picks up where it left off without corrupting any results.
 
 ---
 
@@ -384,7 +385,7 @@ Also, splitting by cluster allows for more efficient parallel processing. Each c
 pastForward follows a priority chain: rescaled BAM → deduplicated BAM → sorted BAM, using the most-processed available result based on which steps are enabled.
 
 **Q: Deduplication runs in reference_module. Why not in REVEAL processing too?**
-See "Why doesn't REVEAL processing deduplicate reads..." in the REVEAL Module section below. Short version: it's deliberate, not a gap, because of how the feature library is built.
+See "Why doesn't REVEAL processing deduplicate reads..." in the REVEAL Module section below. In short: the feature library is built in a way that makes deduplication wrong there.
 
 ---
 
@@ -449,12 +450,12 @@ In case multiple references are available in `<species>/input/reference_module/`
 Sequences are flagged if the log₂ fold-change in median coverage across individuals exceeds `CN_FC` (default ≥ 2) or the absolute difference exceeds `CN_ABS` (default Δ ≥ 10). Flagged sequences are sorted to the top of the comparison table and written to a companion `_flagged_seqids.tsv` file.
 
 **Q: Deduplication runs in reference_module (via DeDup). Why doesn't REVEAL processing deduplicate reads too?**
-reveal_module maps reads fresh from the merged FASTQ against the combined SCG + feature-library reference; it does not run DeDup or any other deduplication tool on that mapping. This is intentional, not an oversight.
+reveal_module maps reads fresh from the merged FASTQ against the combined SCG + feature-library reference; it does not run DeDup or any other deduplication tool on that mapping. This is on purpose.
 
-The feature library is a many-genomic-copies-to-one-consensus reference: reads from distinct, independent copies of a repeat or transposable element elsewhere in the genome legitimately align to the same consensus coordinate, with the same start position and CIGAR. Deduplicating here would strip real multi-copy signal rather than PCR artifacts, biasing the copy-number/abundance signal REVEAL exists to measure in the first place, in the opposite direction from what dedup is meant to fix.
+The feature library is a many-genomic-copies-to-one-consensus reference: reads from distinct, independent copies of a repeat or transposable element elsewhere in the genome align to the same consensus coordinate, with the same start position and CIGAR. Deduplicating here would strip real multi-copy signal rather than PCR artifacts, and bias the copy-number signal REVEAL is meant to measure.
 
 **Q: Which REVEAL build does pastForward install?**
-`pipeline.reveal_module.settings.version_source` picks which build. The default `"conda"` takes REVEAL from the bioconda-packaged `reveal-tools=1.*`. `"latest_release"` side-loads the newest tagged release from [SarahSaadain/REVEAL](https://github.com/SarahSaadain/REVEAL) instead, in its own conda env. There is also an **experimental** `"dev"` option that tracks the tip of REVEAL's `develop` branch. It is unreleased and untested, so use it at your own risk. The same three options exist for ECMSD via `tools.ecmsd.settings.version_source`, where `"conda"` is the bioconda package `ecmsd=1.*` — the mechanism is identical for both tools.
+`pipeline.reveal_module.settings.version_source` picks which build. The default `"conda"` takes REVEAL from the bioconda-packaged `reveal-tools=1.*`. `"latest_release"` side-loads the newest tagged release from [SarahSaadain/REVEAL](https://github.com/SarahSaadain/REVEAL) instead, in its own conda env. There is also an **experimental** `"dev"` option that tracks the tip of REVEAL's `develop` branch. It is unreleased and untested, so use it at your own risk. The same three options exist for ECMSD via `tools.ecmsd.settings.version_source`, where `"conda"` is the bioconda package `ecmsd=1.*`. Both tools work the same way.
 
 **Q: I set `version_source` to `latest_release` or `dev`, but pastForward is still using the old version. Why?**
 The `latest_release`/`dev` builds of REVEAL and ECMSD are installed by a conda post-deploy script that runs exactly once, right when their conda environment is first created. It has no way to notice a config change on later runs, so it never re-checks GitHub on its own. Switching `version_source` itself (e.g. `conda` to `latest_release`) points the rule at a different env file, and Snakemake builds that env fresh on its own, so you do not have to do anything by hand. But staying on the same unpinned `version_source` while wanting to pick up a newer release/commit needs that one environment force-rebuilt:
@@ -462,7 +463,9 @@ The `latest_release`/`dev` builds of REVEAL and ECMSD are installed by a conda p
 ./pastForward doctor --rebuild-envs ecmsd_git_release   # or: ecmsd_git_development, reveal_git_release, reveal_git_development
 ./pastForward doctor --rebuild-envs                      # rebuilds every conda env, not just these
 ```
-`./pastForward doctor` on its own lists every conda environment the pipeline uses and whether each is currently built, without changing anything. Under the hood this deletes that environment's folder under `.snakemake/conda/` and runs `snakemake --software-deployment-method conda --conda-create-envs-only` to recreate it. That is the same thing you'd do by hand with plain `snakemake --cores <N> --software-deployment-method conda --conda-create-envs-only --conda-cleanup-envs`. This is intentional: it keeps a single pipeline run reproducible even when `version_source` is set to a moving target, at the cost of not auto-updating mid-project.
+`--rebuild-envs` deletes that environment's folder under `.snakemake/conda/` and runs `snakemake --software-deployment-method conda --conda-create-envs-only` to recreate it, the same as `snakemake --cores <N> --software-deployment-method conda --conda-create-envs-only --conda-cleanup-envs` by hand. `./pastForward doctor` on its own lists every conda environment the pipeline uses and whether each is built, without changing anything.
+
+The install-once behavior is on purpose: it keeps a pipeline run reproducible even when `version_source` is a moving target, at the cost of not updating mid-project.
 
 ---
 
@@ -489,9 +492,9 @@ Do not confuse this with `insufficient_data`, which means one individual fell be
 ## Troubleshooting
 
 **Q: pastForward says it is locked. What do I do?**
-A lock file is left behind when a previous run was forcefully terminated. Run `snakemake --unlock` to remove it, then re-run normally. Do not delete the lock file manually.
+A lock file is left behind when a previous run was forcefully terminated. Run `./pastForward unlock` to remove it, then re-run normally. Do not delete the lock file manually.
 
-This is Snakemake's own lock, scoped to this project's working directory (its `.snakemake/` folder). It's unrelated to the separate cross-project `.pastforward.lock` file described in "Can I store a species' data outside the project directory?" above. `snakemake --unlock` does not touch that one. If pastForward instead reports a `.pastforward.lock` conflict, see that Q&A for how to resolve it.
+This is Snakemake's own lock, scoped to this project's working directory (its `.snakemake/` folder). It's unrelated to the separate cross-project `.pastforward.lock` file described in "Can I store a species' data outside the project directory?" above. `./pastForward unlock` does not touch that one. If pastForward instead reports a `.pastforward.lock` conflict, see that Q&A for how to resolve it.
 
 **Q: I accidentally deleted some intermediate files. Can I regenerate them?**
 Yes. Delete the corresponding output files (or use `--forcerun`) and re-run pastForward. Snakemake will re-execute only the rules needed to regenerate the missing files.

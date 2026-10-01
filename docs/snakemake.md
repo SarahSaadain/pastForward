@@ -121,8 +121,6 @@ Do **not** create your own `profiles/default/` folder in your project folder to 
 
 pastForward is a standard Snakemake workflow, so it should work with Snakemake's [cluster/HPC execution support](https://snakemake.readthedocs.io/en/stable/executing/cluster.html) (for example, Slurm or PBS) via the matching [executor plugin](https://snakemake.github.io/snakemake-plugin-catalog/), with no changes to the pipeline itself. This hasn't been specifically tested yet on a Slurm-based cluster, though that's planned. If you try it, feedback is very welcome.
 
-Two things are worth knowing before you try.
-
 **Every job needs a memory and a time request, and the shipped profile gives it one.** Without those, a batch system falls back to the partition's defaults, and a partition wall time is often under an hour, which kills the longer steps partway through. The [resource defaults](#resource-defaults) above cover this with a generous floor. Replace them with measured numbers (`./pastForward benchmark --emit-profile`) before a large run, because a floor that fits the small steps is not the same as a request that fits the big ones.
 
 **Cluster settings belong in a separate profile, not in the shipped one.** Things like the account and partition to submit to are specific to your machine, so keep them apart from the pipeline's own resource numbers. Write your own profile folder and pass it with `--profile`. Snakemake merges the two, so you don't have to repeat anything from the shipped one:

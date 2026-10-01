@@ -152,8 +152,8 @@ Optionally removes or extracts reads that did not map to the reference. Default:
 | `analysis.settings.snp_divergence_min_contig_length` | `10000` | `bcftools` method only. Contigs shorter than this are never picked for the region set. |
 | `analysis.settings.snp_divergence_min_depth` | `3` | `bcftools` method only. Minimum read depth for a site to count toward SNP density. |
 | `analysis.settings.snp_divergence_max_depth` | `50` | `bcftools` method only. Maximum per-site depth passed to `bcftools mpileup --max-depth`. |
-| `analysis.settings.snp_divergence_min_mapping_quality` | `30` | `bcftools` method only. Minimum mapping quality passed to `mpileup --min-MQ` and `samtools depth --min-MQ`. |
-| `analysis.settings.snp_divergence_min_base_quality` | `30` | `bcftools` method only. Minimum base quality passed to `mpileup --min-BQ` and `samtools depth --min-BQ`. |
+| `analysis.settings.snp_divergence_min_mapping_quality` | `30` | `bcftools` method only. Minimum mapping quality passed to `mpileup --min-MQ` and `samtools depth -Q`. |
+| `analysis.settings.snp_divergence_min_base_quality` | `30` | `bcftools` method only. Minimum base quality passed to `mpileup --min-BQ` and `samtools depth -q`. |
 
 Each method writes its own set of files, with the method in the filename: `{reference}_combined_snp_divergence_{method}.csv`, `{reference}_combined_snp_divergence_{method}_detailed.csv` and, with `create_plots` on, `{species}_{reference}_snp_divergence_{method}_bar.png`.
 
