@@ -1,4 +1,6 @@
 """status, abort, print-log: watching and stopping a run, and reading its logs."""
+import contextlib
+import io
 import json
 import os
 import re
@@ -11,7 +13,6 @@ from pathlib import Path
 
 from .common import (
     ABORTING_RE,
-    CONFIGFILE_FLAGS,
     CORES_FLAGS,
     CYAN,
     DEFAULT_CONFIGFILE,
@@ -25,6 +26,7 @@ from .common import (
     YELLOW,
     _color,
     _colorize,
+    _configfiles_from_args,
     _die,
     _ensure_project_root,
     _format_duration,
@@ -123,11 +125,8 @@ def _cores_from_cmd(cmd):
     return None
 
 
-def _configfile_from_cmd(cmd):
-    for i, a in enumerate(cmd):
-        if a in CONFIGFILE_FLAGS and i + 1 < len(cmd):
-            return cmd[i + 1]
-    return DEFAULT_CONFIGFILE
+def _configfiles_from_cmd(cmd):
+    return _configfiles_from_args(cmd) or [DEFAULT_CONFIGFILE]
 
 
 def _read_project_name(configfile):
@@ -223,8 +222,7 @@ def cmd_status(argv):
     if watch:
         try:
             while True:
-                os.system("clear")
-                alive = _print_status(tail=WATCH_TAIL_LINES)
+                alive = _print_watch_frame()
                 if not alive:
                     break
                 time.sleep(5)
@@ -232,6 +230,32 @@ def cmd_status(argv):
             pass
         return
     _print_status()
+
+
+class _TtyBuffer(io.StringIO):
+    """Collects one frame of status output. Reports the real terminal's isatty() so _color()
+    still colors it."""
+
+    def __init__(self, tty):
+        super().__init__()
+        self._tty = tty
+
+    def isatty(self):
+        return self._tty
+
+
+def _print_watch_frame():
+    """One --watch refresh. Builds the whole frame first, then overwrites the screen in a single
+    write: cursor home, each line followed by erase-to-end-of-line, then erase the rest. Clearing
+    the screen first and printing line by line (as `clear` did) showed a blank screen between
+    frames, which flickers."""
+    frame = _TtyBuffer(sys.stdout.isatty())
+    with contextlib.redirect_stdout(frame):
+        alive = _print_status(tail=WATCH_TAIL_LINES)
+    lines = frame.getvalue().splitlines()
+    sys.stdout.write("\033[H" + "".join(line + "\033[K\n" for line in lines) + "\033[J")
+    sys.stdout.flush()
+    return alive
 
 
 def _print_log_tail(text, log_path, tail):
@@ -270,8 +294,10 @@ def _print_status(tail=None):
     alive = _is_alive(pid)
     started = datetime.fromisoformat(state["started_at"])
     log_path = Path(state["log_file"])
-    configfile = _configfile_from_cmd(state["cmd"])
-    project_name = _read_project_name(configfile) or _color(DIM, "(unknown)")
+    configfiles = _configfiles_from_cmd(state["cmd"])
+    # Later files override earlier ones, and config/config.yaml (when present) comes first.
+    names = [_read_project_name(f) for f in [DEFAULT_CONFIGFILE] + configfiles]
+    project_name = next((n for n in reversed(names) if n), None) or _color(DIM, "(unknown)")
     cores = _cores_from_cmd(state["cmd"]) or "?"
     # `run`/`resume` pass unknown flags straight through to Snakemake, so `run --cores N -n`
     # tracks a dry run in the state file. A dry run executes nothing, so none of the progress
@@ -288,7 +314,7 @@ def _print_status(tail=None):
     # Progress together at the end, behind a blank line, stops the bar from getting lost in
     # the middle of the header.
     print(f"{_color(CYAN, 'Project:')}   {project_name}")
-    print(f"{_color(CYAN, 'Config:')}    {configfile}")
+    print(f"{_color(CYAN, 'Config:')}    {', '.join(configfiles)}")
     # The PID line stays neutral: the Status line below already says how the run ended, so a red
     # "not running" here would flag every clean finish as if something went wrong.
     print(f"{_color(CYAN, 'PID:')}       {pid} ({_color(GREEN, 'running') if alive else _color(DIM, 'not running')})")
@@ -365,6 +391,18 @@ def cmd_abort(argv):
         print(_color(DIM, "Use --force (-f) to kill the whole process group immediately instead."))
 
 
+def _live_run_log():
+    """The tracked run's log while that run is still going. A `dryrun` started next to it would
+    otherwise be the newest file in logs/ and hide the run. Once the run has ended, the newest
+    log is what the user wants again."""
+    try:
+        state = json.loads(STATE_FILE.read_text())
+        log_path = Path(state["log_file"])
+    except (OSError, ValueError, KeyError):
+        return None
+    return log_path if _is_alive(state.get("pid", -1)) and log_path.exists() else None
+
+
 def cmd_print_log(argv):
     _ensure_project_root(require_snakemake=False)
     live = any(a in ("--live", "-l") for a in argv)
@@ -384,7 +422,7 @@ def cmd_print_log(argv):
     logs = sorted(LOG_DIR.glob("*.log"), key=lambda p: p.stat().st_mtime)
     if not logs:
         _die("pastForward: no log files found in logs/.")
-    latest = logs[-1]
+    latest = _live_run_log() or logs[-1]
 
     if live:
         cmd = ["tail", "-n", str(tail_n or DEFAULT_TAIL_LINES), "-f", str(latest)]

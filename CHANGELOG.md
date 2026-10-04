@@ -15,6 +15,9 @@ All notable changes to this project will be documented in this file.
 - **SNP divergence check**: `pipeline.reference_module.analysis.settings.snp_divergence_check` flags individuals whose divergence from the reference is an outlier within their cohort. This can point to a wrong reference, cross-species contamination, or a mislabeled individual. Warning only. Methods: `samtools_stats` (default, no extra runtime), `bcftools` (adds heterozygous-call rate), or `both`. Default `false`. See [config/parameters.md](config/parameters.md)
 - **`pipeline.reveal_module.normalization.settings.skip_low_coverage_individuals`**: excludes individuals with too little SCG coverage for REVEAL normalization instead of failing the whole species. Excluded individuals are listed in `{species}_{feature_library}_excluded_individuals.tsv`. Default `false`. See [config/parameters.md](config/parameters.md)
 - **Short flags**: `status -w`, `abort -f`, `print-log -l` and `print-log -t [N]`
+- **`./pastForward check` and `preview` take `--configfile`**, merged on top of `config/config.yaml` the same way Snakemake does it for `run`
+- **`./pastForward unlock` handles `.pastforward.lock`**: it lists the cross-project locks in the config's `processed_dir`/`results_dir` targets, and `--cross-project` removes them. A lock whose run is still alive on this host is never removed. See [docs/FAQ.md](docs/FAQ.md)
+- **`./pastForward <command> --help`** (or `-h`) shows the help for that one command. A mistyped command now suggests the closest one
 - **`config/max_config_modern_sample.yaml`**: example config for modern DNA. All steps run as in `max_config_sample.yaml`, except deduplication, damage rescaling and damage analysis, which are off
 
 ### Changed
@@ -29,6 +32,11 @@ All notable changes to this project will be documented in this file.
 - **`./pastForward status` shows Snakemake's own run time** for a finished run, from the `Elapsed time` line Snakemake logs on exit. A killed run still falls back to the log file's last write
 
 ### Bug Fixes
+
+- **`./pastForward run --configfile <file>` failed without `config/config.yaml`**, even though Snakemake does not need it then. Same for `dryrun` and `touch`. A missing `--configfile` file is now reported before Snakemake starts
+- **`./pastForward print-log` could show the wrong log**: a `dryrun` started during a run was newer, so it was shown instead of the run. While a tracked run is going, its log is shown
+- **`./pastForward unlock` left a `.pastforward.lock` behind** when the config sets `processed_dir` or `results_dir`. Same host runs took it over, but it looked like a stuck lock
+- **`./pastForward status --watch` flickered**: each refresh cleared the screen before drawing. It now draws over the previous frame
 
 - **Workflow failed to parse without `config/config.yaml`**: a fresh clone has no config, so `snakemake --lint` and the [Snakemake workflow catalog](https://snakemake.github.io/snakemake-workflow-catalog) reported the workflow as broken. A missing config is now reported with a clear message when you run it
 - **`./pastForward dryrun` did not match `./pastForward run`**: it left out `--rerun-trigger mtime` and could show an almost full rerun that `run` would never do

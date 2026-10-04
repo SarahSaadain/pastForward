@@ -61,7 +61,62 @@ def _die(msg):
     sys.exit(_color(RED, msg))
 
 
-def _ensure_project_root(require_snakemake=True, require_config=False):
+def _configfiles_from_args(argv):
+    """Every file named after --configfile/--configfiles (also in its --flag=value form). Like
+    Snakemake's own option it takes several files at once, up to the next flag, and may be
+    repeated; argparse keeps only the last occurrence, so this does too."""
+    files = []
+    for i, arg in enumerate(argv):
+        flag, eq, value = arg.partition("=")
+        if flag not in CONFIGFILE_FLAGS:
+            continue
+        if eq:
+            files = [value]
+            continue
+        files = []
+        for follower in argv[i + 1 :]:
+            if follower.startswith("-"):
+                break
+            files.append(follower)
+    return files
+
+
+def _strip_configfile_args(argv):
+    """argv without its --configfile flags and their files, for commands that take nothing else."""
+    rest, skipping = [], False
+    for arg in argv:
+        flag, eq, _ = arg.partition("=")
+        if flag in CONFIGFILE_FLAGS:
+            skipping = not eq
+        elif not (skipping and not arg.startswith("-")):
+            skipping = False
+            rest.append(arg)
+    return rest
+
+
+def _merge_config(base, update):
+    # Same recursive merge Snakemake's update_config() does: nested dicts are merged key by key,
+    # everything else is replaced.
+    for key, value in update.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            _merge_config(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
+def _load_config(configfiles):
+    """The config a Snakemake run with these --configfile files would see: config/config.yaml
+    (initialize.smk loads it whenever it exists), then each given file merged on top in order."""
+    import yaml  # not at module level: version/print-log must work without PyYAML
+
+    config = {}
+    for path in ([DEFAULT_CONFIGFILE] if Path(DEFAULT_CONFIGFILE).is_file() else []) + list(configfiles):
+        _merge_config(config, yaml.safe_load(Path(path).read_text()) or {})
+    return config
+
+
+def _ensure_project_root(require_snakemake=True, require_config=False, configfiles=()):
     if not Path("workflow").is_dir() or not Path("config").is_dir():
         _die(
             "pastForward: this isn't a project root (needs workflow/ and config/ in the "
@@ -70,7 +125,12 @@ def _ensure_project_root(require_snakemake=True, require_config=False):
     # Only for the commands that read the config. The workflow itself no longer insists on
     # config/config.yaml being there (see the `configfile:` comment in initialize.smk), so
     # without this a missing config would surface as a Snakemake traceback instead.
-    if require_config and not Path(DEFAULT_CONFIGFILE).is_file():
+    # With --configfile the default file is optional (initialize.smk only loads it when present),
+    # but every file named there must exist.
+    missing = [f for f in configfiles if not Path(f).is_file()]
+    if require_config and missing:
+        _die(f"pastForward: config file(s) not found: {', '.join(missing)}")
+    if require_config and not configfiles and not Path(DEFAULT_CONFIGFILE).is_file():
         _die(
             f"pastForward: no {DEFAULT_CONFIGFILE} found in this project root. Copy "
             "config/min_config_sample.yaml there and edit it, or generate one with "

@@ -1,23 +1,30 @@
 """run, resume, dryrun, touch, unlock: the commands that shell out to `snakemake`."""
 import json
+import socket
 import subprocess
 import sys
 from datetime import datetime
+from pathlib import Path
 
 from .common import (
     CORES_FLAGS,
     DIM,
     GREEN,
     LOG_DIR,
+    RED,
     SDM_FLAG,
     SNAKEMAKE_LINE_RULES,
     STATE_DIR,
     STATE_FILE,
+    YELLOW,
     _color,
     _colorize,
+    _configfiles_from_args,
     _die,
     _ensure_project_root,
     _is_alive,
+    _load_config,
+    _strip_configfile_args,
 )
 
 
@@ -119,7 +126,7 @@ def _run_background(cmd, log_path):
 
 
 def cmd_run(argv, extra_flags=(), name="run"):
-    _ensure_project_root(require_config=True)
+    _ensure_project_root(require_config=True, configfiles=_configfiles_from_args(argv))
     # --fg/--foreground is pastForward's own flag, not snakemake's - pulled out here rather
     # than by argparse so it can sit anywhere among the passed-through snakemake args.
     extra = [a for a in argv if a not in ("--fg", "--foreground")]
@@ -143,21 +150,68 @@ def cmd_resume(argv):
 
 
 def cmd_dryrun(argv):
-    _ensure_project_root(require_config=True)
+    _ensure_project_root(require_config=True, configfiles=_configfiles_from_args(argv))
     cmd = _build_dryrun_cmd(argv)
     log_path = LOG_DIR / f"dryrun_{_timestamp()}.log"
     sys.exit(_run_foreground(cmd, log_path))
 
 
 def cmd_touch(argv):
-    _ensure_project_root(require_config=True)
+    _ensure_project_root(require_config=True, configfiles=_configfiles_from_args(argv))
     cmd = _build_touch_cmd(argv)
     log_path = LOG_DIR / f"touch_{_timestamp()}.log"
     sys.exit(_run_foreground(cmd, log_path))
 
 
+def _cross_project_locks(config):
+    """Every .pastforward.lock in the processed_dir/results_dir targets this config points at,
+    as (lock_path, owner) pairs. Only overridden locations can hold one (see species_paths.py)."""
+    sys.path.insert(0, "workflow")
+    from scripts import species_paths
+
+    found = {}
+    for species in config.get("species") or {}:
+        for category in species_paths.WRITE_CATEGORIES:
+            target = species_paths._resolve_category_target(config, species, category)
+            lock = Path(target or "", species_paths.LOCK_FILENAME)
+            if target and lock.is_file():
+                found[lock] = species_paths._read_lock(lock) or {}
+    return list(found.items())
+
+
+def _lock_owner_alive(owner):
+    # Only a PID on this host can be checked. One from another host counts as not alive here,
+    # because the user asked to clear it and the FAQ's only other advice is deleting it by hand.
+    return owner.get("hostname") == socket.gethostname() and _is_alive(owner.get("pid", -1))
+
+
 def cmd_unlock(argv):
-    _ensure_project_root()
-    if argv:
-        _die("pastForward unlock: takes no arguments.")
-    sys.exit(subprocess.call(["snakemake", "--unlock", "--cores", "1"]))
+    configfiles = _configfiles_from_args(argv)
+    rest = _strip_configfile_args(argv)
+    cross_project = "--cross-project" in rest
+    rest = [a for a in rest if a != "--cross-project"]
+    if rest:
+        _die(f"pastForward unlock: unknown argument(s): {' '.join(rest)}")
+    _ensure_project_root(configfiles=configfiles)
+    # --dryrun: without it initialize.smk takes the cross-project .pastforward.lock for every
+    # processed_dir/results_dir override, and an unlock never fires the onsuccess:/onerror: hooks
+    # that release it. The unlock itself still happens.
+    code = subprocess.call(["snakemake", "--unlock", "--dryrun", "--cores", "1"])
+
+    locks = _cross_project_locks(_load_config(configfiles))
+    if not locks:
+        sys.exit(code)
+    print()
+    print(_color(YELLOW, f"Cross-project locks ({len(locks)}), separate from Snakemake's own lock:"))
+    for lock, owner in locks:
+        alive = _lock_owner_alive(owner)
+        who = f"host {owner.get('hostname')}, PID {owner.get('pid')}, project {owner.get('working_directory')}"
+        if cross_project and not alive:
+            lock.unlink()
+            print(f"  {lock}  {_color(GREEN, 'removed')}  ({who})")
+        else:
+            label = _color(RED, "owner still running") if alive else _color(DIM, "kept")
+            print(f"  {lock}  {label}  ({who})")
+    if not cross_project:
+        print(_color(DIM, "Add --cross-project to remove them. A lock whose run is still alive on this host is never removed."))
+    sys.exit(code)

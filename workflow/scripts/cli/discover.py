@@ -3,9 +3,21 @@ import io
 import logging
 import re
 import sys
-from pathlib import Path
 
-from .common import CYAN, DEFAULT_CONFIGFILE, DIM, GREEN, RED, YELLOW, _color, _colorize, _die, _ensure_project_root
+from .common import (
+    CYAN,
+    DIM,
+    GREEN,
+    RED,
+    YELLOW,
+    _color,
+    _colorize,
+    _configfiles_from_args,
+    _die,
+    _ensure_project_root,
+    _load_config,
+    _strip_configfile_args,
+)
 
 
 # Must match initialize.smk's logging.basicConfig, so the regexes below parse in-process
@@ -26,7 +38,15 @@ CHECK_LINE_RULES = [
 ]
 
 
-def _capture_pipeline_log(include_check):
+def _configfiles_only(argv, command):
+    # check/preview run in-process, so there is no Snakemake left to pass other flags on to.
+    rest = _strip_configfile_args(argv)
+    if rest:
+        _die(f"pastForward {command}: unknown argument(s): {' '.join(rest)}. Only --configfile <file> [...] is accepted.")
+    return _configfiles_from_args(argv)
+
+
+def _capture_pipeline_log(include_check, configfiles=()):
     """Runs the pipeline's own discovery / expected-output code in-process and returns the log
     output it produces, formatted exactly as initialize.smk formats it for a real run - so the
     parsing in cmd_check/cmd_preview is the same either way.
@@ -35,16 +55,15 @@ def _capture_pipeline_log(include_check):
     include_check=False calls get_expected_outputs_from_pipeline() (the Requesting/Skipping
     lines). Neither needs Snakemake: no DAG, no conda envs, no directory lock.
     """
-    _ensure_project_root(require_snakemake=False, require_config=True)
+    _ensure_project_root(require_snakemake=False, require_config=True, configfiles=configfiles)
     sys.path.insert(0, "workflow")
     try:
-        import yaml
         from scripts.pipeline_namespace import load_pipeline_namespace
         from scripts.species_paths import setup_species_data_locations
+
+        config = _load_config(configfiles)  # needs PyYAML
     except ImportError as e:
         _die(f"pastForward: {e}. Activate the pipeline's conda env first.")
-
-    config = yaml.safe_load(Path(DEFAULT_CONFIGFILE).read_text()) or {}
     buffer = io.StringIO()
     handler = logging.StreamHandler(buffer)
     handler.setFormatter(logging.Formatter(LOG_FORMAT, LOG_DATE_FORMAT))
@@ -70,12 +89,10 @@ def _capture_pipeline_log(include_check):
 
 
 def cmd_check(argv):
-    if argv:
-        _die("pastForward check: takes no arguments (it always reads config/config.yaml).")
-    text = _capture_pipeline_log(include_check=True)
+    text = _capture_pipeline_log(include_check=True, configfiles=_configfiles_only(argv, "check"))
     m = DETECTED_SPECIES_RE.search(text)
     if not m:
-        _die("pastForward: no species found — check config.yaml.")
+        _die("pastForward: no species found — check the config.")
     # check.py's tree lines all start with "-" or indentation (or are blank, between species) -
     # the first line that starts with anything else is the next, unrelated log message.
     lines = text[m.start() :].splitlines()
@@ -89,9 +106,7 @@ def cmd_check(argv):
 
 
 def cmd_preview(argv):
-    if argv:
-        _die("pastForward preview: takes no arguments (it always reads config/config.yaml).")
-    text = _capture_pipeline_log(include_check=False)
+    text = _capture_pipeline_log(include_check=False, configfiles=_configfiles_only(argv, "preview"))
     skipped_species = re.findall(r"Skipping species '(.+?)' \(execute: false\)", text)
     existing = re.findall(r"- Skipping: (.+)", text)
     requested = re.findall(r"- Requesting: (.+)", text)
@@ -110,4 +125,4 @@ def cmd_preview(argv):
     for f in requested:
         print(f"  - {f}")
     if not requested:
-        print(_color(DIM, "  (none — check config.yaml, or run `./pastForward check` to see what was discovered)"))
+        print(_color(DIM, "  (none — check the config, or run `./pastForward check` to see what was discovered)"))

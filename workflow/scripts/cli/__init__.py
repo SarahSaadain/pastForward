@@ -19,6 +19,7 @@ on any "-"-looking token - like a genuine snakemake flag, e.g. --forceall - that
 before the parser has committed to consuming positionals. Splitting on the command name
 ourselves sidesteps that entirely.
 """
+import difflib
 import sys
 import textwrap
 from pathlib import Path
@@ -57,11 +58,17 @@ SECTIONS = {
     "Before a run": {
         "check": (
             cmd_check,
-            "",
+            "[--configfile <file>...]",
             "Show what pastForward discovers on disk for the current config "
-            "(species/individuals/references/...).",
+            "(species/individuals/references/...). --configfile merges more config files on top "
+            "of config/config.yaml, the same way `run --configfile` does.",
         ),
-        "preview": (cmd_preview, "", "Show expected output files for the current config, including skipped ones."),
+        "preview": (
+            cmd_preview,
+            "[--configfile <file>...]",
+            "Show expected output files for the current config, including skipped ones. Takes "
+            "--configfile like `check`.",
+        ),
         "dryrun": (cmd_dryrun, "[snakemake-args...]", "Run `snakemake --dryrun` in the foreground."),
     },
     "Run the pipeline": {
@@ -92,7 +99,8 @@ SECTIONS = {
             cmd_print_log,
             "[--live/-l] [--tail/-t [N]]",
             "Print the most recently written log from logs/. --tail shows only the last N lines "
-            "(default 20) instead of the whole file. --live follows the log with `tail -f` "
+            "(default 20) instead of the whole file. While a tracked run is going, its log is the "
+            "one shown, even if a newer one (e.g. from `dryrun`) exists. --live follows the log with `tail -f` "
             "(Ctrl-C to stop). Combine with --tail to seed how many lines it starts from.",
         ),
         "abort": (
@@ -103,7 +111,14 @@ SECTIONS = {
         ),
     },
     "Fix problems": {
-        "unlock": (cmd_unlock, "", "Run `unlock` to clear a stale Snakemake lock left by a crashed run."),
+        "unlock": (
+            cmd_unlock,
+            "[--cross-project] [--configfile <file>...]",
+            "Clear a stale Snakemake lock left by a crashed run, then list any cross-project "
+            ".pastforward.lock files in the config's processed_dir/results_dir targets. "
+            "--cross-project also removes those, except one whose run is still alive on this "
+            "host. A lock written on another host is removed, so make sure that run is over.",
+        ),
         "touch": (
             cmd_touch,
             "[snakemake-args...]",
@@ -141,9 +156,23 @@ SECTIONS = {
 }
 
 COMMANDS = {name: spec[0] for commands in SECTIONS.values() for name, spec in commands.items()}
+USAGE = {name: spec[1:] for commands in SECTIONS.values() for name, spec in commands.items()}
 
 HELP_INDENT = 32
 HELP_WIDTH = 80
+
+
+def _print_usage(name, args, description):
+    usage = f"  {_color(BOLD_GREEN, name)} {args}".rstrip()
+    lines = textwrap.wrap(description, HELP_WIDTH - HELP_INDENT, break_on_hyphens=False)
+    plain_len = len(f"  {name} {args}".rstrip())
+    # Short usage: description starts on the same line. Long usage: on the next one.
+    if plain_len < HELP_INDENT:
+        print(usage + " " * (HELP_INDENT - plain_len) + lines.pop(0))
+    else:
+        print(usage)
+    for line in lines:
+        print(" " * HELP_INDENT + line)
 
 
 def _print_help():
@@ -154,16 +183,7 @@ def _print_help():
         print()
         print(_color(CYAN, f"{section}:"))
         for name, (_, args, description) in commands.items():
-            usage = f"  {_color(BOLD_GREEN, name)} {args}".rstrip()
-            lines = textwrap.wrap(description, HELP_WIDTH - HELP_INDENT, break_on_hyphens=False)
-            plain_len = len(f"  {name} {args}".rstrip())
-            # Short usage: description starts on the same line. Long usage: on the next one.
-            if plain_len < HELP_INDENT:
-                print(usage + " " * (HELP_INDENT - plain_len) + lines.pop(0))
-            else:
-                print(usage)
-            for line in lines:
-                print(" " * HELP_INDENT + line)
+            _print_usage(name, args, description)
     print()
     print("Run from a project root: the folder containing workflow/ and config/.")
     print("Logs for `run`/`dryrun`/`touch` are written to logs/<command>_<timestamp>.log.")
@@ -177,8 +197,13 @@ def main(argv=None):
     command, rest = argv[0], argv[1:]
     func = COMMANDS.get(command)
     if func is None:
-        print(_color(RED, f"pastForward: unknown command '{command}'"))
-        print()
-        _print_help()
-        sys.exit(1)
+        close = difflib.get_close_matches(command, COMMANDS, n=1)
+        hint = f" Did you mean `{close[0]}`?" if close else " Run ./pastForward --help for the list."
+        sys.exit(_color(RED, f"pastForward: unknown command '{command}'.{hint}"))
+    # `--help` after a command shows that command's entry. Without this it would reach the
+    # command itself: `run --help` failed on the missing --cores, `check --help` on the argument.
+    # `tools` prints its own, longer help.
+    if rest in (["-h"], ["--help"]) and command != "tools":
+        _print_usage(command, *USAGE[command])
+        return
     func(rest)

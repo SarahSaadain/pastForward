@@ -119,11 +119,40 @@ class StatusHelpersTestCase(unittest.TestCase):
         self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "-j", "all"]), "all")
         self.assertIsNone(cli.monitor._cores_from_cmd(["snakemake"]))
 
-    def test_configfile_from_cmd(self):
-        self.assertEqual(
-            cli.monitor._configfile_from_cmd(["snakemake", "--configfile", "other.yaml"]), "other.yaml"
-        )
-        self.assertEqual(cli.monitor._configfile_from_cmd(["snakemake", "--cores", "4"]), cli.common.DEFAULT_CONFIGFILE)
+    def test_configfiles_from_cmd(self):
+        self.assertEqual(cli.monitor._configfiles_from_cmd(["snakemake", "--configfile", "other.yaml"]), ["other.yaml"])
+        self.assertEqual(cli.monitor._configfiles_from_cmd(["snakemake", "--cores", "4"]), [cli.common.DEFAULT_CONFIGFILE])
+
+    def test_configfiles_from_args_follows_snakemake_parsing(self):
+        parse = cli.common._configfiles_from_args
+        # Several files per flag, up to the next flag.
+        self.assertEqual(parse(["--configfile", "a.yaml", "b.yaml", "--cores", "4"]), ["a.yaml", "b.yaml"])
+        # The --flag=value form takes exactly one file, so a later word is a target.
+        self.assertEqual(parse(["--configfiles=a.yaml", "target"]), ["a.yaml"])
+        # Repeating the flag replaces, it does not add up (argparse keeps the last occurrence).
+        self.assertEqual(parse(["--configfile", "a.yaml", "--configfile", "b.yaml"]), ["b.yaml"])
+        self.assertEqual(parse(["--cores", "4"]), [])
+
+    def test_strip_configfile_args_keeps_everything_else(self):
+        strip = cli.common._strip_configfile_args
+        self.assertEqual(strip(["--configfile", "a.yaml", "b.yaml", "--foo", "x"]), ["--foo", "x"])
+        self.assertEqual(strip(["--configfile=a.yaml", "target"]), ["target"])
+        self.assertEqual(strip([]), [])
+
+    def test_load_config_merges_like_snakemake(self):
+        with tempfile.TemporaryDirectory() as d:
+            orig = os.getcwd()
+            os.chdir(d)
+            try:
+                os.makedirs("config")
+                Path(cli.common.DEFAULT_CONFIGFILE).write_text(
+                    "project_name: base\nspecies:\n  Dmel:\n    name: fly\n    lineage: x\n"
+                )
+                Path("other.yaml").write_text("species:\n  Dmel:\n    lineage: y\n")
+                config = cli.common._load_config(["other.yaml"])
+            finally:
+                os.chdir(orig)
+        self.assertEqual(config, {"project_name": "base", "species": {"Dmel": {"name": "fly", "lineage": "y"}}})
 
     def test_read_project_name(self):
         with tempfile.TemporaryDirectory() as d:
@@ -255,7 +284,8 @@ class ArgvValidationTestCase(unittest.TestCase):
             cli.run.cmd_unlock(["--foo"])
 
     def test_unlock_passes_cores_one(self):
-        # snakemake >= 9.9 requires --cores even for --unlock.
+        # snakemake >= 9.9 requires --cores even for --unlock. --dryrun keeps it from taking a
+        # cross-project lock it would never release.
         captured = {}
         orig = cli.run.subprocess.call
         cli.run.subprocess.call = lambda cmd: captured.setdefault("cmd", cmd) or 0
@@ -264,13 +294,77 @@ class ArgvValidationTestCase(unittest.TestCase):
                 cli.run.cmd_unlock([])
         finally:
             cli.run.subprocess.call = orig
-        self.assertEqual(captured["cmd"], ["snakemake", "--unlock", "--cores", "1"])
+        self.assertEqual(captured["cmd"], ["snakemake", "--unlock", "--dryrun", "--cores", "1"])
 
     def test_check_rejects_arguments(self):
-        # check/preview always read config/config.yaml as-is - there is no Snakemake
-        # invocation left to forward flags to.
-        with self.assertRaises(SystemExit):
-            cli.discover.cmd_check(["--configfile", "other.yaml"])
+        # check/preview run in-process - there is no Snakemake invocation left to forward
+        # flags to, so only --configfile is accepted.
+        with self.assertRaises(SystemExit) as cm:
+            cli.discover.cmd_check(["--configfile", "other.yaml", "--forceall"])
+        self.assertIn("--forceall", str(cm.exception))
+
+    def test_check_dies_on_a_missing_configfile(self):
+        with self.assertRaises(SystemExit) as cm:
+            cli.discover.cmd_check(["--configfile", "missing.yaml"])
+        self.assertIn("missing.yaml", str(cm.exception))
+
+    def test_run_accepts_configfile_without_default_config(self):
+        # initialize.smk only loads config/config.yaml when it exists, so a run driven
+        # entirely by --configfile is valid.
+        os.remove(self.configfile)
+        Path("other.yaml").write_text("project_name: other\n")
+        captured = {}
+        orig = cli.run._run_background
+        cli.run._run_background = lambda cmd, log_path: captured.setdefault("cmd", cmd)
+        try:
+            cli.run.cmd_run(["--cores", "4", "--configfile", "other.yaml"])
+        finally:
+            cli.run._run_background = orig
+        self.assertIn("other.yaml", captured["cmd"])
+
+    def test_run_dies_on_a_missing_configfile(self):
+        with self.assertRaises(SystemExit) as cm:
+            cli.run.cmd_run(["--cores", "4", "--configfile", "missing.yaml"])
+        self.assertIn("missing.yaml", str(cm.exception))
+        self.assertFalse(cli.common.STATE_FILE.exists())
+
+    def _stub_snakemake_unlock(self):
+        orig = cli.run.subprocess.call
+        cli.run.subprocess.call = lambda cmd: 0
+        self.addCleanup(setattr, cli.run.subprocess, "call", orig)
+
+    def _write_cross_project_lock(self, owner):
+        target = os.path.join(self.project_dir, "elsewhere", "processed")
+        os.makedirs(target)
+        with open(self.configfile, "w") as f:
+            f.write(f"project_name: test\nspecies:\n  Dmel:\n    processed_dir: {target}\n")
+        lock = Path(target, ".pastforward.lock")
+        lock.write_text(json.dumps(owner))
+        return lock
+
+    def test_unlock_lists_cross_project_locks_but_keeps_them(self):
+        self._stub_snakemake_unlock()
+        lock = self._write_cross_project_lock({"hostname": "other-host", "pid": 1})
+        with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
+            cli.run.cmd_unlock([])
+        self.assertIn(str(lock), out.getvalue())
+        self.assertIn("--cross-project", out.getvalue())
+        self.assertTrue(lock.exists())
+
+    def test_unlock_cross_project_removes_dead_locks(self):
+        self._stub_snakemake_unlock()
+        lock = self._write_cross_project_lock({"hostname": "other-host", "pid": 1})
+        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit):
+            cli.run.cmd_unlock(["--cross-project"])
+        self.assertFalse(lock.exists())
+
+    def test_unlock_cross_project_never_removes_a_live_local_lock(self):
+        self._stub_snakemake_unlock()
+        lock = self._write_cross_project_lock({"hostname": cli.run.socket.gethostname(), "pid": os.getpid()})
+        with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
+            cli.run.cmd_unlock(["--cross-project"])
+        self.assertTrue(lock.exists())
+        self.assertIn("owner still running", out.getvalue())
 
     def test_preview_rejects_arguments(self):
         with self.assertRaises(SystemExit):
@@ -356,25 +450,26 @@ class ArgvValidationTestCase(unittest.TestCase):
         self.assertIn("Currently running jobs", output)
 
     def test_watch_passes_tail_lines_to_print_status(self):
-        # Stub both the terminal clear and _print_status: exercise cmd_status's watch wiring
-        # without actually clearing the real terminal or looping forever.
+        # Stub _print_status: exercise cmd_status's watch wiring without looping forever.
         calls = []
 
         def fake_print_status(tail=None):
             calls.append(tail)
+            print("line one")
             return False  # not alive -> loop exits after one iteration
 
         orig_print_status = cli.monitor._print_status
-        orig_system = cli.monitor.os.system
         cli.monitor._print_status = fake_print_status
-        cli.monitor.os.system = lambda *_: None
         try:
-            cli.monitor.cmd_status(["--watch"])
-            cli.monitor.cmd_status(["-w"])
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                cli.monitor.cmd_status(["--watch"])
+                cli.monitor.cmd_status(["-w"])
         finally:
             cli.monitor._print_status = orig_print_status
-            cli.monitor.os.system = orig_system
         self.assertEqual(calls, [cli.monitor.WATCH_TAIL_LINES, cli.monitor.WATCH_TAIL_LINES])
+        # One frame per refresh, drawn over the old one rather than after clearing the screen.
+        frame = "\033[Hline one\033[K\n\033[J"
+        self.assertEqual(out.getvalue(), frame * 2)
 
     def test_abort_force_short_flag_kills_process_group(self):
         killed = []
@@ -614,6 +709,26 @@ class ArgvValidationTestCase(unittest.TestCase):
     def test_print_log_dies_without_logs_dir(self):
         with self.assertRaises(SystemExit):
             cli.monitor.cmd_print_log([])
+
+    def test_print_log_prefers_the_live_tracked_run(self):
+        os.makedirs(cli.common.LOG_DIR)
+        run_log = cli.common.LOG_DIR / "run_20260101_000000.log"
+        dryrun_log = cli.common.LOG_DIR / "dryrun_20260101_000001.log"
+        run_log.write_text("run log\n")
+        dryrun_log.write_text("dryrun log\n")
+        os.utime(run_log, (1, 1))
+        os.utime(dryrun_log, (2, 2))
+        cli.common.STATE_DIR.mkdir(parents=True, exist_ok=True)
+        state = {"pid": os.getpid(), "log_file": str(run_log.resolve())}
+        cli.common.STATE_FILE.write_text(json.dumps(state))
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            cli.monitor.cmd_print_log([])
+        self.assertIn("run log", out.getvalue())
+        # Once that run is over, the newest log wins again.
+        cli.common.STATE_FILE.write_text(json.dumps({**state, "pid": 2**22 + 1}))
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            cli.monitor.cmd_print_log([])
+        self.assertIn("dryrun log", out.getvalue())
 
     def test_print_log_prints_most_recently_modified_file(self):
         os.makedirs(cli.common.LOG_DIR)
@@ -1032,5 +1147,22 @@ class ToolsTestCase(unittest.TestCase):
             cli.main(["tools", "nonsense"])
 
 
+class MainDispatchTestCase(unittest.TestCase):
+    def test_unknown_command_suggests_the_closest_one(self):
+        with self.assertRaises(SystemExit) as cm:
+            cli.main(["stauts"])
+        self.assertIn("Did you mean `status`?", str(cm.exception))
+
+    def test_help_after_a_command_shows_only_that_command(self):
+        # Must not reach cmd_run, which would die on the missing --cores.
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            cli.main(["run", "--help"])
+            cli.main(["check", "-h"])
+        self.assertIn("--cores <N>", out.getvalue())
+        self.assertIn("check [--configfile", out.getvalue())
+        self.assertNotIn("print-log", out.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()
+
