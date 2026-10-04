@@ -104,6 +104,16 @@ class StatusHelpersTestCase(unittest.TestCase):
         self.assertEqual(cli.common._format_duration(3661), "1h 1m 1s")
         self.assertEqual(cli.common._format_duration(90000), "1d 1h 0m 0s")
 
+    def test_elapsed_seconds(self):
+        # str(timedelta) as Snakemake >= 9.26 logs it, with and without a day part.
+        self.assertEqual(cli.monitor._elapsed_seconds("Elapsed time: 2:03:04.5\n"), 7384.5)
+        self.assertEqual(
+            cli.monitor._elapsed_seconds("[x] [INFO] Elapsed time: 1 day, 0:00:01\nElapsed time: 2 days, 1:00:00.25"),
+            2 * 86400 + 3600.25,
+        )
+        self.assertIsNone(cli.monitor._elapsed_seconds("Finished jobid: 1 (Rule: all)"))
+        self.assertIsNone(cli.monitor._elapsed_seconds(None))
+
     def test_cores_from_cmd(self):
         self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "--software-deployment-method", "conda", "--cores", "8", "--forceall"]), "8")
         self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "-j", "all"]), "all")

@@ -47,7 +47,7 @@ rule filter_mapped_only_bam:
     message:
         "Filtering unmapped reads from BAM for {wildcards.individual} mapped to {wildcards.reference}."
     wrapper:
-        "v9.3.0/bio/samtools/view"
+        f"{WRAPPER_VERSION}/bio/samtools/view"
 
 
 rule index_mapped_only_bam:
@@ -65,7 +65,7 @@ rule index_mapped_only_bam:
     message:
         "Indexing mapped-only BAM for {wildcards.individual} mapped to {wildcards.reference}."
     wrapper:
-        "v9.3.0/bio/samtools/index"
+        f"{WRAPPER_VERSION}/bio/samtools/index"
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ rule convert_unmapped_reads_to_fastq:
     message:
         "Extracting unmapped reads to FASTQ for {wildcards.individual} mapped to {wildcards.reference}."
     wrapper:
-        "v9.3.0/bio/samtools/fastx"
+        f"{WRAPPER_VERSION}/bio/samtools/fastx"
 
 
 # ---------------------------------------------------------------------------
@@ -109,4 +109,4 @@ rule convert_unmapped_reads_to_fasta:
     message:
         "Extracting unmapped reads to FASTA for {wildcards.individual} mapped to {wildcards.reference}."
     wrapper:
-        "v9.3.0/bio/samtools/fastx"
+        f"{WRAPPER_VERSION}/bio/samtools/fastx"

@@ -103,7 +103,7 @@ def _summarize_benchmarks(records):
 
 def _emit_benchmark_profile(rows):
     print("# Snakemake resource settings derived from the benchmarks above. Paste into")
-    print("# workflow/profiles/default/config.yaml, below its `default-resources:` block, or")
+    print("# workflow/profiles/default/profile.yaml, below its `default-resources:` block, or")
     print("# pass individual entries as `--set-resources <rule>:<resource>=<value>`.")
     print(
         f"# runtime is in minutes at {BENCHMARK_RUNTIME_FACTOR:g}x the longest job observed; mem_mb is "

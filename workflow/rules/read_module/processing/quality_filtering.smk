@@ -32,7 +32,7 @@ rule filter_reads_by_quality:
     message:
         "Quality filtering reads in {input.sample}"
     wrapper:
-        "v9.3.0/bio/fastp"
+        f"{WRAPPER_VERSION}/bio/fastp"
 
 
 rule get_quality_filtered_final:

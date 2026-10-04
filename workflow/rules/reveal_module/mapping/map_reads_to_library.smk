@@ -48,7 +48,7 @@ if _dyn_mapper == "minimap2":
         message:
             "Indexing SCG and Feature library {input} with minimap2"
         wrapper:
-            "v9.3.0/bio/minimap2/index"
+            f"{WRAPPER_VERSION}/bio/minimap2/index"
 
     rule map_reads_to_scg_feature_library_minimap2:
         input:
@@ -67,7 +67,7 @@ if _dyn_mapper == "minimap2":
         message:
             "Mapping reads of {wildcards.individual} to {wildcards.species} SCG and Feature library with minimap2"
         wrapper:
-            "v9.3.0/bio/minimap2/aligner"
+            f"{WRAPPER_VERSION}/bio/minimap2/aligner"
 
 elif _dyn_mapper == "bwa-aln":
 
@@ -88,7 +88,7 @@ elif _dyn_mapper == "bwa-aln":
         message:
             "Indexing SCG and Feature library {input} with BWA (for BWA ALN)"
         wrapper:
-            "v9.3.0/bio/bwa/index"
+            f"{WRAPPER_VERSION}/bio/bwa/index"
 
     rule align_reads_to_library_bwa_aln:
         input:
@@ -111,7 +111,7 @@ elif _dyn_mapper == "bwa-aln":
         params:
             extra=_dyn_mapper_extra,
         wrapper:
-            "v9.3.0/bio/bwa/aln"
+            f"{WRAPPER_VERSION}/bio/bwa/aln"
 
     rule map_reads_to_scg_feature_library_bwa_aln:
         input:
@@ -133,7 +133,7 @@ elif _dyn_mapper == "bwa-aln":
             "{species}/processed/reveal_module/{feature_library}/mapped/{individual}_{feature_library}_and_scg_bwa_samse.log",
         threads: 1
         wrapper:
-            "v9.3.0/bio/bwa/samse"
+            f"{WRAPPER_VERSION}/bio/bwa/samse"
 
     rule sort_bam_reads_to_library:
         input:
@@ -146,7 +146,7 @@ elif _dyn_mapper == "bwa-aln":
         message:
             "Sorting BAM file for {input}"
         wrapper:
-            "v9.3.0/bio/samtools/sort"
+            f"{WRAPPER_VERSION}/bio/samtools/sort"
 
 else:
 
@@ -165,7 +165,7 @@ else:
         message:
             "Indexing SCG and Feature library {input} with BWA-MEM2"
         wrapper:
-            "v9.3.0/bio/bwa-mem2/index"
+            f"{WRAPPER_VERSION}/bio/bwa-mem2/index"
 
     rule map_reads_to_scg_feature_library_bwa_mem2:
         input:
@@ -192,7 +192,7 @@ else:
         message:
             "Mapping reads of {wildcards.individual} to {wildcards.species} SCG and Feature library with BWA-MEM2"
         wrapper:
-            "v9.3.0/bio/bwa-mem2/mem"
+            f"{WRAPPER_VERSION}/bio/bwa-mem2/mem"
 
 
 if _comp_execute:
@@ -211,7 +211,7 @@ if _comp_execute:
         message:
             "Removing unmapped reads from BAM file for {input}"
         wrapper:
-            "v9.3.0/bio/samtools/view"
+            f"{WRAPPER_VERSION}/bio/samtools/view"
 
     # Rule: Remove reads mapping to competition sequences (_comp suffix)
     rule filter_competition_reads_from_bam:
@@ -259,7 +259,7 @@ else:
         message:
             "Removing unmapped reads from BAM file for {input}"
         wrapper:
-            "v9.3.0/bio/samtools/view"
+            f"{WRAPPER_VERSION}/bio/samtools/view"
 
 
 if _dyn_min_mapq_scg > 0 or _dyn_min_mapq_fle > 0:
@@ -303,4 +303,4 @@ rule index_bam_reads_to_library:
     message:
         "Indexing BAM file for {input}"
     wrapper:
-        "v9.3.0/bio/samtools/index"
+        f"{WRAPPER_VERSION}/bio/samtools/index"

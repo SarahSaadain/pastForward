@@ -9,6 +9,11 @@
 import glob
 import os
 
+# Version of the Snakemake wrapper repository every `wrapper:` directive is pinned to. Bump it
+# here, in one place, so all wrappers move together. A bump changes tool versions and rebuilds
+# the wrapper envs, so treat it as its own release and check a dry run afterwards.
+WRAPPER_VERSION = "v9.3.0"
+
 
 def determine_reads_trimmed_final_input(wildcards):
 

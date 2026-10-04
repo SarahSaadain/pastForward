@@ -21,4 +21,4 @@ rule analyze_bam_with_qualimap:
         .get("settings", {})
         .get("qualimap_mem_mb", 4096),
     wrapper:
-        "v9.3.0/bio/qualimap/bamqc"
+        f"{WRAPPER_VERSION}/bio/qualimap/bamqc"

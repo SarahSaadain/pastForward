@@ -16,4 +16,4 @@ rule analyze_bam_with_samtools_stats:
     message:
         "Generating samtools stats for {input.bam}"
     wrapper:
-        "v9.3.0/bio/samtools/stats"
+        f"{WRAPPER_VERSION}/bio/samtools/stats"

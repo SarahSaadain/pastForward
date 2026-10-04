@@ -21,7 +21,7 @@ rule determine_mapped_reads_coverage:
     message:
         "Calculating coverage depth for {input.bams}"
     wrapper:
-        "v9.3.0/bio/samtools/depth"
+        f"{WRAPPER_VERSION}/bio/samtools/depth"
 
 
 # Rule: Analyze coverage depth and breadth

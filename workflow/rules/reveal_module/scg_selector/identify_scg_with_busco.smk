@@ -44,7 +44,7 @@ rule run_busco_for_scg_determination:
     message:
         "Running BUSCO to identify single-copy genes for {wildcards.species}"
     wrapper:
-        "v9.3.0/bio/busco"
+        f"{WRAPPER_VERSION}/bio/busco"
 
 
 rule prepare_scg_library_from_busco:

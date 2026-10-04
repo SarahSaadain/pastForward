@@ -42,7 +42,7 @@ rule remove_adapters_single_with_fastp:
     message:
         "Trimming adapters from single-end reads in {input.sample}"
     wrapper:
-        "v9.3.0/bio/fastp"
+        f"{WRAPPER_VERSION}/bio/fastp"
 
 
 # Rule: Adapter removal for paired-end reads using fastp
@@ -100,7 +100,7 @@ rule remove_adapters_paired_with_fastp:
     message:
         "Trimming adapters from paired-end reads and merging for {input.sample}"
     wrapper:
-        "v9.3.0/bio/fastp"
+        f"{WRAPPER_VERSION}/bio/fastp"
 
 
 rule get_adapter_removal_final:

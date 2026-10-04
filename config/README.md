@@ -7,7 +7,7 @@ This guide walks through everything you need to set up and configure pastForward
 pastForward runs on two free tools:
 
 * **Conda** installs and manages all the other software the pipeline needs.
-* **Snakemake** runs the pipeline itself and can be installed using conda. Version **9.9.0** or newer is required.
+* **Snakemake** runs the pipeline itself and can be installed using conda. Version **9.26.1** or newer is required.
 
 
 ## Step 1: Install Conda

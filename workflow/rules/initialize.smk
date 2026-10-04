@@ -48,7 +48,7 @@ envvars:
 #     Snakemake Version Check
 # =================================================================================================
 # Ensure the minimum required Snakemake version is available for compatibility
-snakemake.utils.min_version("9.9.0")
+snakemake.utils.min_version("9.26.1")
 
 
 # =================================================================================================

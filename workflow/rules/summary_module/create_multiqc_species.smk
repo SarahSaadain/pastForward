@@ -19,7 +19,7 @@ rule create_multiqc_species:
         extra="--verbose",  # Optional: extra parameters for multiqc.
         use_input_files_only=True,
     wrapper:
-        "v9.3.0/bio/multiqc"
+        f"{WRAPPER_VERSION}/bio/multiqc"
 
 
 rule create_multiqc_species_config:

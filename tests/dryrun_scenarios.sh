@@ -92,7 +92,7 @@ fi
 # shellcheck disable=SC1091
 source "$(conda info --base)/etc/profile.d/conda.sh"
 if ! conda env list | awk '{print $1}' | grep -qx "$CONDA_ENV"; then
-  echo "ERROR: conda environment '$CONDA_ENV' not found. Create it per config/README.md (Snakemake >= 9.9.0)." >&2
+  echo "ERROR: conda environment '$CONDA_ENV' not found. Create it per config/README.md (Snakemake >= 9.26.1)." >&2
   exit 2
 fi
 conda activate "$CONDA_ENV"
@@ -518,7 +518,7 @@ else
 fi
 
 # =============================================================================================
-# Scenario 10: the shipped workflow profile (workflow/profiles/default/config.yaml). Snakemake
+# Scenario 10: the shipped workflow profile (workflow/profiles/default/profile.yaml). Snakemake
 # discovers it by path and by filename, and gets both wrong silently: a profile at the top of the
 # project instead of under workflow/ is never seen from a project root that only symlinks
 # workflow/, and a key Snakemake does not recognize is ignored without a warning. So assert the

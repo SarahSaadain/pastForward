@@ -5,7 +5,7 @@
 For a full step-by-step walkthrough, including installing conda and Snakemake from scratch, see the [Setup Guide](../config/README.md). The questions below cover specific details.
 
 **Q: What version of Snakemake do I need?**
-Version 9.9.0 or newer. pastForward checks this automatically at startup and won't run on an older version.
+Version 9.26.1 or newer. pastForward checks this automatically at startup and won't run on an older version. Older versions have bugs that hit this pipeline. They rerun jobs whose outputs are already up to date, read a `runtime` resource as seconds instead of minutes, and on long runs can crash with "Too many open files".
 
 **Q: What version of conda do I need?**
 24.7.1 or newer is recommended (or a compatible tool such as Mamba or Miniforge). Conda installs and manages all the other software the pipeline needs, through the `--software-deployment-method conda` flag (`--sdm conda` for short; the older `--use-conda` spelling still works but is deprecated since Snakemake 8).
@@ -327,7 +327,7 @@ pastForward is a plain Snakemake workflow, so it should in principle work with S
 pastForward does ship a default memory and wall time request for every step, so jobs are not submitted without one, which on most clusters would mean being killed at the partition's default time limit. See [Running on an HPC Cluster](snakemake.md#running-on-an-hpc-cluster) for the cluster-side profile you still have to write yourself, and for why to build the conda environments on the login node first.
 
 **Q: How do I change how much memory or wall time a step asks for?**
-Those live in `workflow/profiles/default/config.yaml`, a Snakemake profile that ships with the pipeline. It sets a default memory and wall time for every step, plus `--keep-going` and `--rerun-trigger mtime`. Snakemake picks it up on its own, with no flag, because it sits next to the `Snakefile`. (`--software-deployment-method conda` is not in it, so you still pass that yourself. Otherwise even a dry run would need a working, recent conda.)
+Those live in `workflow/profiles/default/profile.yaml`, a Snakemake profile that ships with the pipeline. It sets a default memory and wall time for every step, plus `--keep-going` and `--rerun-trigger mtime`. Snakemake picks it up on its own, with no flag, because it sits next to the `Snakefile`. (`--software-deployment-method conda` is not in it, so you still pass that yourself. Otherwise even a dry run would need a working, recent conda.)
 
 The shipped numbers are a generous floor, not measurements. For numbers that fit your data, run the pipeline once and then `./pastForward benchmark --emit-profile`, which prints a `set-resources:` block measured from that run. Paste it into the same file, below `default-resources:`. A `set-resources:` entry wins over a value written into a rule, which `default-resources:` does not.
 
@@ -337,14 +337,14 @@ For a one-off change, override on the command line instead. This beats the profi
 ./pastForward run --cores 40 --set-resources run_busco_for_scg_determination:mem_mb=32000
 ```
 
-**Q: I put my own `profiles/default/config.yaml` in my project folder and the pipeline stopped working. Why?**
+**Q: I put my own `profiles/default/profile.yaml` in my project folder and the pipeline stopped working. Why?**
 Because Snakemake uses that file *instead* of the one shipped in `workflow/profiles/default/`, rather than merging the two. Everything the shipped profile set is gone: the memory and wall time defaults, and the rerun behavior. So a folder created to change one number drops every other setting, without any error or warning.
 
 There are three safe ways to change something:
 
 - **One setting, one run:** pass it on the command line. `--set-resources <rule>:mem_mb=<N>`, `--set-threads <rule>=<N>`. The command line always wins over a profile.
 - **Settings for your machine** (cluster account, partition, job limits): put them in a profile folder of your own and pass it with `--profile my_profile`. This one *does* merge with the shipped profile, so you only write what is specific to your machine.
-- **Changing the pipeline's own numbers:** edit `workflow/profiles/default/config.yaml` directly. Note that a pipeline update overwrites it, so keep a copy of your changes.
+- **Changing the pipeline's own numbers:** edit `workflow/profiles/default/profile.yaml` directly. Note that a pipeline update overwrites it, so keep a copy of your changes.
 
 To run with no profile at all, use `--workflow-profile none`.
 

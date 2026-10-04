@@ -51,6 +51,9 @@ LOCK_RE = re.compile(r"LockException")
 # Printed instead of a "N of N steps" progress line when the DAG's targets were already all
 # present and up to date - a legitimate no-op success, not a sign the run never started.
 NOTHING_TO_DO_RE = re.compile(r"^Nothing to be done \(all requested files are present and up to date\)\.", re.MULTILINE)
+# Snakemake >= 9.26 logs the whole run's wall time when it exits, on success and on failure
+# alike, as a str(timedelta): "Elapsed time: 2:03:04.123456" or "1 day, 2:03:04.123456".
+ELAPSED_RE = re.compile(r"Elapsed time: (?:(\d+) days?, )?(\d+):(\d+):(\d+(?:\.\d+)?)")
 PROJECT_NAME_RE = re.compile(r'^project_name:\s*["\']?([^"\'\n]+?)["\']?\s*$', re.MULTILINE)
 JOB_ERROR_BLOCK_RE = re.compile(r"^Error in rule \S+:\n(?:[ \t]+.*\n?)*", re.MULTILINE)
 # The `log:` line Snakemake prints inside an "Error in rule" block - points at the rule's own
@@ -239,6 +242,28 @@ def _print_log_tail(text, log_path, tail):
         sys.stdout.write(_colorize(line + "\n", SNAKEMAKE_LINE_RULES))
 
 
+def _elapsed_seconds(text):
+    """Seconds from Snakemake's own last "Elapsed time" line, or None if it logged none."""
+    matches = ELAPSED_RE.findall(text or "")
+    if not matches:
+        return None
+    days, hours, minutes, seconds = matches[-1]
+    return int(days or 0) * 86400 + int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+
+
+def _runtime(alive, started, log_path, text):
+    if alive:
+        return _format_duration((datetime.now() - started).total_seconds())
+    # A run that ended on its own leaves Snakemake's exact figure in the log. A killed run
+    # (SIGKILL, OOM, power loss) never gets to write it, so fall back to the log file's last
+    # write, which freezes the runtime at whenever it actually stopped.
+    elapsed = _elapsed_seconds(text)
+    if elapsed is not None:
+        return _format_duration(elapsed)
+    end = datetime.fromtimestamp(log_path.stat().st_mtime) if log_path.exists() else started
+    return _format_duration((end - started).total_seconds())
+
+
 def _print_status(tail=None):
     state = _read_state()
     pid = state["pid"]
@@ -247,18 +272,13 @@ def _print_status(tail=None):
     log_path = Path(state["log_file"])
     configfile = _configfile_from_cmd(state["cmd"])
     project_name = _read_project_name(configfile) or _color(DIM, "(unknown)")
-    # Once the process has died, "now" no longer reflects its runtime - use the log file's
-    # last write instead, so runtime freezes at whenever it actually stopped.
-    end = datetime.now() if alive else (
-        datetime.fromtimestamp(log_path.stat().st_mtime) if log_path.exists() else started
-    )
-    runtime = _format_duration((end - started).total_seconds())
     cores = _cores_from_cmd(state["cmd"]) or "?"
     # `run`/`resume` pass unknown flags straight through to Snakemake, so `run --cores N -n`
     # tracks a dry run in the state file. A dry run executes nothing, so none of the progress
     # or exit-classification reporting below applies to it.
     dryrun = any(a in DRYRUN_FLAGS for a in state["cmd"])
     text = log_path.read_text(errors="replace") if log_path.exists() else None
+    runtime = _runtime(alive, started, log_path, text)
     progress = None
     for progress in PROGRESS_RE.finditer(text or ""):
         pass

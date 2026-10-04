@@ -14,10 +14,10 @@
 #     folders), so a top-level `profiles/` would be missed by every project except a run started
 #     from the repo itself, and by the dry-run scenarios in tests/, which build each project as a
 #     symlink to `workflow/`.
-#   - It must be called `config.yaml`. Snakemake 9.9.0, the minimum this pipeline enforces, accepts
-#     no other name. Newer versions also read `profile.yaml`, but on 9.9.0 a `profiles/default/`
-#     holding no `config*.yaml` is a hard error ("profile given but no config.yaml found") that
-#     kills every invocation before the workflow is even parsed.
+#   - It is called `profile.yaml`, the default name since Snakemake 9.19. The old name
+#     `config.yaml` still works, but was easy to confuse with the project's `config/config.yaml`.
+#     Snakemake before 9.19 does not read `profile.yaml` and stops with an error, which is fine
+#     since the pipeline needs 9.26.1 or newer anyway.
 #
 # Note that keys here are Snakemake command-line flags without the leading dashes, and a key
 # Snakemake does not recognize is ignored in silence - no error, no warning. A typo therefore

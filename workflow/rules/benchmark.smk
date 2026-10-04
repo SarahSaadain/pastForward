@@ -48,18 +48,11 @@ try:
         # Snakemake refuses to let a rule be both benchmarked and eligible for between-workflow
         # caching (`cache: True`), because a result served from the cache has no run to measure.
         # It raises a WorkflowError at DAG build time, well after this loop, so skip those rules
-        # here rather than letting them break the run. Where that flag lives moved between
-        # versions: 9.9.0 keeps it on the workflow, 9.25.1 hangs a RuleCache off every rule
-        # whose `.output` says whether caching is actually on. An unrecognized future shape is
-        # treated as cached, which costs one rule's measurements rather than the whole run.
-        _benchmark_cache = getattr(_benchmark_rule, "cache", None)
-        if _benchmark_cache is not None:
-            _benchmark_cached = getattr(_benchmark_cache, "output", True)
-        else:
-            _benchmark_cached = bool(
-                getattr(workflow, "cache_rules", {}).get(_benchmark_rule.name)
-            )
-        if _benchmark_cached:
+        # here rather than letting them break the run. Every rule carries a RuleCache, so
+        # `rule.cache` is always truthy. Its `.output` says whether caching is actually on. An
+        # unrecognized future shape is treated as cached, which costs one rule's measurements
+        # rather than the whole run.
+        if getattr(_benchmark_rule.cache, "output", True):
             continue
         if _benchmark_rule.log:
             _benchmark_target = str(_benchmark_rule.log[0])

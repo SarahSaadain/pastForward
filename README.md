@@ -2,7 +2,7 @@
 
 # pastForward - A pipeline for ancient and historical DNA based on Snakemake
 
-[![Snakemake](https://img.shields.io/badge/snakemake-≥9.9.0-brightgreen.svg)](https://snakemake.github.io)
+[![Snakemake](https://img.shields.io/badge/snakemake-≥9.26.1-brightgreen.svg)](https://snakemake.github.io)
 [![GitHub release](https://img.shields.io/github/v/release/SarahSaadain/aDNA_Pipeline_Snakemake)](https://github.com/SarahSaadain/aDNA_Pipeline_Snakemake/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 

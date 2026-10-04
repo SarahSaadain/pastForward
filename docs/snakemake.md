@@ -88,7 +88,7 @@ find . -name '*.benchmark.jsonl' -delete
 
 ## Resource Defaults
 
-pastForward ships a [Snakemake profile](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) at `workflow/profiles/default/config.yaml`. Snakemake finds it by itself, with no flag, because it sits next to the `Snakefile`. It does two things:
+pastForward ships a [Snakemake profile](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) at `workflow/profiles/default/profile.yaml`. Snakemake finds it by itself, with no flag, because it sits next to the `Snakefile`. It does two things:
 
 * It sets `--keep-going` and `--rerun-trigger mtime` from the suggested command above, so a plain `snakemake` call decides what to re-run, and what to do about a failed step, the same way `./pastForward run` does. You still have to pass `--software-deployment-method conda` yourself (see below).
 * It gives every step a default memory (8 GB) and wall time (4 hours) request, for steps that don't ask for something specific themselves.
@@ -103,7 +103,7 @@ They are a generous floor, not measurements. To get real numbers for your data, 
 
 This prints a `set-resources:` block measured from that run, which you can paste into the profile below the `default-resources:` block. A `set-resources:` entry also overrides a value written into a rule, which `default-resources:` does not.
 
-**To change a setting, edit `workflow/profiles/default/config.yaml`, or override it on the command line:**
+**To change a setting, edit `workflow/profiles/default/profile.yaml`, or override it on the command line:**
 
 ```bash
 # more memory for one step, just for this run

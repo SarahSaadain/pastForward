@@ -88,7 +88,7 @@ dry-run/`onsuccess:` hook timing (dry runs never fire `onsuccess:`/`onerror:`, s
 cross-project lock must not be acquired during a dry run, see the comment in
 `setup_species_data_locations`).
 
-Requires a conda environment named `snakemake` (Snakemake >= 9.9.0, see
+Requires a conda environment named `snakemake` (Snakemake >= 9.26.1, see
 [config/README.md](../config/README.md)). The first run may be slow while Snakemake clones
 `snakemake-wrappers` into `~/.cache/snakemake` for a wrapper-based rule. That cache is reused on
 later runs.
