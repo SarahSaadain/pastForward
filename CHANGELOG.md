@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - **SNP divergence check**: `pipeline.reference_module.analysis.settings.snp_divergence_check` flags individuals whose divergence from the reference is an outlier within their cohort. This can point to a wrong reference, cross-species contamination, or a mislabeled individual. Warning only. Methods: `samtools_stats` (default, no extra runtime), `bcftools` (adds heterozygous-call rate), or `both`. Default `false`. See [config/parameters.md](config/parameters.md)
 - **`pipeline.reveal_module.normalization.settings.skip_low_coverage_individuals`**: excludes individuals with too little SCG coverage for REVEAL normalization instead of failing the whole species. Excluded individuals are listed in `{species}_{feature_library}_excluded_individuals.tsv`. Default `false`. See [config/parameters.md](config/parameters.md)
 - **Short flags**: `status -w`, `abort -f`, `print-log -l` and `print-log -t [N]`
+- **`config/max_config_modern_sample.yaml`**: example config for modern DNA. All steps run as in `max_config_sample.yaml`, except deduplication, damage rescaling and damage analysis, which are off
 
 ### Changed
 
