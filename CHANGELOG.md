@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-06
+
 ### New Features
 
 - **`./pastForward tools create-species`**: creates a species' `input/` folders in the project root and prints a `species:` block for `config/config.yaml`. Takes several species at once and leaves existing folders alone. See [README.md](README.md#running-the-pipeline)
