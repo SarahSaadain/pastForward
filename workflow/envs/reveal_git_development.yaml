@@ -2,14 +2,11 @@ name: reveal_env_git_development
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
-  # REVEAL (https://github.com/SarahSaadain/REVEAL) is not yet published on
-  # bioconda, so we pin its runtime deps directly (same list as REVEAL's own
-  # shell/install.sh) and side-load REVEAL itself via the neighboring
-  # reveal_git_development.post-deploy.sh (tip of the develop branch). Once
-  # reveal-tools lands on bioconda, replace this list with `- reveal-tools`
-  # and delete that script.
+  # This env intentionally tracks the tip of REVEAL's (https://github.com/SarahSaadain/REVEAL)
+  # "develop" branch rather than the bioconda package (see reveal.yaml for that), so we pin its
+  # runtime deps directly (same list as REVEAL's own shell/install.sh) and side-load REVEAL itself
+  # via the neighboring reveal_git_development.post-deploy.sh.
   - conda-forge::python>=3.10
   - bioconda::pysam
   - conda-forge::numpy

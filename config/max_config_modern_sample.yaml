@@ -1,0 +1,479 @@
+# config.yaml - Configuration file for pastForward
+#
+# Only project_name and at least one species entry are required.
+# All pipeline stages run with their defaults when not specified.
+#
+# For a full list of settings and an interactive editor, open config_designer.html in a browser.
+
+project_name: "pastForward modern DNA config Lynn"
+
+# Species-specific settings
+species:
+  # Settings for the demo species
+  Bger:
+    # Whether to process this species (Default: true).
+    # Set to false to skip all pipeline stages for this species without removing it from the config.
+    execute: true
+
+    # Name of the species
+    name: "Blattella Germanica"
+
+    # BUSCO lineage database name (required for SCG auto-determination, only
+    # relevant when pipeline.reveal_module.scg_selector.execute is true AND no
+    # user-provided SCG file exists in {species}/input/reveal_module/scg/).
+    # Find available lineages at https://busco.ezlab.org/
+    # Example: "drosophilidae_odb12", "diptera_odb10", "insecta_odb10"
+    lineage: "insecta_odb12"
+    # Optional: exact path to the reference genome to use for SCG determination.
+    # Required when multiple FASTA files exist in {species}/input/reference_module/.
+    # If omitted and exactly one reference is present, it is used automatically
+    # and an info message is written to the log.
+    #scg_reference: "/path/to/reference.fasta"
+
+    # Optional: store this species' data outside the project directory (see
+    # config/README.md#storing-species-data-elsewhere). If none of the settings below
+    # are set, data must live in-project exactly as documented in config/README.md.
+    #
+    # Whole-species root; must mirror the input/{read_module,reference_module,
+    # reveal_module/{scg,feature_library,competition}}, processed/, results/ layout.
+    # Sets the default target for every override below.
+    #species_dir: "/mnt/big_disk/pastforward_data/demo"
+    # Optional: override just {species}/input/read_module/
+    #reads_dir: "/mnt/big_disk/pastforward_data/demo/input/read_module"
+    # Optional: override just {species}/input/reference_module/
+    #reference_dir: "/mnt/big_disk/pastforward_data/demo/input/reference_module"
+    # Optional: override just {species}/input/reveal_module/scg/
+    #scg_dir: "/mnt/big_disk/pastforward_data/demo/input/reveal_module/scg"
+    # Optional: override just {species}/input/reveal_module/feature_library/
+    #feature_library_dir: "/mnt/big_disk/pastforward_data/demo/input/reveal_module/feature_library"
+    # Optional: override just {species}/input/reveal_module/competition/
+    #competition_dir: "/mnt/big_disk/pastforward_data/demo/input/reveal_module/competition"
+    # Optional: override just {species}/processed/ (protected by a cross-project lock; see FAQ.md)
+    #processed_dir: "/scratch/pastforward_processed/demo"
+    # Optional: override just {species}/results/ (protected by a cross-project lock; see FAQ.md)
+    #results_dir: "/scratch/pastforward_results/demo"
+
+    # Optional: restrict which individuals to process for this species.
+    # If omitted, all individuals discovered in {species}/input/read_module/ are used.
+    # Each entry must match the individual ID extracted from read filenames
+    # (the part before the first "_", e.g. "IND001" from "IND001_L001_R1.fastq.gz").
+    # An error is raised if any listed ID is not found on disk.
+    #individuals:
+    #  - IND001
+    #  - IND002
+
+    # Optional: restrict which reference genomes to use for this species.
+    # If omitted, all references discovered in {species}/input/reference_module/ are used.
+    # Each entry must match the reference ID derived from the filename:
+    # basename without extension, dots replaced by underscores
+    # (e.g. "genome.fna" → "genome", "EquCab3.0.fna" → "EquCab3_0").
+    # An error is raised if any listed ID is not found on disk.
+    #references:
+    #  - genome
+
+    # Optional: restrict which feature libraries to use for this species.
+    # If omitted, all libraries discovered in {species}/input/reveal_module/feature_library/ are used.
+    # Each entry must match the library ID derived from the filename:
+    # basename without extension, dots replaced by underscores
+    # (e.g. "genes.fna" → "genes", "my.lib.fna" → "my_lib").
+    # An error is raised if any listed ID is not found on disk.
+    #feature_libraries:
+    #  - genes
+
+# Pipeline stages and their configurations
+pipeline:
+
+  # Global settings
+  global:
+    # When true, existing output files are not requested from Snakemake and are never
+    # re-computed. Warning: changed input files then do not propagate to existing
+    # downstream outputs, which can leave results inconsistent. (Default: false)
+    skip_existing_files: false
+
+  # Stages of the pipeline
+
+  # Raw reads processing
+  # Includes quality checking, adapter removal, quality filtering, merging, 
+  # taxonomic screening, and statistical analysis
+  read_module:
+    # When true, this stage will be executed. (Default: true)
+    execute: true
+
+    # Adapter removal from raw reads
+    adapter_removal:
+      # When true, this sub-stage will be executed (Default: true)
+      execute: true
+
+      # Settings for adapter removal
+      settings: 
+        # Minimum quality score for adapter removal
+        min_quality: 0
+        # Minimum length of reads after adapter removal
+        min_length: 0
+        # Optional: Minimum length to trigger poly-X tail trimming (Default: 5)
+        #poly_x_min_len: 5
+        # Optional: Max percentage of unqualified bases allowed in a read (Default: 40)
+        #unqualified_percent_limit: 40
+        # Optional: Max number of N bases allowed in a read (Default: 5)
+        #n_base_limit: 5
+        # Optional: Adapter sequences for read 1 and read 2
+        # If not provided, fastp will try to identify adapters automatically
+        #adapters_sequences:
+          # Adapter sequence for read 1
+          #r1: "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA"
+          # Adapter sequence for read 2
+          #r2: "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT"
+        # Optional: Extra parameters for adapter removal (Default: "")
+        extra_params: "--correction"
+
+    
+    # Quality filtering of trimmed reads
+    quality_filtering:
+      # When true, this sub-stage will be executed (Default: true)
+      execute: true
+      settings:
+        # Minimum quality score for quality filtering
+        min_quality: 30
+        # Minimum length of reads after quality filtering
+        min_length: 30
+        # Optional: Max percentage of unqualified bases allowed in a read (Default: 40)
+        #unqualified_percent_limit: 40
+        # Optional: Max number of N bases allowed in a read (Default: 5)
+        #n_base_limit: 5
+
+    # Taxonomic screening
+    taxonomic_screening:
+      # When true, this sub-stage will be executed (Default: true)
+      execute: true
+      tools:
+        # ECMSD tool settings for taxonomic screening
+        ecmsd:
+          # When true, this tool will be executed (Default: true)
+          execute: true
+          settings:
+            # Where to get the ECMSD binary from (Default: "conda"). Options:
+            #   "conda"          -- the bioconda-packaged ecmsd=1.* release (default)
+            #   "latest_release" -- always side-load the newest tagged release from
+            #                        https://github.com/capoony/ECMSD (unpinned by design)
+            #   "dev"            -- [experimental] side-load the tip of ECMSD's "development"
+            #                        branch. Unreleased and untested -- use at your own risk.
+            # Each option has its own conda env file, so switching this builds/reuses that env
+            # automatically; picking up a newer release/commit on an already-built unpinned env
+            # still needs a manual rebuild (see FAQ.md).
+            #version_source: "conda"
+            # Optional: Path to the ECMSD database folder.
+            # If not provided, the database will be auto-created via ECMSD --create-db
+            #database: "resources/ecmsd_database"
+            # Minimum % of reference covered by reads to retain it (Default: 25)
+            cov_threshold: 25
+            # Number of top references to generate alignment plots for (Default: 25)
+            top_n: 25
+            # Minimum mapping quality score to include a read in analysis (Default: 20)
+            mapping_quality: 20
+            # Taxonomic level for aggregating results. Options: "species", "genus", "family", "order" (Default: "species")
+            taxonomic_hierarchy: "species"
+        # Centrifuge tool settings for taxonomic screening
+        centrifuge:
+          # When true, this tool will be executed (Default: true)
+          execute: true
+          settings:
+            # Optional: When true, human will be included in the Centrifuge analysis (Default: false)
+            include_human_taxid: false
+            # Optional: Path to the conda environment for Centrifuge
+            # If not provided, the default environment will be used
+            #conda_env: "../../../../envs/centrifuge.yaml"
+            # Path to the Centrifuge index. If not provided, the default index will be downloaded and used
+            # index: "/path/to/centrifuge_index"
+    
+    # Sub-stages with their respective settings
+    # Quality analysis (FastQC + MultiQC at each processing stage)
+    analysis:
+      # When true, quality checking will run (Default: true)
+      execute: true
+      settings:
+        # Run FastQC/MultiQC on raw reads (Default: true)
+        multiqc_raw_reads: true
+        # Run FastQC/MultiQC on adapter-trimmed reads (Default: true)
+        multiqc_trimmed_reads: true
+        # Run FastQC/MultiQC on quality-filtered reads (Default: true)
+        multiqc_quality_filtered_reads: true
+        # Run FastQC/MultiQC on merged per-individual reads (Default: true)
+        multiqc_merged_reads: true
+        # When true, generate read count bar plots (Default: true)
+        create_plots: true
+
+  # Reference processing
+  reference_module:
+    # When true, this stage will be executed (Default: true)
+    execute: true
+
+    mapping:
+      settings:
+        # Options: "bwa-aln", "bwa-mem2" (default), or "minimap2"
+        # bwa-aln: classic seed-and-extend, relatively slow
+        # bwa-mem2: standard, faster modern reimplementation of bwa-mem
+        # minimap2: fast versatile aligner, uses preset "-ax sr" for short reads
+        mapper: "bwa-mem2"
+        # Optional: extra parameters passed directly to the mapper
+        # For bwa-aln, defaults to "-n 0.01 -k 2 -l 1024 -o 2" (Oliva et al. 2021, 10.1093/bib/bbab076)
+        # For minimap2, defaults to "-ax sr"
+        #mapper_extra_params: ""
+
+    # Deduplication settings
+    deduplication:
+      # When true, this sub-stage will be executed (Default: true)
+      execute: false
+    
+    # Damage rescaling settings for mapDamage2
+    damage_rescaling:
+      # When true, this sub-stage will be executed (Default: true)
+      execute: false
+
+    filter_unmapped_reads:
+      # When true, unmapped reads will be processed according to action (Default: false)
+      execute: false
+      settings:
+        # What to do with unmapped reads. Choose one of:
+        #   "keep"          — retain unmapped reads in the final BAM (default — must be changed explicitly)
+        #   "remove"        — write a mapped-reads-only BAM  ({individual}_{reference}_mapped_only.bam)
+        #   "extract_fastq" — write unmapped reads to a compressed FASTQ ({individual}_{reference}_unmapped.fastq.gz)
+        #   "extract_fasta" — write unmapped reads to a compressed FASTA ({individual}_{reference}_unmapped.fasta.gz)
+        action: "keep"
+
+    # BAM analysis settings (coverage, Qualimap, Preseq, damage, endogenous reads)
+    analysis:
+      # When true, this sub-stage will be executed (Default: true)
+      execute: true
+      settings:
+        # Run mapDamage2 damage visualisation and statistics (Default: true)
+        damage_analysis: false
+        # When true, generate coverage and endogenous reads plots (Default: true)
+        create_plots: true
+        # When true, generate a per-individual MultiQC BAM report (Default: true)
+        individual_multiqc: true
+        # When true, generate a per-reference MultiQC report across all individuals (Default: true)
+        species_multiqc: true
+        # When true, include Preseq complexitiy_curve in MultiQC reports (Default: true)
+        preseq_complexitiy_curve: true
+        # When true, include Qualimap in MultiQC reports (Default: true)
+        qualimap: true
+        # When true, include samtools stats in MultiQC reports (Default: true)
+        samtools_stats: true
+        # Optional: Memory (MB) requested from the cluster scheduler for Qualimap (Default: 4096)
+        # Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources.
+        #qualimap_mem_mb: 4096
+
+        # When true, measure how far each individual diverges from the reference and flag
+        # individuals whose divergence is an outlier compared to the rest of the cohort.
+        # A flagged individual can mean a wrong reference genome, cross-species
+        # contamination, or a mislabeled individual. Flagging is a warning only, the run
+        # continues. This is NOT related to reveal_module's snp_analysis, which is a
+        # different feature computing SNP stats on feature libraries. (Default: false)
+        snp_divergence_check: false
+
+        # Optional: how the per-individual divergence number is obtained.
+        #   samtools_stats -- reuse the per-individual samtools stats file that is already
+        #                     produced (mismatches / bases mapped). Free, runs in seconds,
+        #                     no extra dependency, but gives no heterozygous-call rate.
+        #   bcftools       -- call SNPs per individual with bcftools mpileup/call. Adds the
+        #                     heterozygous-call rate and a MultiQC panel, costs real runtime.
+        #   both           -- run both of the above side by side on the same cohort.
+        # Each method writes its own files, with the method in the filename, so the two never
+        # overwrite each other and changing this setting never reuses the other method's
+        # result. (Default: samtools_stats)
+        #snp_divergence_method: samtools_stats
+
+        # Optional: modified z-score above which an individual is flagged as an outlier.
+        # Only the high side is flagged, an unusually low divergence is not suspicious.
+        # (Default: 3.5)
+        #snp_divergence_outlier_zscore: 3.5
+
+        # Optional: skip flagging any individual with fewer callable bases than this, since
+        # the score is too noisy to trust below it. "Callable bases" means aligned bases for
+        # snp_divergence_method: samtools_stats, and sites at or above
+        # snp_divergence_min_depth inside the sampled regions for snp_divergence_method:
+        # bcftools. Such an individual gets status insufficient_data. (Default: 100000)
+        #snp_divergence_min_callable_bases: 100000
+
+        # Note: scoring is cohort relative, so it also needs at least three usable
+        # individuals mapped to the same reference. With fewer, every individual gets
+        # status insufficient_cohort and nothing is flagged. That minimum is fixed.
+
+        # --- the settings below only apply when snp_divergence_method: bcftools ---
+
+        # Optional: how many reference bases to call per individual. Caps runtime so it
+        # scales with this budget instead of with genome size. The same deterministic region
+        # set is used for every individual of the cohort, so the scores stay comparable.
+        # Set to 0 to use the whole reference. (Default: 10000000)
+        #snp_divergence_target_bases: 10000000
+        # Optional: contigs shorter than this are never picked for the region set (Default: 10000)
+        #snp_divergence_min_contig_length: 10000
+        # Optional: minimum read depth for a site to count toward SNP density (Default: 3)
+        #snp_divergence_min_depth: 3
+        # Optional: maximum per-site depth passed to bcftools mpileup --max-depth (Default: 50)
+        #snp_divergence_max_depth: 50
+        # Optional: minimum mapping and base quality passed to mpileup --min-MQ / --min-BQ (Default: 30)
+        #snp_divergence_min_mapping_quality: 30
+        #snp_divergence_min_base_quality: 30
+
+
+  reveal_module:
+    # When true, this stage will be executed (Default: true)
+    execute: true
+
+    #settings:
+      # Where to get the REVEAL toolkit from (Default: "conda"). Options:
+      #   "conda"           -- the bioconda package reveal-tools=1.* (default)
+      #   "latest_release"  -- always side-load the newest tagged release from
+      #                        https://github.com/SarahSaadain/REVEAL (unpinned by design)
+      #   "dev"             -- [experimental] side-load the tip of REVEAL's "develop" branch.
+      #                        Unreleased and untested -- use at your own risk.
+      # Each option has its own conda env file, so switching this builds/reuses that env
+      # automatically; picking up a newer release/commit on an already-built unpinned
+      # latest_release/dev env still needs a manual rebuild (see FAQ.md).
+      #version_source: "conda"
+
+    # ── SCG Selector ──────────────────────────────────────────────────────────
+    # Automatically determines single-copy genes (SCGs) via BUSCO when no SCG
+    # FASTA is provided in {species}/input/reveal_module/scg/.
+    # If a FASTA is already present there, this section is ignored and the
+    # user-provided file is used instead.
+    # Setting execute: true also enables an "SCG-only" run (ranking output is
+    # produced even when no feature libraries are present).
+    scg_selector:
+      # When true, run SCG determination if no user-provided SCG file exists (Default: true)
+      # Automatically skipped when a user-provided SCG FASTA is found in
+      # {species}/input/reveal_module/scg/ or when no lineage is configured for the species.
+      execute: true
+      settings:
+        # Mapper for SCG library mapping. Defaults to pipeline.reveal_module.mapping.settings.mapper.
+        # Uncomment to override. Options: "bwa-mem2", "bwa-aln", "minimap2"
+        #mapper: "minimap2"
+        # Extra parameters passed directly to the mapper.
+        # Defaults to pipeline.reveal_module.mapping.settings.mapper_extra_params if set,
+        # otherwise falls back to mapper-specific defaults (bwa-aln: Oliva et al. 2021, minimap2: "-ax sr").
+        #mapper_extra_params: ""
+        # Number of top-ranked SCGs to keep (Default: 20)
+        num_top_scgs: 20
+        # Minimum SCG sequence length in bp to include (Default: 4000)
+        min_length_scg: 4000
+        # Maximum SCG sequence length in bp to include (Default: 8000)
+        max_length_scg: 8000
+        # Minimum mapping quality score for reads mapped to the SCG library.
+        # Reads with MAPQ below this value are removed from the BAM after unmapped-read removal.
+        # Also used as the threshold when computing per-contig coverage stats. Set to 0 to disable. (Default: 0)
+        min_mapq: 0
+        # When true, the filtered sorted SCG BAM and its index are kept as permanent outputs in
+        # {species}/processed/reveal_module/scg/reads_mapped/. When false (default), they are
+        # marked as temporary and deleted after SCG ranking consumes them.
+        keep_mapped_bam: false
+
+    mapping:
+      settings:
+        # Options: "bwa-mem2" (default), "bwa-aln" or "minimap2"
+        # bwa-aln: classic seed-and-extend, relatively slow
+        # bwa-mem2: default, faster modern reimplementation of bwa-mem
+        # minimap2: fast versatile aligner, uses preset "-ax sr" for short reads
+        mapper: "bwa-mem2"
+        # Optional: extra parameters passed directly to the mapper
+        # For bwa-aln, defaults to "-n 0.01 -k 2 -l 1024 -o 2" (Oliva et al. 2021, 10.1093/bib/bbab076)
+        #mapper_extra_params: ""
+        # When true, the filtered sorted BAM (and its index) produced by the REVEAL mapping step
+        # are kept as permanent outputs in {species}/processed/reveal_module/{feature_library}/mapped/.
+        # When false (default), they are marked as temporary and deleted after REVEAL consumes them.
+        # Set to true to inspect the BAM or to run the mapping step independently of REVEAL.
+        keep_mapped_bam: false
+        # When true, competitive mapping is enabled: sequences from {species}/input/reveal_module/competition/
+        # are combined with the SCG and feature library before mapping. Competition sequences are
+        # suffixed with _comp, and reads mapping to them are removed after mapping — only SCG and
+        # feature library sequences are retained for downstream analysis. (Default: false)
+        competitive_mapping: false
+        # Minimum mapping quality score applied to SCG sequences (_scg) in the combined library.
+        # Reads mapping to SCG references with MAPQ below this value are removed after mapping.
+        # Set to 0 to disable.
+        min_mapq_scg: 0
+        # Minimum mapping quality score applied to feature library sequences (_fle) in the combined library.
+        # Reads mapping to feature references with MAPQ below this value are removed after mapping.
+        # SCG reads (_scg) are not affected. Set to 0 (default) to disable.
+        min_mapq_fle: 0
+
+    # ── Sequence Overview (bam2so) ──────────────────────────────────────────────
+    # Thresholds used when converting the mapped BAM into a sequence overview (.so)
+    # profile — coverage, SNP, and indel calls per reference position.
+    sequence_overview:
+      settings:
+        # Mapping quality threshold; reads below this are considered ambiguous (Default: 5)
+        mapping_quality_threshold: 5
+        # Minimum count of SNPs to call a SNP (Default: 5)
+        minimum_count_snp: 5
+        # Minimum frequency of SNPs to call a SNP (Default: 0.1)
+        minimum_frequency_snp: 0.1
+        # Minimum count of indels to call an indel (Default: 3)
+        minimum_count_indel: 3
+        # Minimum frequency of indels to call an indel (Default: 0.01)
+        minimum_frequency_indel: 0.01
+
+    # ── Normalization (normalize-so) ────────────────────────────────────────────
+    # Settings used to normalise sequence overview coverage against single-copy
+    # gene (SCG) depth.
+    normalization:
+      settings:
+        # Distance from sequence ends excluded from normalization (Default: 100)
+        end_distance: 100
+        # Exclude the most extreme coverage quantiles for normalization (Default: 25)
+        exclude_quantile: 25
+        # When an individual's SCG coverage is too low to normalize, exclude that
+        # individual instead of failing the whole species-level comparison/plot.
+        # Excluded individuals are listed in *_excluded_individuals.tsv (Default: false)
+        skip_low_coverage_individuals: false
+
+    visualization:
+      # When true, this sub-stage will be executed (Default: true)
+      execute: true
+      settings:
+        # Controls plotting for individual-level REVEAL visualization output.
+        # Options:
+        #   "plot"          — generate plotables AND render plots
+        #   "plotable_only" — generate plotables only, skip rendering plots
+        #   "skip"          — skip both plotables and plots (Default)
+        individual_plots: "skip"
+        # Controls plotting for species-level (comparison) REVEAL visualization output.
+        # Options:
+        #   "plot"          — generate plotables AND render the facet comparison plot (Default)
+        #   "plotable_only" — generate plotables only, skip rendering the comparison plot
+        #   "skip"          — skip both plotables and the comparison plot
+        comparison_plots: "plot"
+        # Y-axis value above which the plot switches to log scale (individual and species level) (Default: 25)
+        y_axis_log_scale_threshold_individual: 25
+        y_axis_log_scale_threshold_species: 25
+        # Bin size used when generating per-position coverage plotables (Default: "target:5000")
+        # Options:
+        #   fixed integer      — e.g. "100" applies the same bin size to every sequence
+        #   "target:N"         — auto-computes bin_size = max(1, seq_len // N) per sequence (Default)
+        #   length thresholds  — e.g. "10000:1,100000:10,1000000:100,default:500" uses bin size 1
+        #                        for sequences <= 10000 bp, 10 for <= 100000 bp, etc., and the
+        #                        "default" bin size for anything larger
+        visualization_bin_size: "target:5000"
+    
+    analysis:
+      # When true, this sub-stage will be executed (Default: true)
+      execute: true
+      settings:
+        # When true, produce per-individual and species-level coverage stats,
+        # comparisons, and plots (Default: true)
+        coverage_analysis: true
+        # When true, produce per-individual and species-level SNP stats
+        # and comparisons (Default: false)
+        snp_analysis: false
+        # When true, produce per-individual and species-level indel stats
+        # and comparisons (Default: false)
+        indel_analysis: false
+  
+  summary_module:
+    # When true, this stage will be executed (Default: true)
+    execute: true
+    settings:
+      # When true, generate a per-individual MultiQC summary report (Default: true)
+      individual_multiqc: true
+      # When true, generate a per-species MultiQC summary report (Default: true)
+      species_multiqc: true

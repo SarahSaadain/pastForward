@@ -16,7 +16,7 @@ rule create_multiqc_bam_individual:
         extra="--verbose",  # Optional: extra parameters for multiqc.
         use_input_files_only=True,  # Optional: only use the specified input files.
     wrapper:
-        "v9.3.0/bio/multiqc"
+        f"{WRAPPER_VERSION}/bio/multiqc"
 
 
 rule create_multiqc_bam_individual_config:

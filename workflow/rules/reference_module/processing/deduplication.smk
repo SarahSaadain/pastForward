@@ -70,7 +70,7 @@ rule save_unmapped_reads_from_bam:
     message:
         "Converting SAM to BAM for {input}"
     wrapper:
-        "v9.3.0/bio/samtools/view"
+        f"{WRAPPER_VERSION}/bio/samtools/view"
 
 
 # Rule: Split BAM file into contig clusters
@@ -90,7 +90,7 @@ rule dedup_split_bam_into_clusters_by_contig_cluster:
     message:
         "Splitting BAM file {input} into cluster {wildcards.start}-{wildcards.end} for individual {wildcards.individual} in species {wildcards.species}"
     wrapper:
-        "v9.3.0/bio/samtools/view"
+        f"{WRAPPER_VERSION}/bio/samtools/view"
 
 
 # Rule: Index split cluster BAM file
@@ -109,7 +109,7 @@ rule dedup_index_split_cluster_bam:
     message:
         "Indexing split BAM file for cluster {wildcards.start}-{wildcards.end} for individual {wildcards.individual} in species {wildcards.species}"
     wrapper:
-        "v9.3.0/bio/samtools/index"
+        f"{WRAPPER_VERSION}/bio/samtools/index"
 
 
 # Rule: Deduplicate BAM file for each contig cluster
@@ -127,7 +127,7 @@ rule dedup_deduplicate_bam_cluster:
         dedup_hist="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}/{individual}_{reference}_cluster_{start}_{end}.hist",
         dedup_json="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}/{individual}_{reference}_cluster_{start}_{end}.dedup.json",
     log:
-        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}/{individual}_{reference}_{start}_{end}.dedup.log",
+        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}.dedup.log",
     conda:
         "../../../envs/dedup.yaml"
     resources:
@@ -167,7 +167,7 @@ rule dedup_merge_bam_clusters:
     message:
         "Merging deduplicated BAM files for individual {wildcards.individual} in species {wildcards.species}"
     wrapper:
-        "v9.3.0/bio/samtools/merge"
+        f"{WRAPPER_VERSION}/bio/samtools/merge"
 
 
 # Rule: Sort BAM file
@@ -185,7 +185,7 @@ rule sort_mapped_dedupped_reads_bam:
     message:
         "Sorting deduplicated BAM file for {input}"
     wrapper:
-        "v9.3.0/bio/samtools/sort"
+        f"{WRAPPER_VERSION}/bio/samtools/sort"
 
 
 # Rule: Index BAM file
@@ -205,7 +205,7 @@ rule dedup_index_dedupped_bam:
     message:
         "Indexing deduplicated BAM file for {input}"
     wrapper:
-        "v9.3.0/bio/samtools/index"
+        f"{WRAPPER_VERSION}/bio/samtools/index"
 
 
 # Rule: Merge DeDup JSON files

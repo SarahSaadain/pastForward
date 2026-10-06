@@ -38,7 +38,7 @@ if _ref_mapper == "minimap2":
             extra=_ref_mapper_extra,
             sorting="none",
         wrapper:
-            "v9.3.0/bio/minimap2/aligner"
+            f"{WRAPPER_VERSION}/bio/minimap2/aligner"
 
 elif _ref_mapper == "bwa-aln":
 
@@ -64,7 +64,7 @@ elif _ref_mapper == "bwa-aln":
         params:
             extra=_ref_mapper_extra,
         wrapper:
-            "v9.3.0/bio/bwa/aln"
+            f"{WRAPPER_VERSION}/bio/bwa/aln"
 
     rule map_reads_to_reference_bwa_aln:
         input:
@@ -86,7 +86,7 @@ elif _ref_mapper == "bwa-aln":
             "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}.bam.log",
         threads: 1
         wrapper:
-            "v9.3.0/bio/bwa/samse"
+            f"{WRAPPER_VERSION}/bio/bwa/samse"
 
 else:
 
@@ -111,7 +111,7 @@ else:
         params:
             extra=_ref_mapper_extra,
         wrapper:
-            "v9.3.0/bio/bwa-mem2/mem"
+            f"{WRAPPER_VERSION}/bio/bwa-mem2/mem"
 
 
 # Rule: Sort BAM file
@@ -129,7 +129,7 @@ rule sort_mapped_reads_bam:
     message:
         "Sorting BAM file for {input}"
     wrapper:
-        "v9.3.0/bio/samtools/sort"
+        f"{WRAPPER_VERSION}/bio/samtools/sort"
 
 
 # Rule: Index BAM file
@@ -149,4 +149,4 @@ rule index_mapped_sorted_reads_bam:
     message:
         "Indexing BAM file for {input}"
     wrapper:
-        "v9.3.0/bio/samtools/index"
+        f"{WRAPPER_VERSION}/bio/samtools/index"

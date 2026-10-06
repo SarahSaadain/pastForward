@@ -2,17 +2,5 @@ name: reveal_env_conda
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
-  # REVEAL (https://github.com/SarahSaadain/REVEAL) is not yet published on
-  # bioconda, so we pin its runtime deps directly (same list as REVEAL's own
-  # shell/install.sh) and the neighboring reveal.post-deploy.sh stands in for
-  # the missing package by side-loading REVEAL's latest GitHub release. Once
-  # reveal-tools lands on bioconda, replace this list with `- reveal-tools`
-  # and delete that script.
-  - conda-forge::python>=3.10
-  - bioconda::pysam
-  - conda-forge::numpy
-  - conda-forge::pandas
-  - conda-forge::r-base>=4.0
-  - conda-forge::r-tidyverse>=2.0.0
+  - reveal-tools=1.*

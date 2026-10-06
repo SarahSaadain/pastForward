@@ -40,7 +40,7 @@ if _ref_mapper == "minimap2":
         message:
             "Indexing reference {wildcards.reference} with minimap2"
         wrapper:
-            "v9.3.0/bio/minimap2/index"
+            f"{WRAPPER_VERSION}/bio/minimap2/index"
 
 elif _ref_mapper == "bwa-aln":
 
@@ -65,7 +65,7 @@ elif _ref_mapper == "bwa-aln":
         message:
             "Indexing reference {wildcards.reference} with BWA (for BWA ALN)"
         wrapper:
-            "v9.3.0/bio/bwa/index"
+            f"{WRAPPER_VERSION}/bio/bwa/index"
 
 else:
 
@@ -89,7 +89,7 @@ else:
         message:
             "Indexing reference {wildcards.reference} with BWA-MEM2"
         wrapper:
-            "v9.3.0/bio/bwa-mem2/index"
+            f"{WRAPPER_VERSION}/bio/bwa-mem2/index"
 
 
 rule index_reference_with_samtools:
@@ -102,4 +102,4 @@ rule index_reference_with_samtools:
     params:
         extra="",
     wrapper:
-        "v9.3.0/bio/samtools/faidx"
+        f"{WRAPPER_VERSION}/bio/samtools/faidx"

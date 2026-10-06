@@ -45,7 +45,7 @@ rule analyze_mapdamage_and_rescale_bam:
     message:
         "Analyze damage and rescale {input.bam}"
     wrapper:
-        "v9.3.0/bio/mapdamage2"
+        f"{WRAPPER_VERSION}/bio/mapdamage2"
 
 
 # Rule: Sort rescaled BAM file
@@ -63,7 +63,7 @@ rule sort_rescaled_bam:
     message:
         "Sort rescaled BAM for {input}"
     wrapper:
-        "v9.3.0/bio/samtools/sort"
+        f"{WRAPPER_VERSION}/bio/samtools/sort"
 
 
 # Rule: Index rescaled BAM file
@@ -81,7 +81,7 @@ rule index_rescaled_bam:
     message:
         "Index rescaled BAM for {input}"
     wrapper:
-        "v9.3.0/bio/samtools/index"
+        f"{WRAPPER_VERSION}/bio/samtools/index"
 
 
 # Rule: Move rescaled BAM and index to processed directory

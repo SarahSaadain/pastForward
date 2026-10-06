@@ -25,7 +25,7 @@ After adapter removal, reads go through a second dedicated quality filtering ste
 
 ### Merge by Individual
 
-Many sequencing projects split a single individual across multiple sequencing runs or lanes, each producing a separate FASTQ file. This step concatenates all quality-filtered samples belonging to the same individual into a single merged FASTQ. Individual identity is derived from the sample filename. Everything before the first underscore is treated as the individual identifier. The merged file is the single input to all downstream reference mapping and REVEAL analyses.
+Many sequencing projects split a single individual across multiple sequencing runs or lanes, each producing a separate FASTQ file. This step concatenates all quality-filtered samples belonging to the same individual into a single merged FASTQ. Each run or lane is handled as its own sample beforehand, since the sample name keeps everything in the filename except the read number. Individual identity is derived from the sample filename. Everything before the first underscore is treated as the individual identifier. The merged file is the single input to all downstream reference mapping and REVEAL analyses.
 
 ### Read Count Statistics
 
@@ -186,4 +186,4 @@ The entire pastForward Pipeline is controlled through a single `config/config.ya
 
 For a full description of all configuration options and defaults, see [config/parameters.md](../config/parameters.md). For an annotated example config, see [config/max_config_sample.yaml](../config/max_config_sample.yaml).
 
-On every execution the pipeline logs extensive provenance information: timestamp, platform and OS details, Python and Snakemake versions, the active conda environment, the git commit hash of the pipeline code, the full command line used, all config file paths, and the complete loaded configuration. A minimum Snakemake version of 9.9.0 is enforced at startup.
+On every execution the pipeline logs extensive provenance information: timestamp, platform and OS details, Python and Snakemake versions, the active conda environment, the git commit hash of the pipeline code, the full command line used, all config file paths, and the complete loaded configuration. A minimum Snakemake version of 9.26.1 is enforced at startup.

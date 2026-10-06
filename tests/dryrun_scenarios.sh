@@ -92,7 +92,7 @@ fi
 # shellcheck disable=SC1091
 source "$(conda info --base)/etc/profile.d/conda.sh"
 if ! conda env list | awk '{print $1}' | grep -qx "$CONDA_ENV"; then
-  echo "ERROR: conda environment '$CONDA_ENV' not found. Create it per config/README.md (Snakemake >= 9.9.0)." >&2
+  echo "ERROR: conda environment '$CONDA_ENV' not found. Create it per config/README.md (Snakemake >= 9.26.1)." >&2
   exit 2
 fi
 conda activate "$CONDA_ENV"
@@ -313,6 +313,268 @@ if [ "$S7_EXIT" -eq 0 ] && [ ! -e "$EXT7/.pastforward.lock" ]; then
 else
   fail "7: real run acquires the lock and releases it via onsuccess:" \
        "exit=$S7_EXIT, lock present=$([ -e "$EXT7/.pastforward.lock" ] && echo yes || echo no), see $S7/run.log"
+fi
+
+# =============================================================================================
+# Scenario 8: the SNP divergence check is off by default and, when switched on, its
+# snp_divergence_method picks which per-individual rules end up in the DAG.
+# =============================================================================================
+make_snp_project() {  # make_snp_project <dir> <extra_analysis_settings_yaml_or_empty>
+  make_project "$1"
+  cat > "$1/config/config.yaml" <<EOF
+project_name: "pastForward_Project"
+pipeline:
+  reference_module:
+    analysis:
+      settings:
+$2
+species:
+  Dmel:
+    name: "Drosophila melanogaster"
+EOF
+  mkdir -p "$1/Dmel"
+  make_species_root "$1/Dmel"
+  make_fake_data "$1/Dmel"
+}
+
+# 8a: default config (check off) must not pull any snp_divergence rule into the DAG
+if grep -qE "^(combine_snp_divergence|call_snps_for_divergence|plot_snp_divergence_bar)[[:space:]]" "$S1/dryrun.log"; then
+  fail "8a: snp divergence check is off by default" "a snp_divergence rule appeared in $S1/dryrun.log"
+else
+  pass "8a: snp divergence check is off by default"
+fi
+
+# 8b: samtools_stats tier reuses the existing samtools stats files, no bcftools rules
+S8B="$WORKDIR/8_snp_samtools_stats"
+make_snp_project "$S8B" "        snp_divergence_check: true"
+run_dryrun "$S8B" "$S8B/dryrun.log"
+if [ "$DRYRUN_EXIT" -eq 0 ]; then
+  pass "8b: samtools_stats tier dry-run succeeds"
+else
+  fail "8b: samtools_stats tier dry-run succeeds" "exit code $DRYRUN_EXIT, see $S8B/dryrun.log"
+fi
+if grep -qE "^combine_snp_divergence[[:space:]]" "$S8B/dryrun.log" &&
+   grep -qE "^plot_snp_divergence_bar[[:space:]]" "$S8B/dryrun.log"; then
+  pass "8c: samtools_stats tier schedules the combine and plot rules"
+else
+  fail "8c: samtools_stats tier schedules the combine and plot rules" "see $S8B/dryrun.log"
+fi
+if grep -qE "^(build_snp_divergence_regions|call_snps_for_divergence|count_snp_divergence_callable_bases|compute_snp_divergence_stats)[[:space:]]" "$S8B/dryrun.log"; then
+  fail "8d: samtools_stats tier pulls in no bcftools rule" "a bcftools-tier rule appeared in $S8B/dryrun.log"
+else
+  pass "8d: samtools_stats tier pulls in no bcftools rule"
+fi
+
+# 8e: bcftools tier adds the region BED, calling, callable-bases and stats rules
+S8E="$WORKDIR/8_snp_bcftools"
+make_snp_project "$S8E" "        snp_divergence_check: true
+        snp_divergence_method: bcftools"
+run_dryrun "$S8E" "$S8E/dryrun.log"
+if [ "$DRYRUN_EXIT" -eq 0 ]; then
+  pass "8e: bcftools tier dry-run succeeds"
+else
+  fail "8e: bcftools tier dry-run succeeds" "exit code $DRYRUN_EXIT, see $S8E/dryrun.log"
+fi
+S8E_MISSING=""
+for expected_rule in build_snp_divergence_regions call_snps_for_divergence \
+                     count_snp_divergence_callable_bases compute_snp_divergence_stats \
+                     combine_snp_divergence; do
+  grep -qE "^${expected_rule}[[:space:]]" "$S8E/dryrun.log" || S8E_MISSING="$S8E_MISSING $expected_rule"
+done
+if [ -z "$S8E_MISSING" ]; then
+  pass "8f: bcftools tier schedules every bcftools-tier rule"
+else
+  fail "8f: bcftools tier schedules every bcftools-tier rule" "missing:$S8E_MISSING, see $S8E/dryrun.log"
+fi
+
+# 8g: target_bases 0 means call the whole reference, so no region BED is built
+S8G="$WORKDIR/8_snp_bcftools_whole_reference"
+make_snp_project "$S8G" "        snp_divergence_check: true
+        snp_divergence_method: bcftools
+        snp_divergence_target_bases: 0"
+run_dryrun "$S8G" "$S8G/dryrun.log"
+if [ "$DRYRUN_EXIT" -eq 0 ] && ! grep -qE "^build_snp_divergence_regions[[:space:]]" "$S8G/dryrun.log"; then
+  pass "8g: target_bases 0 skips the region BED rule"
+else
+  fail "8g: target_bases 0 skips the region BED rule" \
+       "exit=$DRYRUN_EXIT, see $S8G/dryrun.log"
+fi
+
+# 8i: method "both" runs the two methods side by side, each writing its own files
+S8I="$WORKDIR/8_snp_both"
+make_snp_project "$S8I" "        snp_divergence_check: true
+        snp_divergence_method: both"
+run_dryrun "$S8I" "$S8I/dryrun.log"
+if [ "$DRYRUN_EXIT" -eq 0 ]; then
+  pass "8i: method both dry-run succeeds"
+else
+  fail "8i: method both dry-run succeeds" "exit code $DRYRUN_EXIT, see $S8I/dryrun.log"
+fi
+S8I_COMBINE=$(awk '$1 == "combine_snp_divergence" { print $2 }' "$S8I/dryrun.log" | head -n 1)
+S8I_PLOT=$(awk '$1 == "plot_snp_divergence_bar" { print $2 }' "$S8I/dryrun.log" | head -n 1)
+if [ "$S8I_COMBINE" = "2" ] && [ "$S8I_PLOT" = "2" ] &&
+   grep -qE "^call_snps_for_divergence[[:space:]]" "$S8I/dryrun.log"; then
+  pass "8j: method both schedules one combine and one plot per method, plus the bcftools rules"
+else
+  fail "8j: method both schedules one combine and one plot per method, plus the bcftools rules" \
+       "combine=$S8I_COMBINE, plot=$S8I_PLOT, see $S8I/dryrun.log"
+fi
+
+# 8h: an unknown method fails fast instead of silently doing nothing
+S8H="$WORKDIR/8_snp_bad_method"
+make_snp_project "$S8H" "        snp_divergence_check: true
+        snp_divergence_method: nonsense"
+run_dryrun "$S8H" "$S8H/dryrun.log"
+if [ "$DRYRUN_EXIT" -ne 0 ] && grep -q "Unknown snp_divergence_method" "$S8H/dryrun.log"; then
+  pass "8h: an unknown snp_divergence_method fails with a clear error"
+else
+  fail "8h: an unknown snp_divergence_method fails with a clear error" \
+       "exit=$DRYRUN_EXIT, see $S8H/dryrun.log"
+fi
+
+# =============================================================================================
+# Scenario 9: benchmarking - workflow/rules/benchmark.smk attaches a benchmark file to every
+# rule after the fact, using Snakemake internals (Rule.benchmark, Rule.log_modifier,
+# Workflow.output_settings). A Snakemake upgrade that changes those must fail here rather than
+# in a user's run.
+# =============================================================================================
+S9="$WORKDIR/9_benchmark"
+make_project "$S9"
+cat > "$S9/config/config.yaml" <<'EOF'
+project_name: "pastForward_Project"
+species:
+  Dmel:
+    name: "Drosophila melanogaster"
+EOF
+mkdir -p "$S9/Dmel"
+make_species_root "$S9/Dmel"
+make_fake_data "$S9/Dmel"
+
+run_dryrun "$S9" "$S9/dryrun.log"
+if [ "$DRYRUN_EXIT" -eq 0 ]; then
+  pass "9a: dry-run with benchmarks attached succeeds"
+else
+  fail "9a: dry-run with benchmarks attached succeeds" "exit code $DRYRUN_EXIT, see $S9/dryrun.log"
+fi
+
+# 9b: the DAG job count is unchanged - a benchmark file is not an output, so it adds no job
+S9_JOBS="$(job_total "$S9/dryrun.log")"
+if [ -n "$S1_JOBS" ] && [ "$S1_JOBS" = "$S9_JOBS" ]; then
+  pass "9b: DAG job count unchanged by benchmarks ($S9_JOBS jobs)"
+else
+  fail "9b: DAG job count unchanged by benchmarks" "scenario1=$S1_JOBS scenario9=$S9_JOBS"
+fi
+
+# 9c: every scheduled job carries a benchmark path next to its log path
+if grep -qE "^    benchmark: .*\.benchmark\.jsonl$" "$S9/dryrun.log"; then
+  pass "9c: jobs are scheduled with a .benchmark.jsonl path"
+else
+  fail "9c: jobs are scheduled with a .benchmark.jsonl path" "no benchmark line in $S9/dryrun.log"
+fi
+
+# 9d: rules marked `cache: True` must be skipped. Snakemake rejects a rule that is both
+# cacheable and benchmarked, and does so at DAG build time, which kills the whole run.
+if grep -q "may not be marked as eligible" "$S9/dryrun.log"; then
+  fail "9d: cache-eligible rules are left unbenchmarked" \
+       "Snakemake rejected a cacheable rule carrying a benchmark, see $S9/dryrun.log"
+else
+  pass "9d: cache-eligible rules are left unbenchmarked"
+fi
+
+# 9e: a real (tiny, conda-free) job actually writes the file, in the extended JSON-lines format
+# that `./pastForward benchmark` reads. The dry runs above only prove the paths were attached.
+S9E="$WORKDIR/9_benchmark_write"
+mkdir -p "$S9E"
+cat > "$S9E/Snakefile" <<EOF
+rule all:
+    input:
+        "out.txt",
+
+
+rule make_out:
+    output:
+        "out.txt",
+    log:
+        "out.log",
+    shell:
+        "touch {output} > {log} 2>&1"
+
+
+include: "$REPO_ROOT/workflow/rules/benchmark.smk"
+EOF
+( cd "$S9E" && "$TIMEOUT_CMD" 120 snakemake --cores 1 > "$S9E/run.log" 2>&1 )
+if [ -f "$S9E/out.benchmark.jsonl" ]; then
+  pass "9e: a real job writes out.benchmark.jsonl next to out.log"
+else
+  fail "9e: a real job writes out.benchmark.jsonl next to out.log" "see $S9E/run.log"
+fi
+# rule_name only appears in the extended format, which benchmark.smk switches on for the whole
+# workflow - without it the aggregator cannot tell which rule a file belongs to.
+if grep -q '"rule_name": "make_out"' "$S9E/out.benchmark.jsonl" 2>/dev/null; then
+  pass "9f: the record is in extended format, with no --benchmark-extended flag passed"
+else
+  fail "9f: the record is in extended format, with no --benchmark-extended flag passed" \
+       "$(cat "$S9E/out.benchmark.jsonl" 2>/dev/null || echo "no benchmark file")"
+fi
+
+# =============================================================================================
+# Scenario 10: the shipped workflow profile (workflow/profiles/default/profile.yaml). Snakemake
+# discovers it by path and by filename, and gets both wrong silently: a profile at the top of the
+# project instead of under workflow/ is never seen from a project root that only symlinks
+# workflow/, and a key Snakemake does not recognize is ignored without a warning. So assert the
+# effect on a real DAG, not the file's existence.
+# =============================================================================================
+S10="$WORKDIR/10_profile"
+make_project "$S10"
+cat > "$S10/config/config.yaml" <<'EOF'
+project_name: "pastForward_Project"
+species:
+  Dmel:
+    name: "Drosophila melanogaster"
+EOF
+mkdir -p "$S10/Dmel"
+make_species_root "$S10/Dmel"
+make_fake_data "$S10/Dmel"
+
+run_dryrun "$S10" "$S10/dryrun.log"
+
+# 10a: found through the workflow/ symlink, from a project root with no profiles/ of its own
+if grep -q "workflow specific profile workflow/profiles/default" "$S10/dryrun.log"; then
+  pass "10a: workflow profile is discovered through the workflow/ symlink"
+else
+  fail "10a: workflow profile is discovered through the workflow/ symlink" \
+       "no discovery line in $S10/dryrun.log - wrong path, or wrong filename for this version"
+fi
+
+# 10b: its default-resources actually reach the jobs. No rule declares a runtime of its own, so
+# every scheduled job must carry the profile's. A typo'd key would leave the line out entirely.
+PROFILE_RUNTIME="$(grep -oE "runtime=[0-9]+" "$S10/dryrun.log" | head -1)"
+if [ "$PROFILE_RUNTIME" = "runtime=240" ]; then
+  pass "10b: the profile's default-resources reach the scheduled jobs ($PROFILE_RUNTIME)"
+else
+  fail "10b: the profile's default-resources reach the scheduled jobs" \
+       "expected runtime=240, got '${PROFILE_RUNTIME:-no runtime in any resources line}'"
+fi
+
+# 10c: the DAG is unchanged by the profile. Resources are requests, not targets - if the job count
+# moves, the profile is doing something it should not.
+S10_JOBS="$(job_total "$S10/dryrun.log")"
+if [ -n "$S1_JOBS" ] && [ "$S1_JOBS" = "$S10_JOBS" ]; then
+  pass "10c: DAG job count unchanged by the profile ($S10_JOBS jobs)"
+else
+  fail "10c: DAG job count unchanged by the profile" "scenario1=$S1_JOBS scenario10=$S10_JOBS"
+fi
+
+# 10d: --workflow-profile none is the documented escape hatch, so it has to still build a DAG
+( cd "$S10" && "$TIMEOUT_CMD" 120 snakemake --cores 4 --dryrun \
+    --workflow-profile none > "$S10/no_profile.log" 2>&1 )
+S10_NONE_EXIT=$?
+S10_NONE_JOBS="$(job_total "$S10/no_profile.log")"
+if [ "$S10_NONE_EXIT" -eq 0 ] && [ "$S10_NONE_JOBS" = "$S10_JOBS" ]; then
+  pass "10d: --workflow-profile none still builds the same DAG"
+else
+  fail "10d: --workflow-profile none still builds the same DAG" \
+       "exit $S10_NONE_EXIT, jobs $S10_NONE_JOBS vs $S10_JOBS, see $S10/no_profile.log"
 fi
 
 # =============================================================================================

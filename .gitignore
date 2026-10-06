@@ -6,7 +6,7 @@ __pycache__
 .snakemake/
 *.bkp
 
-# pastForward CLI (workflow/scripts/cli.py): .pastforward/ holds the tracked-run state file,
+# pastForward CLI (workflow/scripts/cli/): .pastforward/ holds the tracked-run state file,
 # logs/ holds timestamped run/dryrun logs - both per project root.
 .pastforward/
 /logs/
@@ -14,4 +14,8 @@ __pycache__
 # Synthetic test library materialized by tests/build_test_library.py (rebuilt on every
 # test run - see tests/README.md).
 tests/fixtures/
+
+# A project's own config/config.yaml is the user's, never the repo's. The pattern has no
+# leading slash, so it matches at any depth. The shipped workflow profile is named profile.yaml
+# so this pattern does not swallow it.
 config.yaml

@@ -14,11 +14,11 @@ rule count_reads_raw:
     log:
         "{species}/processed/read_module/statistics/{sample}_raw.log",
     conda:
-        "../../../../envs/python_and_r.yaml"
+        "../../../../envs/python_isal.yaml"
     message:
         "Counting reads in raw FASTQ file(s) {input.fastq}"
     script:
-        "../../../../scripts/read_module/analytics/statistics/count_reads_raw.py"
+        "../../../../scripts/read_module/analytics/statistics/count_reads.py"
 
 
 # Rule: Count reads in trimmed FASTQ files
@@ -38,11 +38,11 @@ rule count_reads_trimmed:
     log:
         "{species}/processed/read_module/statistics/{sample}_trimmed.log",
     conda:
-        "../../../../envs/python_and_r.yaml"
+        "../../../../envs/python_isal.yaml"
     message:
         "Counting reads in {input.source}"
-    run:
-        write_count_from_source(input.source, output.counted)
+    script:
+        "../../../../scripts/read_module/analytics/statistics/count_reads.py"
 
 
 # Rule: Count reads in quality-filtered FASTQ files
@@ -62,11 +62,11 @@ rule count_reads_quality_filtered:
     log:
         "{species}/processed/read_module/statistics/{sample}_quality_filtered.log",
     conda:
-        "../../../../envs/python_and_r.yaml"
+        "../../../../envs/python_isal.yaml"
     message:
         "Counting reads in {input.source}"
-    run:
-        write_count_from_source(input.source, output.counted)
+    script:
+        "../../../../scripts/read_module/analytics/statistics/count_reads.py"
 
 
 # Rule: Combine read counts per sample

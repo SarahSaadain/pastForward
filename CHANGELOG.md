@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### New Features
+
+- **`./pastForward tools create-species`**: creates a species' `input/` folders in the project root and prints a `species:` block for `config/config.yaml`. Takes several species at once and leaves existing folders alone. See [README.md](README.md#running-the-pipeline)
+- **`./pastForward tools link-reads`**: `--source <folder> --species <species>` (or `-d`/`-s`) symlinks every `*.fastq.gz`/`*.fq.gz` file in the source folder into `<species>/input/read_module/`, so reads can stay where they are. Existing names are never overwritten, and names the pipeline cannot use are listed in a warning. See [README.md](README.md#running-the-pipeline)
+- **`./pastForward touch`**: wraps `snakemake --touch` to mark existing outputs as up to date, for example after copying results from another machine. Only timestamps change. See [README.md](README.md#running-the-pipeline)
+- **`./pastForward benchmark`**: every rule now writes a `*.benchmark.jsonl` file next to its log. `./pastForward benchmark` sums these up per rule (wall time, peak memory, core-hours), and `--emit-profile` prints a `set-resources:` block for HPC runs. On macOS only wall time is recorded. See [docs/snakemake.md](docs/snakemake.md#benchmarking-a-run)
+- **Default workflow profile**: `workflow/profiles/default/profile.yaml` gives every rule a default request of 8 GB memory and 4 hours wall time, and sets `--keep-going` and `--rerun-trigger mtime`. Snakemake picks it up without a flag. Cluster jobs no longer fall back to the partition's defaults. See [docs/snakemake.md](docs/snakemake.md#resource-defaults)
+- **SNP divergence check**: `pipeline.reference_module.analysis.settings.snp_divergence_check` flags individuals whose divergence from the reference is an outlier within their cohort. This can point to a wrong reference, cross-species contamination, or a mislabeled individual. Warning only. Methods: `samtools_stats` (default, no extra runtime), `bcftools` (adds heterozygous-call rate), or `both`. Default `false`. See [config/parameters.md](config/parameters.md)
+- **`pipeline.reveal_module.normalization.settings.skip_low_coverage_individuals`**: excludes individuals with too little SCG coverage for REVEAL normalization instead of failing the whole species. Excluded individuals are listed in `{species}_{feature_library}_excluded_individuals.tsv`. Default `false`. See [config/parameters.md](config/parameters.md)
+- **Short flags**: `status -w`, `abort -f`, `print-log -l` and `print-log -t [N]`
+- **`./pastForward check` and `preview` take `--configfile`**, merged on top of `config/config.yaml` the same way Snakemake does it for `run`
+- **`./pastForward unlock` handles `.pastforward.lock`**: it lists the cross-project locks in the config's `processed_dir`/`results_dir` targets, and `--cross-project` removes them. A lock whose run is still alive on this host is never removed. See [docs/FAQ.md](docs/FAQ.md)
+- **`./pastForward <command> --help`** (or `-h`) shows the help for that one command. A mistyped command now suggests the closest one
+- **`config/max_config_modern_sample.yaml`**: example config for modern DNA. All steps run as in `max_config_sample.yaml`, except deduplication, damage rescaling and damage analysis, which are off
+
+### Changed
+
+- **Sample names keep everything in the read filename except `R1`/`R2`**: text after the read number (e.g. `_set1_lane6`) used to be dropped, so several lanes of one library collapsed into one sample and the run stopped with `has more than one R1 candidate`. Each lane is now its own sample and is still merged per individual. Note: on existing projects with text after the read number, per-sample files get new names, so mapping and later steps rerun. See [config/README.md](config/README.md#naming-your-read-files)
+- **`./pastForward status` shows how a run ended**: a new `Status:` line (`Running`, `Completed`, `Aborted`, `Failed`, `Interrupted`, ...) replaces the red `PID: ... (not running)` that made clean finishes look like errors. The progress bar is colored by state
+- **`./pastForward --help` groups commands by task**. Command names and flags are unchanged
+- **REVEAL is installed from bioconda**: `version_source: "conda"` (the default) now installs `reveal-tools=1.*` from [bioconda](https://github.com/bioconda/bioconda-recipes/pull/67451) instead of the newest GitHub release
+- **`--software-deployment-method conda` replaces `--use-conda`** in the CLI and docs, since Snakemake 8 deprecated `--use-conda`. The old flag still works. The CLI no longer overrides a deployment flag you pass yourself (e.g. `--sdm apptainer`)
+- **Read counting is about 4x faster**, using ISA-L instead of Python's `gzip`
+- **Snakemake 9.26.1 or newer is required** (was 9.9.0). Older versions have bugs that hit this pipeline. They can rerun jobs whose outputs are up to date (fixed in 9.11, 9.22 and 9.26). From 9.16.3 to 9.19 they read the profile's `runtime` as seconds instead of minutes. Before 9.24 they leak benchmark threads, which crashed long runs with "Too many open files". Update with `conda update -n snakemake snakemake`
+- **`./pastForward status` shows Snakemake's own run time** for a finished run, from the `Elapsed time` line Snakemake logs on exit. A killed run still falls back to the log file's last write
+
+### Bug Fixes
+
+- **`./pastForward run --configfile <file>` failed without `config/config.yaml`**, even though Snakemake does not need it then. Same for `dryrun` and `touch`. A missing `--configfile` file is now reported before Snakemake starts
+- **`./pastForward print-log` could show the wrong log**: a `dryrun` started during a run was newer, so it was shown instead of the run. While a tracked run is going, its log is shown
+- **`./pastForward unlock` left a `.pastforward.lock` behind** when the config sets `processed_dir` or `results_dir`. Same host runs took it over, but it looked like a stuck lock
+- **`./pastForward status --watch` flickered**: each refresh cleared the screen before drawing. It now draws over the previous frame
+
+- **Workflow failed to parse without `config/config.yaml`**: a fresh clone has no config, so `snakemake --lint` and the [Snakemake workflow catalog](https://snakemake.github.io/snakemake-workflow-catalog) reported the workflow as broken. A missing config is now reported with a clear message when you run it
+- **`./pastForward dryrun` did not match `./pastForward run`**: it left out `--rerun-trigger mtime` and could show an almost full rerun that `run` would never do
+- **`./pastForward status` called a tracked dry run force-killed**: `run -n` is now labeled as a dry run
+- **`./pastForward check` could hide read files with unusable names**: it now always prints a `WARNING: reads not used` line with the reason for each file
+- **`./pastForward doctor --rebuild-envs` crashed on environments shared by several rules** with `FileNotFoundError`
+- **BUSCO SCG library step broke on Snakemake >= 9.17.0** with `ImportError: cannot import name 'snakemake' from 'snakemake.script'` ([#11](https://github.com/SarahSaadain/pastForward/issues/11))
+- **`dedup_deduplicate_bam_cluster` lost its log on a crash**: the log was inside an output folder that Snakemake deletes on failure
+- **REVEAL conda environments could fail with `libicui18n.so.58: cannot open shared object file`**: the `defaults` channel is removed from the REVEAL env files. Rebuild old envs with `./pastForward doctor --rebuild-envs reveal`
+
+### Docs
+
+- **FAQ**: new sections on reprocessing cascades, why REVEAL processing does not deduplicate, benchmark files, workflow profiles, and SNP divergence status values
+
+### CI / Maintenance
+
+- `workflow/rules/initialize.smk` formatted so the workflow catalog's older snakefmt also accepts it
+- `workflow/scripts/cli.py` split into a `workflow/scripts/cli/` package
+- Three REVEAL library rules now write their own log file
+
 ## [2.1.0] - 2026-08-20
 
 ### New Features

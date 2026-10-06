@@ -23,7 +23,7 @@ rule run_fastqc_raw:
     message:
         "Running FastQC on raw reads for sample {wildcards.sample} in species {wildcards.species}"
     wrapper:
-        "v9.3.0/bio/fastqc"
+        f"{WRAPPER_VERSION}/bio/fastqc"
 
 
 # Rule: Run FastQC on adapter-trimmed reads
@@ -44,7 +44,7 @@ rule run_fastqc_adapter_removed:
     message:
         "Running FastQC on adapter-trimmed reads for sample {wildcards.sample} in species {wildcards.species}"
     wrapper:
-        "v9.3.0/bio/fastqc"
+        f"{WRAPPER_VERSION}/bio/fastqc"
 
 
 # Rule: Run FastQC on quality-filtered reads
@@ -65,7 +65,7 @@ rule run_fastqc_quality_filtered:
     message:
         "Running FastQC on quality-filtered reads for sample {wildcards.sample} in species {wildcards.species}"
     wrapper:
-        "v9.3.0/bio/fastqc"
+        f"{WRAPPER_VERSION}/bio/fastqc"
 
 
 # Rule: Run FastQC on merged reads
@@ -86,4 +86,4 @@ rule run_fastqc_merged:
     message:
         "Running FastQC on merged reads for individual {wildcards.individual} in species {wildcards.species}"
     wrapper:
-        "v9.3.0/bio/fastqc"
+        f"{WRAPPER_VERSION}/bio/fastqc"

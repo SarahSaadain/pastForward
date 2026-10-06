@@ -6,43 +6,13 @@
 # rules and functions" guidance) so their originating rule files stay
 # rules-only. Small one-off helpers stay inline as lambdas at their call site.
 
-import gzip
 import glob
 import os
 
-
-def get_fastq_read_count(fastq_file):
-    """
-    counted reads in a FASTQ file (handles gzipped files).
-    Each read is 4 lines, so counted lines and divide by 4.
-    """
-
-    logger.info(f"Counting reads in {fastq_file}")
-
-    count = 0
-
-    if fastq_file is None:
-        return 0
-
-    if fastq_file.endswith(".gz"):
-        with gzip.open(fastq_file, "rt") as f:
-            count = sum(1 for _ in f) // 4
-    else:
-        with open(fastq_file, "r") as f:
-            count = sum(1 for _ in f) // 4
-
-    logger.debug(f"Found {count} reads in {fastq_file}")
-    return count
-
-
-def write_count_from_source(source, output_file):
-    """Copy a .count file or count reads from a fastq and write the result."""
-    if source.endswith(".count"):
-        shell(f"cp {source} {output_file}")
-    else:
-        count = get_fastq_read_count(source)
-        with open(output_file, "w") as f:
-            f.write(str(count))
+# Version of the Snakemake wrapper repository every `wrapper:` directive is pinned to. Bump it
+# here, in one place, so all wrappers move together. A bump changes tool versions and rebuilds
+# the wrapper envs, so treat it as its own release and check a dry run afterwards.
+WRAPPER_VERSION = "v9.3.0"
 
 
 def determine_reads_trimmed_final_input(wildcards):
@@ -92,6 +62,21 @@ def merge_reads_by_individual_input(wildcards):
         quality_filtered_files.append(qf_file)
 
     return quality_filtered_files
+
+
+def get_snp_divergence_methods(analysis_settings):
+    """
+    The SNP divergence methods to run, from analysis.settings.snp_divergence_method.
+
+    "both" runs samtools_stats and bcftools side by side. Every species-level output
+    carries the method in its filename, so the two never collide and a file written by
+    an earlier method is never picked up as if the current one had produced it.
+    Validation of the value lives in analyze_snp_divergence.smk.
+    """
+    method = analysis_settings.get("snp_divergence_method", "samtools_stats")
+    if method == "both":
+        return ["samtools_stats", "bcftools"]
+    return [method]
 
 
 def create_multiqc_bam_individual_input(wildcards):
@@ -358,6 +343,23 @@ def create_multiqc_reference_input(wildcards):
                 ):
                     file_list.append(
                         f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/samtools_stats/{individual}_{reference}_final.bam.stats"
+                    )
+                # Only the bcftools method of the SNP divergence check produces a file
+                # MultiQC can render. The samtools_stats method reuses the samtools stats
+                # file already added above, so it needs nothing here.
+                analysis_settings = (
+                    config.get("pipeline", {})
+                    .get("reference_module", {})
+                    .get("analysis", {})
+                    .get("settings", {})
+                )
+                if analysis_settings.get(
+                    "snp_divergence_check", False
+                ) == True and "bcftools" in get_snp_divergence_methods(
+                    analysis_settings
+                ):
+                    file_list.append(
+                        f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/snp_divergence/{individual}_{reference}.bcftools_stats.txt"
                     )
                 file_list.append(
                     f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/multiqc_custom_content/{individual}_{reference}_reads_processing_summary.tsv"

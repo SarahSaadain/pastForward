@@ -61,7 +61,27 @@ def get_expected_output_reveal_module_processing(species):
 
     individuals = get_individuals_for_species(species)
 
-    if reveal_cfg.get("visualization", {}).get("execute", True) and coverage_analysis_active:
+    # REVEAL's covcompare/snpcompare/indelcompare all require at least two
+    # stats files to compare, so cross-individual comparison outputs are only
+    # meaningful (and only requested) when there is more than one individual.
+    has_multiple_individuals = len(individuals) > 1
+    if not has_multiple_individuals:
+        logging.info(
+            f"Only one individual found for {species}. "
+            f"Skipping cross-individual comparison outputs (coverage/SNP/indel comparison)."
+        )
+
+    skip_low_coverage_individuals = (
+        reveal_cfg.get("normalization", {})
+        .get("settings", {})
+        .get("skip_low_coverage_individuals", False)
+    )
+
+    if (
+        reveal_cfg.get("visualization", {}).get("execute", True)
+        and coverage_analysis_active
+        and has_multiple_individuals
+    ):
         all_inputs.append(f"{species}/results/reveal_module/{species}_reveal_coverage_comparison.tsv")
 
     keep_mapped_bam = reveal_cfg.get("mapping", {}).get("settings", {}).get("keep_mapped_bam", False)
@@ -79,7 +99,7 @@ def get_expected_output_reveal_module_processing(species):
 
         if reveal_cfg.get("visualization", {}).get("execute", True):
 
-            if coverage_analysis_active:
+            if coverage_analysis_active and has_multiple_individuals:
                 # Species-level coverage stats
                 all_inputs.append(
                     f"{species}/results/reveal_module/{feature_library}/visualization/species_level/{species}_{feature_library}_coverage_comparison.tsv.gz"
@@ -87,6 +107,12 @@ def get_expected_output_reveal_module_processing(species):
                 all_inputs.append(
                     f"{species}/results/reveal_module/{feature_library}/visualization/species_level/{species}_{feature_library}_flagged_seqids.tsv"
                 )
+
+            if coverage_analysis_active:
+                if skip_low_coverage_individuals:
+                    all_inputs.append(
+                        f"{species}/results/reveal_module/{feature_library}/visualization/species_level/{species}_{feature_library}_excluded_individuals.tsv"
+                    )
 
                 if comparison_plots_mode == "plot":
                     all_inputs.append(
@@ -100,12 +126,12 @@ def get_expected_output_reveal_module_processing(species):
                         f"{species}/results/reveal_module/{feature_library}/visualization/species_level/{species}_plotables_facet.tar.gz"
                     )
 
-            if snp_analysis_active:
+            if snp_analysis_active and has_multiple_individuals:
                 all_inputs.append(
                     f"{species}/results/reveal_module/{feature_library}/visualization/species_level/{species}_{feature_library}_snp_comparison.tsv.gz"
                 )
 
-            if indel_analysis_active:
+            if indel_analysis_active and has_multiple_individuals:
                 all_inputs.append(
                     f"{species}/results/reveal_module/{feature_library}/visualization/species_level/{species}_{feature_library}_indel_comparison.tsv.gz"
                 )

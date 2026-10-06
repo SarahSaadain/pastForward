@@ -235,6 +235,18 @@ class TestScgSelectorDefaults(ExpectedOutputManagerTestCase):
         )
 
 
+    def test_skip_low_coverage_individuals_adds_excluded_report(self):
+        outputs = self.get_all_outputs(self.base_config)
+        self.assertFalse(any("excluded_individuals" in o for o in outputs))
+
+        config = dict(
+            self.base_config,
+            pipeline={"reveal_module": {"normalization": {"settings": {"skip_low_coverage_individuals": True}}}},
+        )
+        outputs = self.get_all_outputs(config)
+        self.assertTrue(any(o.endswith("_excluded_individuals.tsv") for o in outputs))
+
+
 class TestSkipExistingFiles(ExpectedOutputManagerTestCase):
     def setUp(self):
         super().setUp()

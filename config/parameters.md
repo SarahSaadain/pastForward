@@ -144,6 +144,27 @@ Optionally removes or extracts reads that did not map to the reference. Default:
 | `analysis.settings.qualimap` | on | Include Qualimap BAM QC data in MultiQC reports. |
 | `analysis.settings.samtools_stats` | on | Include samtools stats data in MultiQC reports. |
 | `analysis.settings.qualimap_mem_mb` | `4096` | Memory (MB) requested from the cluster scheduler for Qualimap. Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources. |
+| `analysis.settings.snp_divergence_check` | `false` | When `true`, measure how far each individual diverges from the reference and flag individuals whose divergence is a cohort outlier. Flags a possible wrong reference genome, cross-species contamination, or mislabeled individual. Warning only, the run continues. Unrelated to `reveal_module`'s `snp_analysis`. |
+| `analysis.settings.snp_divergence_method` | `samtools_stats` | How the divergence number is obtained. `samtools_stats` reuses the per-individual samtools stats file that is already produced (mismatches / bases mapped), costs no extra runtime and adds no dependency, but gives no heterozygous-call rate. `bcftools` calls SNPs per individual, adding the heterozygous-call rate and a MultiQC panel at real runtime cost. `both` runs the two side by side. Each method writes its own files, named after it, so switching this setting never reuses another method's result. |
+| `analysis.settings.snp_divergence_outlier_zscore` | `3.5` | Modified z-score above which an individual is flagged. Only the high side is flagged. |
+| `analysis.settings.snp_divergence_min_callable_bases` | `100000` | Individuals with fewer callable bases are reported as `insufficient_data` instead of being scored, and are left out of the cohort median. |
+| `analysis.settings.snp_divergence_target_bases` | `10000000` | `bcftools` method only. Reference bases to call per individual, so runtime scales with this budget instead of genome size. The same region set is used for every individual. `0` uses the whole reference. |
+| `analysis.settings.snp_divergence_min_contig_length` | `10000` | `bcftools` method only. Contigs shorter than this are never picked for the region set. |
+| `analysis.settings.snp_divergence_min_depth` | `3` | `bcftools` method only. Minimum read depth for a site to count toward SNP density. |
+| `analysis.settings.snp_divergence_max_depth` | `50` | `bcftools` method only. Maximum per-site depth passed to `bcftools mpileup --max-depth`. |
+| `analysis.settings.snp_divergence_min_mapping_quality` | `30` | `bcftools` method only. Minimum mapping quality passed to `mpileup --min-MQ` and `samtools depth -Q`. |
+| `analysis.settings.snp_divergence_min_base_quality` | `30` | `bcftools` method only. Minimum base quality passed to `mpileup --min-BQ` and `samtools depth -q`. |
+
+Each method writes its own set of files, with the method in the filename: `{reference}_combined_snp_divergence_{method}.csv`, `{reference}_combined_snp_divergence_{method}_detailed.csv` and, with `create_plots` on, `{species}_{reference}_snp_divergence_{method}_bar.png`.
+
+The `status` column of `{reference}_combined_snp_divergence_{method}.csv` holds one of four values:
+
+| Status | Meaning |
+|---|---|
+| `ok` | Scored against the cohort and not an outlier. |
+| `outlier` | Scored against the cohort with a modified z-score above `snp_divergence_outlier_zscore`. Check the reference genome, cross-species contamination, and whether the individual is mislabeled. |
+| `insufficient_data` | Fewer callable bases than `snp_divergence_min_callable_bases`. The individual is not scored and does not affect the cohort median. |
+| `insufficient_cohort` | The individual has enough callable bases, but fewer than three usable individuals were mapped to this reference. The score is cohort relative, and the median and MAD carry no information below three individuals, so no individual is scored and nothing is flagged. This minimum of three is fixed and not configurable. |
 
 ### Stage: `reveal_module`
 
@@ -153,7 +174,7 @@ Place feature libraries in `{species}/input/reveal_module/feature_library/` and,
 
 | Setting | Default | Description |
 |---|---|---|
-| `settings.version_source` | `conda` | Where to get the REVEAL toolkit (not yet on bioconda, always side-loaded). `conda` takes REVEAL from its conda package (`reveal.yaml`). No such package exists yet, so `reveal.post-deploy.sh` stands in for it and side-loads the newest tagged release until one does. `latest_release` always side-loads the newest tagged release from [SarahSaadain/REVEAL](https://github.com/SarahSaadain/REVEAL) (`reveal_git_release.yaml`). `dev` **(experimental)** side-loads the tip of REVEAL's `develop` branch, unreleased and untested (`reveal_git_development.yaml`). Each value has its own conda env, so switching it builds or reuses that env automatically. Picking up a newer release/commit on an already-built unpinned env still needs a manual rebuild, see [FAQ.md](FAQ.md). |
+| `settings.version_source` | `conda` | Where to get the REVEAL toolkit. `conda` takes REVEAL from the bioconda package `reveal-tools=1.*` (`reveal.yaml`). `latest_release` side-loads the newest tagged release from [SarahSaadain/REVEAL](https://github.com/SarahSaadain/REVEAL) instead (`reveal_git_release.yaml`). `dev` **(experimental)** side-loads the tip of REVEAL's `develop` branch, unreleased and untested (`reveal_git_development.yaml`). Each value has its own conda env, so switching it builds or reuses that env automatically. Picking up a newer release/commit on an already-built unpinned `latest_release`/`dev` env still needs a manual rebuild, see [FAQ.md](FAQ.md). |
 
 #### `scg_selector`
 
@@ -222,6 +243,7 @@ Competition sequences are internally suffixed with `_comp` to distinguish them f
 | `sequence_overview.settings.minimum_frequency_indel` | `0.01` | Minimum allele frequency (0 to 1) for an indel call. |
 | `normalization.settings.end_distance` | `100` | Number of positions from each end of a sequence excluded when computing the normalisation factor, to avoid edge-coverage artefacts. |
 | `normalization.settings.exclude_quantile` | `25` | Percentile used to exclude the most extreme coverage values from normalisation (excludes both the top and bottom tail). |
+| `normalization.settings.skip_low_coverage_individuals` | `false` | When an individual's SCG coverage is too low for REVEAL to compute a normalisation factor, exclude that individual from normalised outputs and species-level comparisons/plots instead of failing them. Excluded individuals are listed, with the reason, in `{species}_{feature_library}_excluded_individuals.tsv`. Default `false` keeps today's behaviour: a low-coverage individual fails the whole species-level REVEAL comparison. |
 
 ### Stage: `summary_module`
 

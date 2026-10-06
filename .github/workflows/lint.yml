@@ -13,15 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # `snakemake --lint` currently reports 234 pre-existing findings across 89
-      # rules/files (missing log: directives, missing per-rule conda envs, long
-      # run: blocks, hardcoded params, plus some likely false positives on awk
-      # script strings flagged as "absolute paths"). Re-enable once that backlog
-      # has been triaged, or add `continue-on-error: true` to run it non-blocking
-      # in the meantime.
-      # - name: Snakemake lint
-      #   uses: snakemake/snakemake-github-action@v2
-      #   with:
-      #     directory: "."
-      #     snakefile: "workflow/Snakefile"
-      #     args: "--lint"
+      - name: Snakemake lint
+        uses: snakemake/snakemake-github-action@v2
+        with:
+          directory: "."
+          snakefile: "workflow/Snakefile"
+          args: "--lint"

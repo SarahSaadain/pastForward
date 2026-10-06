@@ -7,7 +7,7 @@ This guide walks through everything you need to set up and configure pastForward
 pastForward runs on two free tools:
 
 * **Conda** installs and manages all the other software the pipeline needs.
-* **Snakemake** runs the pipeline itself and can be installed using conda. Version **9.9.0** or newer is required.
+* **Snakemake** runs the pipeline itself and can be installed using conda. Version **9.26.1** or newer is required.
 
 
 ## Step 1: Install Conda
@@ -71,6 +71,8 @@ To add a new species:
 1. Create a folder for it in the project root. The folder name must exactly (case sensitive) match the species key you'll use under `species:` in `config.yaml` (see [Configuration](#configuration-configyaml) below).
 2. Put your raw read files and reference genome inside that folder (see below).
 
+Or let pastForward do step 1 for you. Run `./pastForward tools create-species Dmel` from the project root. It creates `Dmel/` with every `input/` subfolder listed below, and prints a `species:` block to copy into `config.yaml`.
+
 #### Providing Your Data
 
 The simplest option: drop your raw read files and reference genome inside the `<species>` folder. The first time you run pastForward, it finds them and moves them to the right place. This shortcut only works for reads and the reference genome. REVEAL input files (feature library, and optionally SCG) must go in their specific folders, not just anywhere in `<species>`.
@@ -83,6 +85,8 @@ If you want to put the files straight into their final location, put them here:
 * (optional) a pre-built SCG (single-copy gene) FASTA in `<species>/input/reveal_module/scg/`. If you skip this, pastForward determines SCGs automatically via BUSCO, as long as `pipeline.reveal_module.scg_selector.execute` is `true` (the default) and `species.<key>.lineage` is set to a BUSCO lineage name (e.g. `drosophilidae_odb12`, see [busco.ezlab.org](https://busco.ezlab.org/)). No lineage configured and no FASTA provided means SCG determination is skipped.
 
 If your files are large, shared with other tools, or already live somewhere else on disk, you don't need to copy them. Place a **symlink** in the expected location instead, and pastForward will use it directly. The symlink's name must follow pastForward's naming convention (below), but the real file it points to can keep its own name and live anywhere.
+
+For reads, `./pastForward tools link-reads --source /path/to/reads --species Dmel` makes those symlinks for you. It links every `*.fastq.gz` and `*.fq.gz` file in that folder into `Dmel/input/read_module/`, keeping the original file names. It warns about any name that doesn't follow the convention below, so you can rename those links.
 
 #### Storing Species Data Elsewhere
 
@@ -145,9 +149,12 @@ Pattern:
 ```
 
 * **`<Individual>`** is a unique ID for the sample, e.g. `Dmel01`. It's everything **before the first underscore**, and pastForward uses it to group files that belong together.
-* **`<FreeText>`** (optional, can appear before or after the read number) is any extra label you want, e.g. a protocol name. Useful when the same individual was extracted twice with different methods.
+* **`<FreeText>`** (optional, can appear before or after the read number) is any extra label you want, e.g. a protocol name or a lane. Useful when the same individual was extracted twice with different methods, or sequenced across several lanes.
+* **The sample** is the whole filename with only the read number taken out, e.g. `Dmel01_DabneyProtocol_R1_006.fastq.gz` is sample `Dmel01_DabneyProtocol_006`. Everything you put in the name apart from `R1`/`R2` therefore keeps one file apart from the next, so several lanes of the same individual stay separate samples and are only brought together at the merge step.
 * **`<ReadNumber>`** marks which read of the pair this file is: `R1`/`R2`, or a plain `1`/`2`. It can sit in the middle of the filename (followed by more `<FreeText>`) or be the last part, right before the extension, as in the second and third examples above. A plain `1` or `2` must stand on its own between underscores or right before the file extension. It won't be picked up inside a longer number like `_10_` or `_21`. In case you provide single end data, use `1` or `R1` as well.
 * The file must end in **`.fastq.gz`** or **`.fq.gz`** (compressed FASTQ). Uncompressed `.fastq`/`.fq` files are not supported.
+
+Run `./pastForward check` to see whether your names work. It lists every read file whose name doesn't fit under a `WARNING` line, with the reason. A name with no read number is ignored. A name with more than one read number (e.g. `Dmel01_R1_L1_R1.fastq.gz`) stops the run with an error.
 
 ## Configuration (`config.yaml`)
 

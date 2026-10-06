@@ -48,7 +48,7 @@ if _scg_sel_mapper == "minimap2":
         message:
             "Indexing SCG library {input} with minimap2"
         wrapper:
-            "v9.3.0/bio/minimap2/index"
+            f"{WRAPPER_VERSION}/bio/minimap2/index"
 
     rule map_reads_to_scg_library_minimap2:
         input:
@@ -67,7 +67,7 @@ if _scg_sel_mapper == "minimap2":
         message:
             "Mapping reads of {wildcards.individual} to {wildcards.species} SCG library with minimap2"
         wrapper:
-            "v9.3.0/bio/minimap2/aligner"
+            f"{WRAPPER_VERSION}/bio/minimap2/aligner"
 
 elif _scg_sel_mapper == "bwa-aln":
 
@@ -88,7 +88,7 @@ elif _scg_sel_mapper == "bwa-aln":
         message:
             "Indexing SCG library {input} with BWA (for BWA ALN)"
         wrapper:
-            "v9.3.0/bio/bwa/index"
+            f"{WRAPPER_VERSION}/bio/bwa/index"
 
     rule align_reads_to_scg_library_bwa_aln:
         input:
@@ -111,7 +111,7 @@ elif _scg_sel_mapper == "bwa-aln":
         params:
             extra=_scg_sel_mapper_extra,
         wrapper:
-            "v9.3.0/bio/bwa/aln"
+            f"{WRAPPER_VERSION}/bio/bwa/aln"
 
     rule map_reads_to_scg_library_bwa_aln:
         input:
@@ -133,7 +133,7 @@ elif _scg_sel_mapper == "bwa-aln":
             "{species}/processed/reveal_module/scg/reads_mapped/{individual}_scg_library_bwa_samse.log",
         threads: 1
         wrapper:
-            "v9.3.0/bio/bwa/samse"
+            f"{WRAPPER_VERSION}/bio/bwa/samse"
 
     rule sort_scg_bam_reads:
         input:
@@ -148,7 +148,7 @@ elif _scg_sel_mapper == "bwa-aln":
         message:
             "Sorting SCG BAM file for {input}"
         wrapper:
-            "v9.3.0/bio/samtools/sort"
+            f"{WRAPPER_VERSION}/bio/samtools/sort"
 
 else:
     # bwa-mem2 (default)
@@ -167,7 +167,7 @@ else:
         message:
             "Indexing SCG library {input} with BWA-MEM2"
         wrapper:
-            "v9.3.0/bio/bwa-mem2/index"
+            f"{WRAPPER_VERSION}/bio/bwa-mem2/index"
 
     rule map_reads_to_scg_library_bwa_mem2:
         input:
@@ -194,7 +194,7 @@ else:
         message:
             "Mapping reads of {wildcards.individual} to {wildcards.species} SCG library with BWA-MEM2"
         wrapper:
-            "v9.3.0/bio/bwa-mem2/mem"
+            f"{WRAPPER_VERSION}/bio/bwa-mem2/mem"
 
 
 _mapq_extra = f" -q {_scg_min_mapq}" if _scg_min_mapq > 0 else ""
@@ -215,7 +215,7 @@ rule remove_unmapped_reads_and_filter_by_mapq_from_scg_bam:
     message:
         "Removing unmapped reads from SCG BAM for {input}"
     wrapper:
-        "v9.3.0/bio/samtools/view"
+        f"{WRAPPER_VERSION}/bio/samtools/view"
 
 
 # SAMTOOLS doesn't parallelize the indexing work — it only parallelizes compression/decompression.
@@ -232,4 +232,4 @@ rule index_scg_bam_reads:
     message:
         "Indexing SCG BAM file for {input}"
     wrapper:
-        "v9.3.0/bio/samtools/index"
+        f"{WRAPPER_VERSION}/bio/samtools/index"
