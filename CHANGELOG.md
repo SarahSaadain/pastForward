@@ -9,6 +9,8 @@ All notable changes to this project will be documented in this file.
 
 - **Config validation**: `config.yaml` is now checked against [workflow/schemas/config.schema.yaml](workflow/schemas/config.schema.yaml) at startup, and by `./pastForward check` and `preview` before they create any data-location symlink. Unknown keys, wrong types (e.g. `execute: "false"` as a string) and invalid values (e.g. an unknown `mapper`) now stop the run, with every problem listed at once and a "did you mean" hint for misspelled keys. Before, a misspelled key was silently ignored, so a typo in `execute: false` ran the step anyway. `execute` on `mapping`, `sequence_overview` or `normalization` is now an error too, since those steps always run and the setting never had an effect. A section whose lines are all commented out (e.g. an empty `settings:`) is reported as empty instead of crashing later with an `AttributeError`. When `jsonschema` is not installed, `check`/`preview` print a warning and skip the validation
 
+- **`./pastForward status` shows conda env installs**: a new `Conda envs:` line appears when the run installs conda environments. While running it names the env being installed and how many are done. After the run it shows how many were installed, or which env did not finish
+
 ### Changed
 
 - **Plot logs in one place**: the logs of the read-count, coverage, endogenous-read and raw-vs-endogenous plots were written under `processed/`, while the SNP-divergence plot and the REVEAL plots log under `results/` next to their output. They now all log next to the plot under `results/`, and so do their `.benchmark.jsonl` files. Old logs under `processed/.../plots/` are no longer updated

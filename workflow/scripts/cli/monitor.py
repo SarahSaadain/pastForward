@@ -56,6 +56,9 @@ NOTHING_TO_DO_RE = re.compile(r"^Nothing to be done \(all requested files are pr
 # Snakemake >= 9.26 logs the whole run's wall time when it exits, on success and on failure
 # alike, as a str(timedelta): "Elapsed time: 2:03:04.123456" or "1 day, 2:03:04.123456".
 ELAPSED_RE = re.compile(r"Elapsed time: (?:(\d+) days?, )?(\d+):(\d+):(\d+(?:\.\d+)?)")
+# Snakemake creates conda envs one at a time before any job runs, logging each start and end.
+CONDA_CREATING_RE = re.compile(r"Creating conda environment (.+)\.\.\.\s*$", re.MULTILINE)
+CONDA_CREATED_RE = re.compile(r"Environment for .+ created \(location:")
 PROJECT_NAME_RE = re.compile(r'^project_name:\s*["\']?([^"\'\n]+?)["\']?\s*$', re.MULTILINE)
 JOB_ERROR_BLOCK_RE = re.compile(r"^Error in rule \S+:\n(?:[ \t]+.*\n?)*", re.MULTILINE)
 # The `log:` line Snakemake prints inside an "Error in rule" block - points at the rule's own
@@ -275,6 +278,20 @@ def _elapsed_seconds(text):
     return int(days or 0) * 86400 + int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
 
+def _conda_env_line(alive, text):
+    """The "Conda envs:" value, or None when this run installed no env."""
+    creating = CONDA_CREATING_RE.findall(text)
+    created = len(CONDA_CREATED_RE.findall(text))
+    if not creating:
+        return None
+    if created >= len(creating):
+        return _color(GREEN, f"{created} installed")
+    pending = creating[-1]
+    if alive:
+        return _color(YELLOW, f"installing {pending}") + _color(DIM, f" ({created} done)")
+    return _color(RED, f"{created} installed, {pending} not finished")
+
+
 def _runtime(alive, started, log_path, text):
     if alive:
         return _format_duration((datetime.now() - started).total_seconds())
@@ -342,6 +359,9 @@ def _print_status(tail=None):
         bar = _progress_bar(0.0, DIM)
         steps = _color(DIM, "(no progress logged yet)")
     print(f"{_color(CYAN, 'Progress:')}  {bar}  {steps}")
+    conda_line = _conda_env_line(alive, text)
+    if conda_line:
+        print(f"{_color(CYAN, 'Conda envs:')} {conda_line}")
 
     if state_key == "failed":
         errors = _parse_job_errors(text)

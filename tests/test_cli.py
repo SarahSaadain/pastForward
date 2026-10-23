@@ -114,6 +114,17 @@ class StatusHelpersTestCase(unittest.TestCase):
         self.assertIsNone(cli.monitor._elapsed_seconds("Finished jobid: 1 (Rule: all)"))
         self.assertIsNone(cli.monitor._elapsed_seconds(None))
 
+    def test_conda_env_line(self):
+        line = cli.monitor._conda_env_line
+        a = "Creating conda environment my envs/a.yaml...\n"
+        a_done = "Environment for /p q/my envs/a.yaml created (location: .snakemake/conda/1)\n"
+        b = "Creating conda environment workflow/envs/b.yaml...\n"
+        self.assertIsNone(line(True, "Finished jobid: 1 (Rule: all)"))
+        self.assertIn("installing workflow/envs/b.yaml", line(True, a + a_done + b))
+        self.assertIn("(1 done)", line(True, a + a_done + b))
+        self.assertIn("1 installed", line(False, a + a_done))
+        self.assertIn("workflow/envs/b.yaml not finished", line(False, a + a_done + b))
+
     def test_cores_from_cmd(self):
         self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "--software-deployment-method", "conda", "--cores", "8", "--forceall"]), "8")
         self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "-j", "all"]), "all")
