@@ -10,7 +10,7 @@ rule plot_read_counts:
     output:
         "{species}/results/read_module/plots/{species}_read_counts.png",
     log:
-        "{species}/processed/read_module/plots/{species}_read_counts.log",
+        "{species}/results/read_module/plots/{species}_read_counts.log",
     conda:
         "../../../envs/python_and_r.yaml"
     message:
@@ -26,7 +26,7 @@ rule plot_read_counts_comparison_by_individual:
     output:
         "{species}/results/read_module/plots/{species}_read_counts_comparison_by_individual.png",
     log:
-        "{species}/processed/read_module/plots/{species}_read_counts_comparison_by_individual.log",
+        "{species}/results/read_module/plots/{species}_read_counts_comparison_by_individual.log",
     conda:
         "../../../envs/python_and_r.yaml"
     message:

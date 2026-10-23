@@ -10,7 +10,7 @@ rule plot_mapped_reads_coverage_breadth_violin:
     output:
         "{species}/results/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_coverage_breadth_violin.png",
     log:
-        "{species}/processed/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_coverage_breadth_violin.log",
+        "{species}/results/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_coverage_breadth_violin.log",
     conda:
         "../../../envs/python_and_r.yaml"
     params:
