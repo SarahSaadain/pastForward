@@ -47,8 +47,11 @@ envvars:
 # =================================================================================================
 #     Snakemake Version Check
 # =================================================================================================
-# Ensure the minimum required Snakemake version is available for compatibility
-snakemake.utils.min_version("9.26.1")
+# Ensure the minimum required Snakemake version is available for compatibility.
+# Skipped for `--lint`: it runs no jobs, and the Snakemake workflow catalog lints every
+# clone with its own pinned (older) Snakemake, which would otherwise fail at parse time.
+if "--lint" not in sys.argv:
+    snakemake.utils.min_version("9.26.1")
 
 
 # =================================================================================================
