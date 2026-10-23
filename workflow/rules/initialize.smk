@@ -145,29 +145,11 @@ if workflow.exec_mode != ExecMode.SUBPROCESS:
         pass
 
     pltfrm = f"{platform.platform()}; {platform.version()}"
+    # Linux distro name (platform.linux_distribution() was removed in Python 3.8).
+    # macOS has no os-release file, and platform.platform() already has its version.
     try:
-        ld = platform.linux_distribution()
-        if len(ld):
-            pltfrm = f"{pltfrm}; {ld}"
-        del ld
-    except:
-        pass
-
-    try:
-
-        def merge_osx_tuple(x, bases=(tuple, list)):
-            for e in x:
-                if type(e) in bases:
-                    for e in merge_osx_tuple(e, bases):
-                        yield e
-                else:
-                    yield e
-
-        mv = " ".join(merge_osx_tuple(platform.mac_ver()))
-        if not mv.isspace():
-            pltfrm = f"{pltfrm}; {mv}"
-        del mv, merge_osx_tuple
-    except:
+        pltfrm = f"{pltfrm}; {platform.freedesktop_os_release()['PRETTY_NAME']}"
+    except (OSError, KeyError):
         pass
 
     username = pwd.getpwuid(os.getuid())[0]

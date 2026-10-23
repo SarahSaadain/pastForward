@@ -21,6 +21,10 @@ All notable changes to this project will be documented in this file.
 - **Deduplicated BAM sort log no longer overwrites the mapped BAM sort log**: both sort rules wrote `{individual}_{reference}_sorted_bam.log`, so the second one replaced the first one's log and benchmark. The deduplicated sort now writes `{individual}_{reference}_sorted_dedupped_bam.log`
 - **`.pastforward.lock` was left behind by `snakemake --lint` and `./pastForward doctor --rebuild-envs`**: the cross-project lock for `processed_dir`/`results_dir` was taken when the workflow loaded, so any call that does not run jobs left it behind. It is now taken only when a real run starts, before its first job, and released when that run ends
 
+### CI / Maintenance
+
+- **Startup log shows the Linux distro name again**: the platform line now ends with the distro (for example `Ubuntu 26.04.1 LTS`), read from `/etc/os-release`. The old `platform.linux_distribution()` call never worked on Python 3.8 or later, and the dead macOS version code is gone (macOS already shows its version in the same line).
+
 ## [2.2.0] - 2026-10-06
 
 ### New Features
