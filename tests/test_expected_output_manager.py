@@ -216,7 +216,7 @@ class TestScgSelectorDefaults(ExpectedOutputManagerTestCase):
         testlib.write_fasta("Dmel/input/reveal_module/scg/first.fasta")
         testlib.write_fasta("Dmel/input/reveal_module/scg/second.fasta")
         ns = self.load(self.base_config)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ns["ConfigValidationError"]):
             ns["get_expected_output_reveal_module_processing"]("Dmel")
 
     def test_no_feature_library_returns_scg_outputs_only(self):

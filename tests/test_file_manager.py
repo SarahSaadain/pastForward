@@ -217,6 +217,42 @@ class TestReferenceDiscovery(FileManagerTestCase):
         self.assertEqual(len(fm.get_references_paths_for_species("Dmel")), 2)
 
 
+class TestDuplicateIdsRaise(FileManagerTestCase):
+    fixture_kwargs = None
+
+    def _touch(self, *paths):
+        for p in paths:
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            open(p, "w").write(">x\nACGT\n")
+
+    def test_reference_same_stem_different_extension_raises(self):
+        self._touch("Dmel/input/reference_module/genome.fa", "Dmel/input/reference_module/genome.fna")
+        with self.assertRaisesRegex(fm.ConfigValidationError, "genome.fa.*genome.fna|genome.fna.*genome.fa"):
+            fm.get_reference_file_list_for_species("Dmel")
+
+    def test_reference_normalised_name_clash_raises(self):
+        self._touch("Dmel/input/reference_module/X.0.fna", "Dmel/input/reference_module/X_0.fna")
+        with self.assertRaises(fm.ConfigValidationError):
+            fm.get_reference_file_list_for_species("Dmel")
+
+    def test_feature_library_clash_raises(self):
+        d = "Dmel/input/reveal_module/feature_library"
+        self._touch(f"{d}/lib.fa", f"{d}/lib.fasta")
+        with self.assertRaises(fm.ConfigValidationError):
+            fm.get_feature_library_file_list_for_species("Dmel")
+
+    def test_multiple_scg_files_raise(self):
+        d = "Dmel/input/reveal_module/scg"
+        self._touch(f"{d}/a.fasta", f"{d}/b.fasta")
+        with self.assertRaises(fm.ConfigValidationError):
+            fm.get_scg_library_file_list_for_species("Dmel")
+
+    def test_distinct_ids_still_work(self):
+        self._touch("Dmel/input/reference_module/a.fna", "Dmel/input/reference_module/b.fa")
+        ids = [i for i, _ in fm.get_reference_file_list_for_species("Dmel")]
+        self.assertEqual(sorted(ids), ["a", "b"])
+
+
 class TestReferenceDiscoveryEdgeCases(FileManagerTestCase):
     fixture_kwargs = None  # each test builds its own fixture
 

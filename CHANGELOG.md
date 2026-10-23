@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **Clashing reference, feature library and SCG file names now stop the run**: two FASTA files that resolve to the same ID (e.g. `genome.fa` next to `genome.fna`, or `X.0.fna` next to `X_0.fna`) used to be silently reduced to one. More than one SCG file per species used to pick one by chance. Both now fail at startup with an error naming the files.
 - **Reads placed directly in the species folder were deleted on a real run**: since benchmarking was added (v2.2.0), moving `<species>/<read>` into `<species>/input/read_module/` failed in the benchmark step and Snakemake then deleted the moved file, so the raw read was lost. `prepare_raw_reads` is no longer benchmarked
 - **`skip_low_coverage_individuals` hid real REVEAL normalize errors**: any failure of `REVEAL normalize`, such as a corrupt coverage file, was treated as low coverage and the individual was silently excluded. Only the `Insufficient coverage to normalize` error is skipped now. Other errors fail the rule
 - **Raw FastQC failed for reads placed directly in the species folder**: the lookup only checked `<species>/input/read_module/`, so it raised before the step that moves the reads there could run. It now also accepts `<species>/<file>`

@@ -388,6 +388,22 @@ def get_individuals_for_species(species):
     return selected
 
 # -----------------------------------------------------------------------------------------------
+# Map FASTA files to (id, path) pairs. The ID is the filename stem with dots replaced by
+# underscores, so two files can share an ID ('genome.fa' + 'genome.fna', 'X.0.fna' + 'X_0.fna').
+# Raises ConfigValidationError naming both files instead of silently letting one win.
+def _fasta_files_to_id_path_pairs(files, kind, species):
+    seen = {}
+    for f in files:
+        file_id = get_cleaned_feature_library_id_for_library_path(f)
+        if file_id in seen:
+            raise ConfigValidationError(
+                f"Species '{species}': {kind} files '{seen[file_id]}' and '{f}' both resolve to ID "
+                f"'{file_id}'. Rename or remove one of them."
+            )
+        seen[file_id] = f
+    return [(i, f) for i, f in seen.items()]
+
+# -----------------------------------------------------------------------------------------------
 # (internal) Discover all reference files from disk without applying any config filter
 def _discover_all_reference_file_list_for_species(species: str) -> list[tuple[str, str]]:
     species_folder = species
@@ -402,7 +418,7 @@ def _discover_all_reference_file_list_for_species(species: str) -> list[tuple[st
     if len(reference_files) == 0:
         raise Exception(f"No reference found for species {species}.")
 
-    result = [(os.path.splitext(os.path.basename(f))[0].replace('.', '_'), f) for f in reference_files]
+    result = _fasta_files_to_id_path_pairs(reference_files, 'reference', species)
     logger.debug(f"Discovered reference files for species {species}: {result}")
     return result
 
@@ -497,7 +513,7 @@ def _discover_all_feature_library_file_list_for_species(species: str) -> list[tu
     if len(library_files) == 0:
         raise Exception(f"No feature library files found for species {species}.")
 
-    result = [(os.path.splitext(os.path.basename(f))[0].replace('.', '_'), f) for f in library_files]
+    result = _fasta_files_to_id_path_pairs(library_files, 'feature library', species)
     logger.debug(f"Discovered feature library files for species {species}: {result}")
     return result
 
@@ -561,8 +577,15 @@ def get_scg_library_file_list_for_species(species: str) -> list[tuple[str, str]]
         logger.debug(f"No user-provided SCG library files found for species {species}.")
         return []
 
+    # Only one SCG file per species is used; picking one by glob order would be arbitrary.
+    if len(library_files) > 1:
+        raise ConfigValidationError(
+            f"Species '{species}': found {len(library_files)} SCG files in {scg_library_folder} "
+            f"({', '.join(sorted(library_files))}). Keep exactly one."
+        )
+
     # Return as list of tuples: (filename without extension, full path)
-    library_files_with_filename = [(get_cleaned_feature_library_id_for_library_path(f), f) for f in library_files]
+    library_files_with_filename = _fasta_files_to_id_path_pairs(library_files, 'SCG', species)
 
     logger.debug(f"SCG library files for species {species}: {library_files_with_filename}")
 

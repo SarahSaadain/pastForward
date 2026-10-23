@@ -43,13 +43,6 @@ def get_expected_output_reveal_module_processing(species):
         )
         return all_inputs
 
-    # Only one user-provided SCG library is supported
-    if len(user_scgs) > 1:
-        raise ValueError(
-            f"Multiple SCG libraries provided for {species}. "
-            f"Only one SCG library is supported at a time."
-        )
-
     visualization_settings = reveal_cfg.get("visualization", {}).get("settings", {})
     analysis_active = reveal_cfg.get("analysis", {}).get("execute", True)
     analysis_settings = reveal_cfg.get("analysis", {}).get("settings", {})
