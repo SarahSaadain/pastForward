@@ -15,7 +15,7 @@ All notable changes to this project will be documented in this file.
 
 - **Wrong config key in the competition FASTA error**: the error for a missing competition FASTA named `pipeline.reveal_module.mapping.competitive_mapping.execute`. It now names the real key, `pipeline.reveal_module.mapping.settings.competitive_mapping`
 - **fastp adapter flags**: setting only `adapters_sequences.r1` no longer passes an empty `--adapter_sequence_r2` to fastp for paired-end reads. Each adapter flag is now passed only when its value is set. An empty `adapters_sequences:` line no longer stops the run with an `AttributeError`
-- **Clashing reference, feature library and SCG file names now stop the run**: two FASTA files that resolve to the same ID (e.g. `genome.fa` next to `genome.fna`, or `X.0.fna` next to `X_0.fna`) used to be silently reduced to one. More than one SCG file per species used to pick one by chance. Both now fail at startup with an error naming the files.
+- **Clashing reference, feature library and SCG file names now stop the run**: two FASTA files that resolve to the same ID (e.g. `genome.fa` next to `genome.fna`, or `X.0.fna` next to `X_0.fna`) used to be silently reduced to one. More than one SCG file per species used to pick one by chance. Both now fail at startup with an error naming the files
 - **Reads placed directly in the species folder were deleted on a real run**: since benchmarking was added (v2.2.0), moving `<species>/<read>` into `<species>/input/read_module/` failed in the benchmark step and Snakemake then deleted the moved file, so the raw read was lost. `prepare_raw_reads` is no longer benchmarked
 - **`skip_low_coverage_individuals` hid real REVEAL normalize errors**: any failure of `REVEAL normalize`, such as a corrupt coverage file, was treated as low coverage and the individual was silently excluded. Only the `Insufficient coverage to normalize` error is skipped now. Other errors fail the rule
 - **Raw FastQC failed for reads placed directly in the species folder**: the lookup only checked `<species>/input/read_module/`, so it raised before the step that moves the reads there could run. It now also accepts `<species>/<file>`
@@ -26,10 +26,10 @@ All notable changes to this project will be documented in this file.
 
 ### CI / Maintenance
 
-- **One process-alive check**: the CLI and the cross-project lock had two copies of the same PID check, and the CLI one treated pid 0 or -1 as alive. Both now use the one in `species_paths.py`, which returns not alive for those.
-- **Dedup cluster input functions share one parser**: `dedup_merge_split_bams_input` and `dedup_merge_split_jsons_input` read the cluster file names in two slightly different ways. Both now use one helper. The cluster files are always `cluster_<int>_<int>.bed`, so the requested files are unchanged.
-- **Startup log shows the Linux distro name again**: the platform line now ends with the distro (for example `Ubuntu 26.04.1 LTS`), read from `/etc/os-release`. The old `platform.linux_distribution()` call never worked on Python 3.8 or later, and the dead macOS version code is gone (macOS already shows its version in the same line).
-- **Dead lines removed from the per-species read count rule**: `combine_counts_per_species` had an unused variable and a `conda:` line. Snakemake ignores `conda:` on `run:` rules, so the rule runs in the main environment as before.
+- **One process-alive check**: the CLI and the cross-project lock had two copies of the same PID check, and the CLI one treated pid 0 or -1 as alive. Both now use the one in `species_paths.py`, which returns not alive for those
+- **Dedup cluster input functions share one parser**: `dedup_merge_split_bams_input` and `dedup_merge_split_jsons_input` read the cluster file names in two slightly different ways. Both now use one helper. The cluster files are always `cluster_<int>_<int>.bed`, so the requested files are unchanged
+- **Startup log shows the Linux distro name again**: the platform line now ends with the distro (for example `Ubuntu 26.04.1 LTS`), read from `/etc/os-release`. The old `platform.linux_distribution()` call never worked on Python 3.8 or later, and the dead macOS version code is gone (macOS already shows its version in the same line)
+- **Dead lines removed from the per-species read count rule**: `combine_counts_per_species` had an unused variable and a `conda:` line. Snakemake ignores `conda:` on `run:` rules, so the rule runs in the main environment as before
 
 ## [2.2.0] - 2026-10-06
 

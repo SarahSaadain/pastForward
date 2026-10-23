@@ -71,7 +71,7 @@ if _filter_remove:
 
 else:
 
-    # Default: copy directly from the last processing-step BAM (_pre_filter_bam).
+    # Default: hard link the last processing-step BAM (_pre_filter_bam).
     rule get_final_bam:
         input:
             bam=_pre_filter_bam,
@@ -86,11 +86,11 @@ else:
         message:
             "Getting final bam for {wildcards.individual} of {wildcards.species}."
         shell:
-            # The final bam is just a copy of the bam that is output from the last step of the reference
+            # The final bam is just a hard link of the bam that is output from the last step of the reference
             # processing pipeline (either damage rescaling, deduplication, or mapping)
             # We hard link (copy if cross-filesystem) instead of move. If we would use move here, other rules will not know that the input bam
             # will be renamed. These other rules will then fail because the input bam is not found (as it has been renamed).
-            # By using copy, we ensure that the input bam is still available for other rules that need it.
+            # By using a hard link, we ensure that the input bam is still available for other rules that need it.
             # The input bam will be deleted at the end of the pipeline when the intermediate files are cleaned up.
             """
             echo "Linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}..." >"{log}" 2>&1
