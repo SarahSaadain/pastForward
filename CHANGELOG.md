@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **MultiQC species and reference reports had no mapping stats under the default config**: the report inputs read `reference_module.execute` with a default of `False`, so qualimap, samtools stats, preseq and mapDamage were left out. The default is now `True`, as in the rest of the pipeline
+
 ## [2.2.0] - 2026-10-06
 
 ### New Features

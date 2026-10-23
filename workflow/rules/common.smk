@@ -300,7 +300,7 @@ def create_multiqc_reference_input(wildcards):
 
         # bam analytics for the single reference
         if (
-            config.get("pipeline", {}).get("reference_module", {}).get("execute", False)
+            config.get("pipeline", {}).get("reference_module", {}).get("execute", True)
             == True
         ):
 
@@ -831,7 +831,7 @@ def create_multiqc_species_input(wildcards):
 
         # bam analytics
         if (
-            config.get("pipeline", {}).get("reference_module", {}).get("execute", False)
+            config.get("pipeline", {}).get("reference_module", {}).get("execute", True)
             == True
         ):
             for reference in references:
