@@ -23,6 +23,18 @@ Defines the overall pipeline behavior, including execution controls and process 
 * You **do not need to specify all stages or process steps** explicitly.
 * Any **stage or process step not provided in the config defaults to `execute: true`** and will be executed.
 
+### Config Validation
+
+The config is checked at startup, and by `./pastForward check` and `./pastForward preview`, against [workflow/schemas/config.schema.yaml](../workflow/schemas/config.schema.yaml). Every key not listed on this page is an error, as is a value of the wrong type or outside its listed options. All problems are reported at once, for example:
+
+```text
+Invalid config (2 problem(s)):
+  - pipeline.read_module.adapter_removal: unknown key 'exectue' (did you mean 'execute'?)
+  - pipeline.summary_module.execute: 'false' is not of type 'boolean'
+```
+
+Only the steps that list `execute` on this page accept it. `mapping`, `sequence_overview` and `normalization` always run with their module, so `execute` there is rejected.
+
 ### Global Pipeline Settings
 
 | Setting | Default | Description |

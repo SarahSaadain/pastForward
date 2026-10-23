@@ -13,9 +13,10 @@ This lets `pastForward check`/`preview` (workflow/scripts/cli/) and
 tests/test_expected_output_manager.py run the real discovery / DAG-target-computation logic
 without starting Snakemake or conda.
 
-config_compat.apply_config_key_aliases() is applied to the config first, mirroring the call
-initialize.smk makes right after the configfile is loaded, so callers see the same normalised
-config a real run does (and deprecated config keys stay covered by the test suite).
+config_compat.apply_config_key_aliases() and then config_schema.validate_config() are applied to
+the config first, mirroring the calls initialize.smk makes right after the configfile is loaded,
+so callers see the same normalised, validated config a real run does (and deprecated config keys
+and the schema stay covered by the test suite).
 
 Not a test module itself - has no tests of its own.
 """
@@ -23,6 +24,7 @@ import os
 from types import SimpleNamespace
 
 from scripts.config_compat import apply_config_key_aliases
+from scripts.config_schema import validate_config
 
 _SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -47,6 +49,7 @@ def load_pipeline_namespace(config, include_check=False):
     there), so this stays importable with nothing but the standard library plus PyYAML.
     """
     apply_config_key_aliases(config)
+    validate_config(config)
     namespace = {"config": config}
     sources = list(_SOURCE_FILES)
     if include_check:

@@ -7,7 +7,8 @@ the rest of the pipeline only ever sees current key names and no `.get("<old nam
 fallback chains are needed at the read sites. Called once from workflow/rules/initialize.smk,
 directly after the configfile is loaded, and mirrored by workflow/scripts/pipeline_namespace.py so
 `pastForward check`/`preview` and the unit tests see the same normalised config the real run
-does.
+does. config_schema.validate_config() runs right after it, so the schema only lists current
+key names.
 """
 
 import logging

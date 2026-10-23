@@ -1,0 +1,324 @@
+# JSON schema for config/config.yaml, checked at startup by
+# workflow/scripts/config_validation.py (validate_config).
+#
+# Every object sets additionalProperties: false, so a misspelled key is an error instead of
+# being silently ignored (an ignored `execute: false` would otherwise run the step anyway).
+# Keep this in sync with config/parameters.md, config/max_config_sample.yaml and
+# config/config_designer.html when adding or renaming a config key.
+#
+# Defaults are not set here: the read sites in the workflow own them.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+type: object
+additionalProperties: false
+properties:
+  project_name: {type: string}
+  species:
+    type: object
+    additionalProperties: {$ref: "#/$defs/species"}
+  pipeline:
+    type: object
+    additionalProperties: false
+    properties:
+      global:
+        type: object
+        additionalProperties: false
+        properties:
+          skip_existing_files: {type: boolean}
+
+      read_module:
+        type: object
+        additionalProperties: false
+        properties:
+          execute: {type: boolean}
+          analysis:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  multiqc_raw_reads: {type: boolean}
+                  multiqc_trimmed_reads: {type: boolean}
+                  multiqc_quality_filtered_reads: {type: boolean}
+                  multiqc_merged_reads: {type: boolean}
+                  create_plots: {type: boolean}
+          adapter_removal:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  min_quality: {type: integer}
+                  min_length: {type: integer}
+                  poly_x_min_len: {type: integer}
+                  unqualified_percent_limit: {type: number}
+                  n_base_limit: {type: integer}
+                  # Left empty in YAML (null) means auto-detect, see _fastp_adapter_flags.
+                  adapters_sequences:
+                    type: [object, "null"]
+                    additionalProperties: false
+                    properties:
+                      r1: {type: string}
+                      r2: {type: string}
+                  extra_params: {type: string}
+          quality_filtering:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  min_quality: {type: integer}
+                  min_length: {type: integer}
+                  unqualified_percent_limit: {type: number}
+                  n_base_limit: {type: integer}
+          taxonomic_screening:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              tools:
+                type: object
+                additionalProperties: false
+                properties:
+                  ecmsd:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      execute: {type: boolean}
+                      settings:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          version_source: {$ref: "#/$defs/version_source"}
+                          database: {type: string}
+                          cov_threshold: {type: number}
+                          top_n: {type: integer}
+                          mapping_quality: {type: integer}
+                          taxonomic_hierarchy: {enum: [species, genus, family, order]}
+                  centrifuge:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      execute: {type: boolean}
+                      settings:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          include_human_taxid: {type: boolean}
+                          index: {type: string}
+                          conda_env: {type: string}
+
+      reference_module:
+        type: object
+        additionalProperties: false
+        properties:
+          execute: {type: boolean}
+          # No execute: mapping always runs when reference_module does.
+          mapping:
+            type: object
+            additionalProperties: false
+            properties:
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  mapper: {$ref: "#/$defs/mapper"}
+                  mapper_extra_params: {type: string}
+          deduplication:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  min_contigs_per_cluster: {type: integer}
+                  max_contigs_per_cluster: {type: integer}
+                  mem_mb: {type: integer}
+          damage_rescaling:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+          filter_unmapped_reads:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  action: {enum: [keep, remove, extract_fastq, extract_fasta]}
+          analysis:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  damage_analysis: {type: boolean}
+                  create_plots: {type: boolean}
+                  individual_multiqc: {type: boolean}
+                  species_multiqc: {type: boolean}
+                  preseq_complexitiy_curve: {type: boolean}
+                  qualimap: {type: boolean}
+                  samtools_stats: {type: boolean}
+                  qualimap_mem_mb: {type: integer}
+                  snp_divergence_check: {type: boolean}
+                  snp_divergence_method: {enum: [samtools_stats, bcftools, both]}
+                  snp_divergence_outlier_zscore: {type: number}
+                  snp_divergence_min_callable_bases: {type: integer}
+                  snp_divergence_target_bases: {type: integer}
+                  snp_divergence_min_contig_length: {type: integer}
+                  snp_divergence_min_depth: {type: integer}
+                  snp_divergence_max_depth: {type: integer}
+                  snp_divergence_min_mapping_quality: {type: integer}
+                  snp_divergence_min_base_quality: {type: integer}
+
+      reveal_module:
+        type: object
+        additionalProperties: false
+        properties:
+          execute: {type: boolean}
+          settings:
+            type: object
+            additionalProperties: false
+            properties:
+              version_source: {$ref: "#/$defs/version_source"}
+          scg_selector:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  mapper: {$ref: "#/$defs/mapper"}
+                  mapper_extra_params: {type: string}
+                  num_top_scgs: {type: integer}
+                  min_length_scg: {type: integer}
+                  max_length_scg: {type: integer}
+                  min_mapq: {type: integer}
+                  keep_mapped_bam: {type: boolean}
+          # No execute on mapping, sequence_overview or normalization: they always run
+          # when reveal_module does.
+          mapping:
+            type: object
+            additionalProperties: false
+            properties:
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  mapper: {$ref: "#/$defs/mapper"}
+                  mapper_extra_params: {type: string}
+                  keep_mapped_bam: {type: boolean}
+                  competitive_mapping: {type: boolean}
+                  min_mapq_scg: {type: integer}
+                  min_mapq_fle: {type: integer}
+          sequence_overview:
+            type: object
+            additionalProperties: false
+            properties:
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  mapping_quality_threshold: {type: integer}
+                  minimum_count_snp: {type: integer}
+                  minimum_frequency_snp: {type: number}
+                  minimum_count_indel: {type: integer}
+                  minimum_frequency_indel: {type: number}
+          normalization:
+            type: object
+            additionalProperties: false
+            properties:
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  end_distance: {type: integer}
+                  exclude_quantile: {type: number}
+                  skip_low_coverage_individuals: {type: boolean}
+          visualization:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  individual_plots: {$ref: "#/$defs/plot_mode"}
+                  comparison_plots: {$ref: "#/$defs/plot_mode"}
+                  y_axis_log_scale_threshold_individual: {type: number}
+                  y_axis_log_scale_threshold_species: {type: number}
+                  # "100", 100, "target:5000" or "10000:1,100000:10,default:500"
+                  visualization_bin_size: {type: [string, integer]}
+          analysis:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  coverage_analysis: {type: boolean}
+                  snp_analysis: {type: boolean}
+                  indel_analysis: {type: boolean}
+
+      summary_module:
+        type: object
+        additionalProperties: false
+        properties:
+          execute: {type: boolean}
+          settings:
+            type: object
+            additionalProperties: false
+            properties:
+              individual_multiqc: {type: boolean}
+              species_multiqc: {type: boolean}
+
+$defs:
+  version_source: {enum: [conda, latest_release, dev]}
+  mapper: {enum: [bwa-aln, bwa-mem2, minimap2]}
+  plot_mode: {enum: [plot, plotable_only, skip]}
+  # Empty or null means "use all discovered" (see _get_species_config_list in file_manager.py).
+  # Items must be strings: an unquoted numeric ID never matches the discovered string ID.
+  id_list:
+    type: [array, "null"]
+    items: {type: string}
+  species:
+    type: object
+    additionalProperties: false
+    properties:
+      execute: {type: boolean}
+      name: {type: string}
+      lineage: {type: string}
+      scg_reference: {type: string}
+      individuals: {$ref: "#/$defs/id_list"}
+      references: {$ref: "#/$defs/id_list"}
+      feature_libraries: {$ref: "#/$defs/id_list"}
+      species_dir: {type: string}
+      reads_dir: {type: string}
+      reference_dir: {type: string}
+      scg_dir: {type: string}
+      feature_library_dir: {type: string}
+      competition_dir: {type: string}
+      processed_dir: {type: string}
+      results_dir: {type: string}

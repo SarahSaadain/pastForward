@@ -431,7 +431,7 @@ S8H="$WORKDIR/8_snp_bad_method"
 make_snp_project "$S8H" "        snp_divergence_check: true
         snp_divergence_method: nonsense"
 run_dryrun "$S8H" "$S8H/dryrun.log"
-if [ "$DRYRUN_EXIT" -ne 0 ] && grep -q "Unknown snp_divergence_method" "$S8H/dryrun.log"; then
+if [ "$DRYRUN_EXIT" -ne 0 ] && grep -q "snp_divergence_method: 'nonsense' is not one of" "$S8H/dryrun.log"; then
   pass "8h: an unknown snp_divergence_method fails with a clear error"
 else
   fail "8h: an unknown snp_divergence_method fails with a clear error" \

@@ -57,16 +57,7 @@ _SNP_DIVERGENCE_MIN_BASE_QUALITY = int(
 _SNP_DIVERGENCE_MIN_CALLABLE_BASES = int(
     _snp_divergence_settings.get("snp_divergence_min_callable_bases", 100000)
 )
-
-if _SNP_DIVERGENCE_ENABLED and _SNP_DIVERGENCE_METHOD not in (
-    "samtools_stats",
-    "bcftools",
-    "both",
-):
-    raise ConfigValidationError(
-        f"Unknown snp_divergence_method '{_SNP_DIVERGENCE_METHOD}'. "
-        "Valid options are 'samtools_stats', 'bcftools' and 'both'."
-    )
+# snp_divergence_method values are checked by workflow/schemas/config.schema.yaml at startup.
 
 # A base budget of 0 means call across the whole reference, so no region BED is
 # built and bcftools mpileup runs without --regions-file.

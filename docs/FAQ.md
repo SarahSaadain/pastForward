@@ -203,6 +203,20 @@ All pastForward stages are enabled by default, so this minimal config is suffici
 **Q: How do I configure pastForward without editing YAML by hand?**
 Open `config/config_designer.html` in a browser. The interactive Config Designer lets you toggle pastForward stages and species settings and exports a ready-to-use `config.yaml`.
 
+**Q: pastForward stops with "Invalid config". What does it mean?**
+pastForward checks `config.yaml` against [workflow/schemas/config.schema.yaml](../workflow/schemas/config.schema.yaml) before it does anything else. The check runs at the start of every run and dry run, and in `./pastForward check` and `./pastForward preview`. It stops on three kinds of problem, and lists all of them at once:
+
+- **An unknown key**, usually a typo. Before this check, a misspelled key was silently ignored, so `exectue: false` ran the step anyway. The error names the closest valid key: `unknown key 'exectue' (did you mean 'execute'?)`.
+- **A wrong type**, e.g. `execute: "false"` in quotes, which is a string and not a boolean, or `individuals: IND001` instead of a list.
+- **A value that is not one of the options**, e.g. `mapper: bwa` instead of `bwa-mem2`.
+
+Two cases surprise people:
+
+- `execute` on `mapping`, `sequence_overview` or `normalization` is rejected. These steps always run with their module, so the setting never had an effect.
+- A section whose lines are all commented out, such as `settings:` with every key under it behind `#`, is reported as empty. Delete the line, or leave at least one key under it.
+
+Every valid key is listed in [config/parameters.md](../config/parameters.md). Keys renamed in v2.0 are listed in the [CHANGELOG](../CHANGELOG.md). The check needs the `jsonschema` Python package, which comes with Snakemake. If `./pastForward check` runs in a Python without it, it prints a warning and skips the check. A real run always validates.
+
 **Q: How do I disable a pastForward stage I don't need?**
 Set its `execute` flag to `false` in `config/config.yaml`. For example, to skip taxonomic screening:
 

@@ -70,6 +70,12 @@ if os.path.exists("config/config.yaml"):
 # (subprocess Snakemake runs re-read the config file too, so they need it as well).
 apply_config_key_aliases(config)
 
+# Reject unknown keys, wrong types and invalid values (workflow/schemas/config.schema.yaml),
+# so a typo like `exectue: false` stops the run instead of being silently ignored.
+from scripts.config_schema import validate_config
+
+validate_config(config)
+
 
 # =================================================================================================
 #     External tool version source (ECMSD / REVEAL)
