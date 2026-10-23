@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - **Raw FastQC failed for reads placed directly in the species folder**: the lookup only checked `<species>/input/read_module/`, so it raised before the step that moves the reads there could run. It now also accepts `<species>/<file>`
 - **MultiQC species and reference reports had no mapping stats under the default config**: the report inputs read `reference_module.execute` with a default of `False`, so qualimap, samtools stats, preseq and mapDamage were left out. The default is now `True`, as in the rest of the pipeline
 - **Per-individual BAM MultiQC report had no breadth-of-coverage section**: it requested `*_depth_coverage_avg.csv`, which MultiQC does not render, instead of `*_coverage_analysis.tsv`. It now uses the same inputs as the other reports. Its qualimap input is also the per-individual copy the other reports use. The four MultiQC report input lists are now built by one shared function
+- **Deduplicated BAM sort log no longer overwrites the mapped BAM sort log**: both sort rules wrote `{individual}_{reference}_sorted_bam.log`, so the second one replaced the first one's log and benchmark. The deduplicated sort now writes `{individual}_{reference}_sorted_dedupped_bam.log`
 
 ## [2.2.0] - 2026-10-06
 

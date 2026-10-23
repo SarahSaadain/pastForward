@@ -180,7 +180,7 @@ rule sort_mapped_dedupped_reads_bam:
             "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam"
         ),
     log:
-        "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_bam.log",
+        "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_bam.log",
     threads: 10
     message:
         "Sorting deduplicated BAM file for {input}"
