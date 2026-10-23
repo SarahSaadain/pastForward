@@ -276,7 +276,8 @@ def acquire_pastforward_locks(config: dict) -> None:
         for species, category, target in _configured_targets(config):
             if category in WRITE_CATEGORIES:
                 _acquire_project_lock(target, species, category)
-    except CrossProjectLockError:
+    except BaseException:
+        # onerror: does not fire for an exception in onstart:, so undo any lock already taken.
         release_pastforward_locks()
         raise
 

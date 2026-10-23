@@ -18,6 +18,7 @@ import socket
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO_ROOT, "workflow"))
@@ -273,6 +274,24 @@ class TestCrossProjectLock(SpeciesPathsTestCase):
         self.assertEqual(len(sp._ACQUIRED_LOCKS), 0)
         with open(os.path.join(t2, ".pastforward.lock")) as f:
             self.assertEqual(json.load(f), foreign)
+
+    def test_any_acquire_error_releases_locks_already_taken(self):
+        t1 = self.make_external_dir("pf_test_rel1_")
+        t2 = self.make_external_dir("pf_test_rel2_")
+        config = {"species": {"Dmel": {"processed_dir": t1, "results_dir": t2}}}
+        real_acquire = sp._acquire_project_lock
+
+        def fail_second(target, *args):
+            if os.path.realpath(target) == os.path.realpath(t2):
+                raise OSError("disk full")
+            return real_acquire(target, *args)
+
+        with mock.patch.object(sp, "_acquire_project_lock", side_effect=fail_second):
+            with self.assertRaises(OSError):
+                sp.acquire_pastforward_locks(config)
+
+        self.assertFalse(os.path.exists(os.path.join(t1, ".pastforward.lock")))
+        self.assertEqual(len(sp._ACQUIRED_LOCKS), 0)
 
 
 if __name__ == "__main__":
