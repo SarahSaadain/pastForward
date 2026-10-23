@@ -45,8 +45,8 @@ rule normalize_visualization_of_individual:
         set -e
 
         if [ $rc -ne 0 ]; then
-            if [ "{params.skip_low_coverage}" = "True" ]; then
-                echo "$(tail -n 1 "{log}")" >"{output.exclusion_reason}"
+            if [ "{params.skip_low_coverage}" = "True" ] && grep -q "Insufficient coverage to normalize" "{log}"; then
+                grep "Insufficient coverage to normalize" "{log}" | tail -n 1 >"{output.exclusion_reason}"
                 : >"{output.normalized}"
             else
                 exit $rc
