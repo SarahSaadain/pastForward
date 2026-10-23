@@ -412,3 +412,39 @@ def _get_busco_lineage(wildcards):
             f"Set species.{wildcards.species}.lineage in your config."
         )
     return lineage
+
+
+# The files ECMSD reads from its database folder (REF, NODES and NAMES in ECMSD.sh). The first one
+# sits at the top of the folder: ecmsd_database_setup takes the folder from its path.
+_ECMSD_DB_FILES = [
+    "mitochondrion_refseq_taxid_masked.fna.gz",
+    "NCBI_taxdump/nodes.dmp",
+    "NCBI_taxdump/names.dmp",
+]
+_ECMSD_DEFAULT_DB = "resources/ecmsd_database"
+
+
+def _ecmsd_db_folder(wildcards=None):
+    return (
+        config.get("pipeline", {})
+        .get("read_module", {})
+        .get("taxonomic_screening", {})
+        .get("tools", {})
+        .get("ecmsd", {})
+        .get("settings", {})
+        .get("database")
+        or _ECMSD_DEFAULT_DB
+    )
+
+
+def _ecmsd_database_input(wildcards):
+    files = [os.path.join(_ecmsd_db_folder(), f) for f in _ECMSD_DB_FILES]
+    # Snakemake only checks that a file exists, and ECMSD skips build steps whose file exists.
+    empty = [f for f in files if os.path.isfile(f) and os.path.getsize(f) == 0]
+    if empty:
+        raise ValueError(
+            f"ECMSD database file(s) are empty, probably left by an interrupted build: {', '.join(empty)}. "
+            "Delete them and run again: pastForward then rebuilds the missing files."
+        )
+    # ancient(): newer database files alone do not rerun finished samples.
+    return [ancient(f) for f in files]

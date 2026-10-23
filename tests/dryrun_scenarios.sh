@@ -602,6 +602,68 @@ else
        "exit $S11_EXIT, read present: $(ls "$S11/Dmel/input/read_module" 2>&1), see $S11/run.log"
 fi
 
+# -------------------------------------------------------------------------------------------
+# Scenario 12: the ECMSD database is built once, before any sample is screened
+# Snakemake used to treat the database folder as done whenever it existed, so a half-built
+# folder was rebuilt inside every screening job, with parallel jobs racing on the same files.
+# -------------------------------------------------------------------------------------------
+S12="$WORKDIR/12_ecmsd_database"
+make_project "$S12"
+printf 'project_name: t\nspecies:\n  Dmel:\n    name: x\n' > "$S12/config/config.yaml"
+mkdir -p "$S12/Dmel"
+make_species_root "$S12/Dmel"
+make_fake_data "$S12/Dmel"
+S12_DB="$S12/resources/ecmsd_database"
+mkdir -p "$S12_DB/NCBI_taxdump"
+echo x > "$S12_DB/NCBI_taxdump/nodes.dmp"
+echo x > "$S12_DB/NCBI_taxdump/names.dmp"
+
+# Scheduled jobs are matched in the job-stats table: the rule name also appears in the
+# "Rules with missing metadata" line when its job is not scheduled.
+# 12a: the folder exists but the reference FASTA is missing -> the setup job runs first
+run_dryrun "$S12" "$S12/missing_file.log"
+if [ "$DRYRUN_EXIT" -eq 0 ] && grep -qE "^ecmsd_database_setup[[:space:]]+[0-9]+" "$S12/missing_file.log"; then
+  pass "12a: an incomplete ECMSD database folder schedules the setup job"
+else
+  fail "12a: an incomplete ECMSD database folder schedules the setup job" \
+       "exit $DRYRUN_EXIT, see $S12/missing_file.log"
+fi
+
+# 12b: all three database files present -> no setup job
+echo x > "$S12_DB/mitochondrion_refseq_taxid_masked.fna.gz"
+run_dryrun "$S12" "$S12/complete.log"
+if [ "$DRYRUN_EXIT" -eq 0 ] && ! grep -qE "^ecmsd_database_setup[[:space:]]+[0-9]+" "$S12/complete.log"; then
+  pass "12b: a complete ECMSD database does not schedule the setup job"
+else
+  fail "12b: a complete ECMSD database does not schedule the setup job" \
+       "exit $DRYRUN_EXIT, see $S12/complete.log"
+fi
+
+# 12c: an empty database file (left by a killed build) stops the run and names the file
+: > "$S12_DB/NCBI_taxdump/names.dmp"
+run_dryrun "$S12" "$S12/empty_file.log"
+if [ "$DRYRUN_EXIT" -ne 0 ] && grep -q "NCBI_taxdump/names.dmp" "$S12/empty_file.log"; then
+  pass "12c: an empty ECMSD database file stops the run and names the file"
+else
+  fail "12c: an empty ECMSD database file stops the run and names the file" \
+       "exit $DRYRUN_EXIT, see $S12/empty_file.log"
+fi
+
+# 12d: a custom database path with files missing is built by the setup job too, at that path
+S12_CUSTOM="$S12/custom_db"
+mkdir -p "$S12_CUSTOM/NCBI_taxdump"
+echo x > "$S12_CUSTOM/NCBI_taxdump/nodes.dmp"
+printf 'pipeline:\n  read_module:\n    taxonomic_screening:\n      tools:\n        ecmsd:\n          settings:\n            database: "%s"\n' \
+  "$S12_CUSTOM" >> "$S12/config/config.yaml"
+run_dryrun "$S12" "$S12/custom_path.log"
+if [ "$DRYRUN_EXIT" -eq 0 ] && grep -qE "^ecmsd_database_setup[[:space:]]+[0-9]+" "$S12/custom_path.log" \
+   && grep -q "$S12_CUSTOM/mitochondrion_refseq_taxid_masked.fna.gz" "$S12/custom_path.log"; then
+  pass "12d: a custom ECMSD database path with files missing schedules the setup job there"
+else
+  fail "12d: a custom ECMSD database path with files missing schedules the setup job there" \
+       "exit $DRYRUN_EXIT, see $S12/custom_path.log"
+fi
+
 # =============================================================================================
 echo ""
 echo "$PASS_COUNT passed, $FAIL_COUNT failed"

@@ -732,7 +732,7 @@
                     <div class="field" style="margin-top:8px">
                       <label>Database Path</label>
                       <input type="text" id="ca_ecmsd_db" value="" placeholder="resources/ecmsd_database" oninput="render()">
-                      <p class="hint">Path to the ECMSD database folder. If not set, the pipeline auto-creates a database at <code>resources/ecmsd_database</code> via <code>ECMSD --create-db</code>.</p>
+                      <p class="hint">Path to the ECMSD database folder. If not set, the database is at <code>resources/ecmsd_database</code>. A missing or partly built database is built once at this path via <code>ECMSD --create-db</code>, before any sample is screened.</p>
                     </div>
                   </div>
                 </div>

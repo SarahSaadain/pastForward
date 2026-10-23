@@ -21,30 +21,26 @@ _ecmsd_tax_hierarchy_summary_txt_output = f"{{species}}/results/read_module/taxo
 
 rule ecmsd_database_setup:
     output:
-        directory("resources/ecmsd_database"),
+        [os.path.join(_ecmsd_db_folder(), f) for f in _ECMSD_DB_FILES],
     log:
         "resources/ecmsd_database_setup.log",
     conda:
         ECMSD_CONDA_ENV
+    params:
+        db_folder=lambda wildcards, output: os.path.dirname(output[0]),
     message:
         "Setting up ECMSD database."
     shell:
         """
-        ECMSD --create-db --db-folder "{output}" >"{log}" 2>&1
+        mkdir -p "{params.db_folder}"
+        ECMSD --create-db --db-folder "{params.db_folder}" >"{log}" 2>&1
         """
 
 
 rule ecmsd_taxonomic_screening:
     input:
         fastq="{species}/processed/read_module/reads_quality_filtered/{sample}_quality_filtered_final.fastq.gz",
-        database=lambda wildcards: config.get("pipeline", {})
-        .get("read_module", {})
-        .get("taxonomic_screening", {})
-        .get("tools", {})
-        .get("ecmsd", {})
-        .get("settings", {})
-        .get("database")
-        or "resources/ecmsd_database",
+        database=_ecmsd_database_input,
     # ECMSD also writes {sample}_Mito_summary_{hierarchy}_{ReadLengths,Proportions}.png next to
     # the files below, but only when the sample has hits to plot - an empty result yields the
     # tables and no plots. They are deliberately not declared as outputs, so a sample with no
@@ -91,6 +87,8 @@ rule ecmsd_taxonomic_screening:
         .get("settings", {})
         .get("taxonomic_hierarchy", "species"),
         prefix="{sample}",
+        db_folder=_ecmsd_db_folder,
+        db_files=_ECMSD_DB_FILES,
     message:
         "Running ECMSD taxonomic screening for {input.fastq}"
     shell:
@@ -102,6 +100,14 @@ rule ecmsd_taxonomic_screening:
         echo "Input FASTQ: {input.fastq}" >>"{log}" 2>&1
         echo "Output folder: $outdir" >>"{log}" 2>&1
 
+        # ECMSD rebuilds a broken database inside the job, and parallel jobs would race on it.
+        for f in {params.db_files}; do
+            if [ ! -s "{params.db_folder}/$f" ]; then
+                echo "ERROR: ECMSD database file {params.db_folder}/$f is missing or empty. Build the database once with: ECMSD --create-db --db-folder {params.db_folder}" >>"{log}"
+                exit 1
+            fi
+        done
+
         ECMSD \
             --fwd "{input.fastq}" \
             --out "$outdir" \
@@ -111,7 +117,7 @@ rule ecmsd_taxonomic_screening:
             --top-n {params.top_n} \
             --mapping_quality {params.mapping_quality} \
             --taxonomic-hierarchy "{params.taxonomic_hierarchy}" \
-            --db-folder "{input.database}" \
+            --db-folder "{params.db_folder}" \
             --force >>"{log}" 2>&1
         """
 
