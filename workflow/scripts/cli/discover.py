@@ -72,11 +72,9 @@ def _capture_pipeline_log(include_check, configfiles=()):
     old_level = root.level
     root.setLevel(logging.INFO)
     try:
-        # dry_run=True: resolve the per-species data-location symlinks (discovery reads through
-        # them) but never take the cross-project .pastforward.lock - check/preview are
-        # read-only and must not block, or be blocked by, a real run. Same reason initialize.smk
-        # skips it on --dryrun.
-        setup_species_data_locations(config, dry_run=True)
+        # Resolve the per-species data-location symlinks (discovery reads through them). This
+        # takes no cross-project lock, so check/preview never block, or are blocked by, a run.
+        setup_species_data_locations(config)
         namespace = load_pipeline_namespace(config, include_check=include_check)
         if not include_check:
             namespace["get_expected_outputs_from_pipeline"](None)

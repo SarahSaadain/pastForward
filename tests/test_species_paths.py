@@ -103,6 +103,7 @@ class TestFreshSpeciesDir(SpeciesPathsTestCase):
 
     def test_locks_acquired_only_for_processed_and_results(self):
         sp.setup_species_data_locations(self.config)
+        sp.acquire_pastforward_locks(self.config)
         self.assertEqual(len(sp._ACQUIRED_LOCKS), 2)
         links = self.expected_links()
         processed_lock = os.path.join(links["Dmel/processed"], ".pastforward.lock")
@@ -115,12 +116,10 @@ class TestFreshSpeciesDir(SpeciesPathsTestCase):
         self.assertEqual(content["hostname"], socket.gethostname())
         self.assertEqual(content["working_directory"], self.project_dir)
 
-    def test_dry_run_creates_symlinks_but_skips_locks(self):
-        # Snakemake never calls onsuccess:/onerror: for --dryrun (verified against the real
-        # Snakemake source and a live --dryrun in tests/dryrun_scenarios.sh), so a lock acquired
-        # during a dry run would never be released and would just leak. dry_run=True must still
-        # set up the symlinks (a dry run needs them to resolve the DAG) but skip locking.
-        sp.setup_species_data_locations(self.config, dry_run=True)
+    def test_setup_creates_symlinks_but_takes_no_lock(self):
+        # setup runs at workflow load, also for --dryrun/--lint/--unlock, which never fire the
+        # onsuccess:/onerror: hooks that release a lock. Locks are taken only in onstart:.
+        sp.setup_species_data_locations(self.config)
         for link in self.expected_links():
             self.assertTrue(os.path.islink(link), f"missing symlink at {link}")
         self.assertEqual(len(sp._ACQUIRED_LOCKS), 0)
@@ -130,8 +129,10 @@ class TestFreshSpeciesDir(SpeciesPathsTestCase):
 
     def test_idempotent_rerun(self):
         sp.setup_species_data_locations(self.config)
+        sp.acquire_pastforward_locks(self.config)
         mtime_before = os.lstat("Dmel/input/read_module").st_mtime_ns
         sp.setup_species_data_locations(self.config)  # must not raise
+        sp.acquire_pastforward_locks(self.config)
         mtime_after = os.lstat("Dmel/input/read_module").st_mtime_ns
         self.assertEqual(mtime_before, mtime_after, "symlink was recreated instead of left alone")
         self.assertEqual(len(sp._ACQUIRED_LOCKS), 2, "second run must not double-acquire locks")
@@ -175,6 +176,7 @@ class TestExecuteFalseSkipsSpecies(SpeciesPathsTestCase):
         processed_target = self.make_external_dir("pf_test_processed_")
         config = {"species": {"Dmel": {"execute": False, "processed_dir": processed_target}}}
         sp.setup_species_data_locations(config)
+        sp.acquire_pastforward_locks(config)
         self.assertFalse(os.path.exists("Dmel"))
         self.assertEqual(len(sp._ACQUIRED_LOCKS), 0)
 
@@ -238,7 +240,7 @@ class TestCrossProjectLock(SpeciesPathsTestCase):
         t1 = self.make_external_dir("pf_test_rel1_")
         t2 = self.make_external_dir("pf_test_rel2_")
         config = {"species": {"Dmel": {"processed_dir": t1, "results_dir": t2}}}
-        sp.setup_species_data_locations(config)
+        sp.acquire_pastforward_locks(config)
         self.assertEqual(len(sp._ACQUIRED_LOCKS), 2)
 
         sp.release_pastforward_locks()
@@ -247,6 +249,25 @@ class TestCrossProjectLock(SpeciesPathsTestCase):
         self.assertFalse(os.path.exists(os.path.join(t2, ".pastforward.lock")))
         self.assertEqual(len(sp._ACQUIRED_LOCKS), 0)
         sp.release_pastforward_locks()  # must be safe to call again / when empty
+
+    def test_failed_acquire_releases_locks_already_taken(self):
+        # onerror: does not fire for an exception in onstart:, so a conflict on the second
+        # target must release the first lock itself.
+        t1 = self.make_external_dir("pf_test_rel1_")
+        t2 = self.make_external_dir("pf_test_rel2_")
+        foreign = {"working_directory": "/elsewhere", "pid": 1, "hostname": "other-host",
+                   "start_timestamp": "2026-01-01T00:00:00"}
+        with open(os.path.join(t2, ".pastforward.lock"), "w") as f:
+            json.dump(foreign, f)
+        config = {"species": {"Dmel": {"processed_dir": t1, "results_dir": t2}}}
+
+        with self.assertRaises(sp.CrossProjectLockError):
+            sp.acquire_pastforward_locks(config)
+
+        self.assertFalse(os.path.exists(os.path.join(t1, ".pastforward.lock")))
+        self.assertEqual(len(sp._ACQUIRED_LOCKS), 0)
+        with open(os.path.join(t2, ".pastforward.lock")) as f:
+            self.assertEqual(json.load(f), foreign)
 
 
 if __name__ == "__main__":

@@ -284,8 +284,7 @@ class ArgvValidationTestCase(unittest.TestCase):
             cli.run.cmd_unlock(["--foo"])
 
     def test_unlock_passes_cores_one(self):
-        # snakemake >= 9.9 requires --cores even for --unlock. --dryrun keeps it from taking a
-        # cross-project lock it would never release.
+        # snakemake >= 9.9 requires --cores even for --unlock.
         captured = {}
         orig = cli.run.subprocess.call
         cli.run.subprocess.call = lambda cmd: captured.setdefault("cmd", cmd) or 0
@@ -294,7 +293,7 @@ class ArgvValidationTestCase(unittest.TestCase):
                 cli.run.cmd_unlock([])
         finally:
             cli.run.subprocess.call = orig
-        self.assertEqual(captured["cmd"], ["snakemake", "--unlock", "--dryrun", "--cores", "1"])
+        self.assertEqual(captured["cmd"], ["snakemake", "--unlock", "--cores", "1"])
 
     def test_check_rejects_arguments(self):
         # check/preview run in-process - there is no Snakemake invocation left to forward

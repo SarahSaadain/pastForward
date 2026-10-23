@@ -77,16 +77,16 @@ Covers the configurable species data locations feature (`species_dir`, `reads_di
 `results_dir`, see [config/README.md](../config/README.md#storing-species-data-elsewhere)) and
 its cross-project lock: symlink creation, idempotency, both conflict cases, `execute: false`
 skipping, the cross-project lock (fresh acquire, stale takeover, foreign-host refusal, scoped
-release), and the dry-run lock skip.
+release, releasing already-taken locks when a later one conflicts), and that the load-time
+symlink setup takes no lock.
 
 ## `dryrun_scenarios.sh`: Snakemake integration checks
 
 Drives the real `snakemake` CLI against throwaway project directories (each just symlinks this
 repo's `workflow/`) to catch anything only visible once Snakemake itself parses `initialize.smk`
 and builds the DAG: rule/wildcard resolution through the symlinks, and Snakemake's own
-dry-run/`onsuccess:` hook timing (dry runs never fire `onsuccess:`/`onerror:`, so the
-cross-project lock must not be acquired during a dry run, see the comment in
-`setup_species_data_locations`).
+hook timing (the cross-project lock is taken in `onstart:`, which dry runs and `--lint` never
+fire, see the comment on `acquire_pastforward_locks`).
 
 Requires a conda environment named `snakemake` (Snakemake >= 9.26.1, see
 [config/README.md](../config/README.md)). The first run may be slow while Snakemake clones
@@ -101,5 +101,5 @@ tests/dryrun_scenarios.sh --keep     # keeps the workspace and prints its path, 
 Scenarios: default/fallback (zero symlinks, zero behavior change), fresh `species_dir` (symlinks
 created, DAG job count identical to the default-layout run), idempotent re-run, both conflict
 cases (pre-existing real directory / pre-existing symlink elsewhere, which must error and leave
-the conflicting path untouched), dry-runs never leaking `.pastforward.lock`, and a real run
-acquiring then releasing the lock via `onsuccess:`.
+the conflicting path untouched), dry-runs never leaking `.pastforward.lock`, and `--lint`
+taking no lock while a real run acquires it in `onstart:` and releases it via `onsuccess:`.

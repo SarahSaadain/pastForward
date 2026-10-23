@@ -13,16 +13,9 @@ def _known_env_names():
 
 
 def _list_conda_envs():
-    # `--list-conda-envs` never creates anything on disk, but - unlike the doc comment this
-    # replaces used to claim - it does NOT set workflow.output_settings.dryrun on its own
-    # (verified against Snakemake 9.25.1: that flag is only true when --dryrun is literally
-    # passed). initialize.smk reads exactly that attribute to decide whether to skip acquiring
-    # the cross-project .pastforward.lock; without an explicit --dryrun here, `pastForward
-    # doctor` would try to acquire that lock for real and fail whenever a real run already
-    # holds it. --dryrun is required, not just belt-and-suspenders.
     # --nolock: read-only, like check/preview - must not be blocked by, or block, a real run.
     proc = subprocess.run(
-        ["snakemake", "--dryrun", SDM_FLAG, "conda", "--list-conda-envs", "--cores", "1", "--nolock"],
+        ["snakemake", SDM_FLAG, "conda", "--list-conda-envs", "--cores", "1", "--nolock"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

@@ -230,7 +230,7 @@ def _acquire_project_lock(target_dir: str, species: str, category: str) -> None:
 # -----------------------------------------------------------------------------------------------
 # Release every cross-project lock this run acquired. Called from onsuccess:/onerror: in
 # workflow/Snakefile. Safe to call when nothing was acquired (e.g. no processed_dir/results_dir
-# overrides configured, or a dry run).
+# overrides configured).
 def release_pastforward_locks() -> None:
     for target_dir, identity in list(_ACQUIRED_LOCKS.items()):
         lock_path = _lock_file_path(target_dir)
@@ -250,28 +250,39 @@ def release_pastforward_locks() -> None:
 
 
 # -----------------------------------------------------------------------------------------------
-# Entry point: for every species (that isn't execute: false) and every data-location category,
-# set up the configured symlink (if any) and, for processed/results, acquire the cross-project
-# lock. Categories with nothing configured are skipped entirely - not "run but no-op".
-#
-# dry_run=True (pass workflow.output_settings.dryrun from initialize.smk) skips lock acquisition:
-# Snakemake never calls onsuccess:/onerror: for a --dryrun (see Workflow.execute in
-# snakemake/workflow.py - both are gated on `not self.dryrun`), so a lock acquired during a dry
-# run would never be released by this run and would just leak, forcing every subsequent
-# invocation to detect it as stale and take it over. Dry runs don't write to processed/results
-# anyway, so there's nothing to protect. Symlinks are still set up unconditionally - the dry run
-# needs them to resolve the DAG (input/reference discovery) correctly.
-def setup_species_data_locations(config: dict, dry_run: bool = False) -> None:
+# Entry point, called at workflow load: for every species (that isn't execute: false) and every
+# data-location category, set up the configured symlink (if any). Categories with nothing
+# configured are skipped entirely - not "run but no-op". Takes no lock: every snakemake call
+# (--dryrun, --lint, --unlock, --conda-create-envs-only, ...) loads the workflow, but only real
+# runs fire the onsuccess:/onerror: hooks that release it. See acquire_pastforward_locks.
+def setup_species_data_locations(config: dict) -> None:
+    for species, category, target in _configured_targets(config):
+        _ensure_symlink(
+            Path(species) / CATEGORY_RELPATHS[category], target, species=species, category=category
+        )
+
+
+# -----------------------------------------------------------------------------------------------
+# Take the cross-project lock for every processed_dir/results_dir override. Called from onstart:
+# in workflow/Snakefile, which Snakemake fires only for real runs (not --dryrun, --lint, --unlock,
+# --conda-create-envs-only or spawned job subprocesses), exactly the runs whose onsuccess:/
+# onerror: release it. If one lock is held elsewhere, the locks already taken are released before
+# re-raising: onerror: does not fire for an exception in onstart:.
+def acquire_pastforward_locks(config: dict) -> None:
+    try:
+        for species, category, target in _configured_targets(config):
+            if category in WRITE_CATEGORIES:
+                _acquire_project_lock(target, species, category)
+    except CrossProjectLockError:
+        release_pastforward_locks()
+        raise
+
+
+def _configured_targets(config: dict):
     for species, sp_cfg in (config.get("species", {}) or {}).items():
         if not (sp_cfg or {}).get("execute", True):
             continue
-
-        for category, relpath in CATEGORY_RELPATHS.items():
+        for category in CATEGORY_RELPATHS:
             target = _resolve_category_target(config, species, category)
-            if target is None:
-                continue
-
-            _ensure_symlink(Path(species) / relpath, target, species=species, category=category)
-
-            if category in WRITE_CATEGORIES and not dry_run:
-                _acquire_project_lock(target, species, category)
+            if target is not None:
+                yield species, category, target

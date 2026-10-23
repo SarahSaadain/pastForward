@@ -10,9 +10,9 @@
 include: "rules/initialize.smk"
 
 
-# species_paths.py: release_pastforward_locks is called from the onsuccess:/onerror: hooks below
-# to release any cross-project locks this run acquired (see rules/initialize.smk).
-from scripts.species_paths import release_pastforward_locks
+# species_paths.py: the onstart: hook below takes the cross-project lock for every
+# processed_dir/results_dir override, and onsuccess:/onerror: release it.
+from scripts.species_paths import acquire_pastforward_locks, release_pastforward_locks
 
 
 # file_manager.py: Manages file paths and directories.
@@ -55,6 +55,12 @@ rule all:
         # this python function from expected_output_manager.py gives us all requested outputs.
         # thus, the pipeline is triggered.
         get_expected_outputs_from_pipeline,
+
+
+# Snakemake fires onstart: only for real runs, after the DAG is built and before any job
+# starts. A lock conflict raised here aborts the run before any job starts.
+onstart:
+    acquire_pastforward_locks(config)
 
 
 # Add logging for workflow completion

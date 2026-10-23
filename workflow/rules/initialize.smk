@@ -110,17 +110,11 @@ if workflow.exec_mode != ExecMode.SUBPROCESS:
     print(PASTFORWARD_BANNER, file=sys.stderr)
 
     # Resolve optional per-species data-location overrides (species_dir, reads_dir, ...) into
-    # symlinks at the conventional locations, and acquire the cross-project collision lock for
-    # any processed_dir/results_dir override, before anything else (including file_manager.py's
+    # symlinks at the conventional locations, before anything else (including file_manager.py's
     # folder discovery) touches a species path. A subprocess spawned by a parent Snakemake
-    # process shares the parent's already-set-up filesystem state and lock, so it must not redo
-    # this - re-acquiring here would see the parent's own live lock and fail.
-    # dry_run is passed through so the lock (but not the symlinks) is skipped on --dryrun - see
-    # setup_species_data_locations's docstring in species_paths.py for why.
-    _pastforward_dryrun = getattr(
-        getattr(workflow, "output_settings", None), "dryrun", False
-    )
-    setup_species_data_locations(config, dry_run=_pastforward_dryrun)
+    # process shares the parent's already-set-up filesystem state, so it must not redo this.
+    # The cross-project lock is taken later, in onstart: (see workflow/Snakefile).
+    setup_species_data_locations(config)
 
     pastForward_version = __version__
 

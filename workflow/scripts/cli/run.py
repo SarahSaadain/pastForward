@@ -193,10 +193,7 @@ def cmd_unlock(argv):
     if rest:
         _die(f"pastForward unlock: unknown argument(s): {' '.join(rest)}")
     _ensure_project_root(configfiles=configfiles)
-    # --dryrun: without it initialize.smk takes the cross-project .pastforward.lock for every
-    # processed_dir/results_dir override, and an unlock never fires the onsuccess:/onerror: hooks
-    # that release it. The unlock itself still happens.
-    code = subprocess.call(["snakemake", "--unlock", "--dryrun", "--cores", "1"])
+    code = subprocess.call(["snakemake", "--unlock", "--cores", "1"])
 
     locks = _cross_project_locks(_load_config(configfiles))
     if not locks:

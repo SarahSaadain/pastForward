@@ -253,8 +253,8 @@ else
 fi
 
 # =============================================================================================
-# Scenario 6: dry runs must never leak the cross-project lock (Snakemake skips onsuccess: for
-# --dryrun, so the lock must simply not be acquired in the first place - see species_paths.py)
+# Scenario 6: dry runs must never leak the cross-project lock (Snakemake skips onstart: and
+# onsuccess: for --dryrun, so the lock is never taken - see acquire_pastforward_locks)
 # =============================================================================================
 S6="$WORKDIR/6_lock_dryrun"
 make_project "$S6"
@@ -279,7 +279,8 @@ else
 fi
 
 # =============================================================================================
-# Scenario 7: a real (non-dry) run acquires the lock and releases it via onsuccess:. Uses a
+# Scenario 7: --lint takes no lock, and a real (non-dry) run acquires the lock in onstart: and
+# releases it via onsuccess:. Uses a
 # minimal synthetic Snakefile (not the full pastForward pipeline, which needs bioinformatics
 # conda envs) that drives species_paths.py exactly the way workflow/Snakefile does.
 # =============================================================================================
@@ -290,29 +291,34 @@ mkdir -p "$EXT7"
 cat > "$S7/Snakefile" <<EOF
 import sys, os
 sys.path.insert(0, "$REPO_ROOT/workflow")
-from scripts.species_paths import setup_species_data_locations, release_pastforward_locks
+from scripts.species_paths import setup_species_data_locations, acquire_pastforward_locks, release_pastforward_locks
 
 TARGET = "$EXT7"
 cfg = {"species": {"X": {"processed_dir": TARGET}}}
-setup_species_data_locations(cfg, dry_run=workflow.output_settings.dryrun)
+setup_species_data_locations(cfg)
 
 rule all:
     input: "out.txt"
 
 rule make_out:
     output: "out.txt"
-    shell: "touch {output}"
+    shell: "test -e {TARGET}/.pastforward.lock && touch {output}"
+
+onstart:
+    acquire_pastforward_locks(cfg)
 
 onsuccess:
     release_pastforward_locks()
 EOF
+( cd "$S7" && "$TIMEOUT_CMD" 30 snakemake --lint -s Snakefile > lint.log 2>&1 )
+S7_LINT_LOCK=$([ -e "$EXT7/.pastforward.lock" ] && echo yes || echo no)
 ( cd "$S7" && "$TIMEOUT_CMD" 30 snakemake --cores 1 -s Snakefile > run.log 2>&1 )
 S7_EXIT=$?
-if [ "$S7_EXIT" -eq 0 ] && [ ! -e "$EXT7/.pastforward.lock" ]; then
-  pass "7: real run acquires the lock and releases it via onsuccess:"
+if [ "$S7_LINT_LOCK" = no ] && [ "$S7_EXIT" -eq 0 ] && [ -e "$S7/out.txt" ] && [ ! -e "$EXT7/.pastforward.lock" ]; then
+  pass "7: --lint takes no lock; real run holds it during the job and releases it via onsuccess:"
 else
-  fail "7: real run acquires the lock and releases it via onsuccess:" \
-       "exit=$S7_EXIT, lock present=$([ -e "$EXT7/.pastforward.lock" ] && echo yes || echo no), see $S7/run.log"
+  fail "7: --lint takes no lock; real run holds it during the job and releases it via onsuccess:" \
+       "lock after --lint=$S7_LINT_LOCK, exit=$S7_EXIT, lock present=$([ -e "$EXT7/.pastforward.lock" ] && echo yes || echo no), see $S7/run.log"
 fi
 
 # =============================================================================================
