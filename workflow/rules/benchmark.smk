@@ -27,6 +27,9 @@
 #     a rule to be cacheable and benchmarked at once, so they are skipped. To measure one of
 #     them, drop its `cache:` line in
 #     workflow/rules/reference_module/processing/prepare_reference_for_mapping.smk.
+#   - `prepare_raw_reads` is skipped, because it moves its input away. The extended benchmark
+#     stats every input after the job, so it would fail on the missing file and Snakemake would
+#     delete the moved read as incomplete output.
 #   - On macOS every column except wall time is "NA": the sampler calls psutil's
 #     memory_full_info(), which is denied on darwin even for the process's own children. Memory
 #     numbers have to be measured on Linux.
@@ -52,6 +55,10 @@ try:
         # `rule.cache` is always truthy. Its `.output` says whether caching is actually on. An
         # unrecognized future shape is treated as cached, which costs one rule's measurements
         # rather than the whole run.
+        # This job moves its input, and the extended benchmark stats inputs afterwards: the job
+        # would fail and its output (the user's only copy of the read) would be deleted.
+        if _benchmark_rule.name == "prepare_raw_reads":
+            continue
         if getattr(_benchmark_rule.cache, "output", True):
             continue
         if _benchmark_rule.log:

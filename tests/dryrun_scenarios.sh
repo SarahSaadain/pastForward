@@ -583,6 +583,25 @@ else
        "exit $S10_NONE_EXIT, jobs $S10_NONE_JOBS vs $S10_JOBS, see $S10/no_profile.log"
 fi
 
+# -------------------------------------------------------------------------------------------
+# Scenario 11: a real (not dry) run of prepare_raw_reads keeps the raw read
+# The rule moves its input, and the extended benchmark stats inputs after the job. Benchmarking it
+# once made the job fail and deleted the moved read.
+# -------------------------------------------------------------------------------------------
+S11="$WORKDIR/11_move_raw_read"
+make_project "$S11"
+printf 'project_name: t\nspecies:\n  Dmel:\n    name: x\n' > "$S11/config/config.yaml"
+mkdir -p "$S11/Dmel"
+printf '@r\nACGT\n+\nIIII\n' | gzip > "$S11/Dmel/A_R1.fastq.gz"
+( cd "$S11" && "$TIMEOUT_CMD" 120 snakemake --cores 1 Dmel/input/read_module/A_R1.fastq.gz > "$S11/run.log" 2>&1 )
+S11_EXIT=$?
+if [ "$S11_EXIT" -eq 0 ] && [ -s "$S11/Dmel/input/read_module/A_R1.fastq.gz" ]; then
+  pass "11: moving a raw read into input/read_module keeps the file"
+else
+  fail "11: moving a raw read into input/read_module keeps the file" \
+       "exit $S11_EXIT, read present: $(ls "$S11/Dmel/input/read_module" 2>&1), see $S11/run.log"
+fi
+
 # =============================================================================================
 echo ""
 echo "$PASS_COUNT passed, $FAIL_COUNT failed"
