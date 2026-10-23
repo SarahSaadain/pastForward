@@ -98,6 +98,13 @@ rule get_adapter_removal_final:
         "{species}/processed/read_module/reads_trimmed/{sample}_determine_trimmed_final.log",
     conda:
         "../../../envs/python_and_r.yaml"
+    params:
+        # Raw reads (adapter removal off) stay on disk, so they get a real copy.
+        # A hard link would share their timestamp and could trigger reruns.
+        hardlink=config.get("pipeline", {})
+        .get("read_module", {})
+        .get("adapter_removal", {})
+        .get("execute", True),
     message:
         "Getting trimmed reads in {wildcards.sample}"
     shell:
@@ -106,7 +113,7 @@ rule get_adapter_removal_final:
         echo "Input: {input}" >>"{log}" 2>&1
         echo "Output: {output}" >>"{log}" 2>&1
         set -- {input}
-        if [ $# -eq 1 ]; then
+        if [ $# -eq 1 ] && [ "{params.hardlink}" = True ]; then
             ln -fL "$1" "{output}" 2>/dev/null || cp "$1" "{output}"
         else
             cat "$@" >"{output}"
