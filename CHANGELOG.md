@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Less disk use with `bwa-aln` mapping in the REVEAL module**: the sorted BAM that still holds unmapped reads is now deleted after filtering, as the `bwa-mem2` and `minimap2` outputs already were. Only the filtered BAM is kept per individual and library
 
 ### Bug Fixes
-
+- **Paired-end adapter flags**: Setting only `adapters_sequences.r1` no longer passes an empty `--adapter_sequence_r2` to fastp. Each adapter flag is now passed only when its value is set.
 - **Clashing reference, feature library and SCG file names now stop the run**: two FASTA files that resolve to the same ID (e.g. `genome.fa` next to `genome.fna`, or `X.0.fna` next to `X_0.fna`) used to be silently reduced to one. More than one SCG file per species used to pick one by chance. Both now fail at startup with an error naming the files.
 - **Reads placed directly in the species folder were deleted on a real run**: since benchmarking was added (v2.2.0), moving `<species>/<read>` into `<species>/input/read_module/` failed in the benchmark step and Snakemake then deleted the moved file, so the raw read was lost. `prepare_raw_reads` is no longer benchmarked
 - **`skip_low_coverage_individuals` hid real REVEAL normalize errors**: any failure of `REVEAL normalize`, such as a corrupt coverage file, was treated as low coverage and the individual was silently excluded. Only the `Insufficient coverage to normalize` error is skipped now. Other errors fail the rule
