@@ -139,7 +139,12 @@ rule get_adapter_removal_final:
         echo "Determining final trimmed reads for {wildcards.sample}" >"{log}" 2>&1
         echo "Input: {input}" >>"{log}" 2>&1
         echo "Output: {output}" >>"{log}" 2>&1
-        cat {input} >"{output}"
+        set -- {input}
+        if [ $# -eq 1 ]; then
+            ln -f "$1" "{output}" 2>/dev/null || cp "$1" "{output}"
+        else
+            cat "$@" >"{output}"
+        fi
         echo "Determination completed for {wildcards.sample}" >>"{log}" 2>&1
         """
 

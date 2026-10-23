@@ -58,15 +58,15 @@ if _filter_remove:
         message:
             "Getting final (mapped-only) BAM for {wildcards.individual} of {wildcards.species}."
         shell:
-            # Use copy so the mapped-only intermediate is still available for any
+            # Use a hard link (copy if cross-filesystem) so the mapped-only intermediate is still available for any
             # other rule that depends on it; temp() handles deletion afterwards.
             """
-            echo "Copying final bam and bai for {wildcards.individual} mapped to {wildcards.reference}..." >"{log}" 2>&1
+            echo "Linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}..." >"{log}" 2>&1
             echo "Input bam: {input.bam}" >>"{log}" 2>&1
             echo "Output bam: {output.bam}" >>"{log}" 2>&1
-            cp "{input.bam}" "{output.bam}" >>"{log}" 2>&1
-            cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
-            echo "Done copying final bam and bai for {wildcards.individual} mapped to {wildcards.reference}." >>"{log}" 2>&1
+            ln -f "{input.bam}" "{output.bam}" 2>/dev/null || cp "{input.bam}" "{output.bam}" >>"{log}" 2>&1
+            ln -f "{input.bai}" "{output.bai}" 2>/dev/null || cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
+            echo "Done linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}." >>"{log}" 2>&1
             """
 
 else:
@@ -88,15 +88,15 @@ else:
         shell:
             # The final bam is just a copy of the bam that is output from the last step of the reference
             # processing pipeline (either damage rescaling, deduplication, or mapping)
-            # We use copy instead of move. If we would use move here, other rules will not know that the input bam
+            # We hard link (copy if cross-filesystem) instead of move. If we would use move here, other rules will not know that the input bam
             # will be renamed. These other rules will then fail because the input bam is not found (as it has been renamed).
             # By using copy, we ensure that the input bam is still available for other rules that need it.
             # The input bam will be deleted at the end of the pipeline when the intermediate files are cleaned up.
             """
-            echo "Copying final bam and bai for {wildcards.individual} mapped to {wildcards.reference}..." >"{log}" 2>&1
+            echo "Linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}..." >"{log}" 2>&1
             echo "Input bam: {input.bam}" >>"{log}" 2>&1
             echo "Output bam: {output.bam}" >>"{log}" 2>&1
-            cp "{input.bam}" "{output.bam}" >>"{log}" 2>&1
-            cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
-            echo "Done copying final bam and bai for {wildcards.individual} mapped to {wildcards.reference}." >>"{log}" 2>&1
+            ln -f "{input.bam}" "{output.bam}" 2>/dev/null || cp "{input.bam}" "{output.bam}" >>"{log}" 2>&1
+            ln -f "{input.bai}" "{output.bai}" 2>/dev/null || cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
+            echo "Done linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}." >>"{log}" 2>&1
             """

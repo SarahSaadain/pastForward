@@ -24,6 +24,11 @@ rule merge_reads_by_individual:
         done
         echo "Output file: {output}" >>"{log}"
 
-        cat {input} >"{output}"
+        set -- {input}
+        if [ $# -eq 1 ]; then
+            ln -f "$1" "{output}" 2>/dev/null || cp "$1" "{output}"
+        else
+            cat "$@" >"{output}"
+        fi
         echo "Merging completed for individual {wildcards.individual} of species {wildcards.species}." >>"{log}"
         """

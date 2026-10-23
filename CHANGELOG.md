@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **Less disk and I/O for pass-through copies**: the final BAM, the rescaled BAM, the final trimmed and quality-filtered reads, and single-sample read merges are now hard links instead of full copies. Input files stay in place. The rules fall back to a copy when the files are on different filesystems
 - **Less disk use with `bwa-aln` mapping in the REVEAL module**: the sorted BAM that still holds unmapped reads is now deleted after filtering, as the `bwa-mem2` and `minimap2` outputs already were. Only the filtered BAM is kept per individual and library
 
 ### Bug Fixes
