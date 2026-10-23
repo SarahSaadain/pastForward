@@ -15,6 +15,17 @@ import os
 WRAPPER_VERSION = "v9.3.0"
 
 
+def _fastp_adapter_flags(paired):
+    # Only set adapters get a flag. `adapters_sequences:` left empty in YAML is None, not {}.
+    seqs = (config.get("pipeline") or {}).get("read_module", {}).get(
+        "adapter_removal", {}
+    ).get("settings", {}).get("adapters_sequences") or {}
+    flags = [("--adapter_sequence", "r1")]
+    if paired:
+        flags.append(("--adapter_sequence_r2", "r2"))
+    return " ".join(f"{flag} {seqs[key]}" for flag, key in flags if seqs.get(key))
+
+
 def determine_reads_trimmed_final_input(wildcards):
 
     species = wildcards.species

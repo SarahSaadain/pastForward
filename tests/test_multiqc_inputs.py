@@ -135,6 +135,17 @@ class MultiqcInputsTestCase(unittest.TestCase):
         self.assertTrue(jsons[0].endswith("dedup_1_50/IND001_genome_cluster_1_50.dedup.json"))
         self.assertEqual(len(jsons), 2)
 
+    def test_fastp_adapter_flags(self):
+        def flags(seqs, paired):
+            ns = self.load({"read_module": {"adapter_removal": {"settings": {"adapters_sequences": seqs}}}})
+            return ns["_fastp_adapter_flags"](paired)
+
+        self.assertEqual(flags(None, True), "")  # empty `adapters_sequences:` in YAML
+        self.assertEqual(flags({"r1": "AAA"}, True), "--adapter_sequence AAA")
+        self.assertEqual(flags({"r2": "CCC"}, True), "--adapter_sequence_r2 CCC")
+        self.assertEqual(flags({"r1": "AAA", "r2": "CCC"}, True), "--adapter_sequence AAA --adapter_sequence_r2 CCC")
+        self.assertEqual(flags({"r1": "AAA", "r2": "CCC"}, False), "--adapter_sequence AAA")
+
 
 if __name__ == "__main__":
     unittest.main()

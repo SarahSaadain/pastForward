@@ -20,16 +20,7 @@ rule remove_adapters_single_with_fastp:
         "{species}/processed/read_module/reads_trimmed/{sample}_trimmed.se.log",
     threads: 10
     params:
-        adapters=lambda wc: (
-            f"--adapter_sequence {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('adapters_sequences',{}).get('r1')}"
-            if config.get("pipeline", {})
-            .get("read_module", {})
-            .get("adapter_removal", {})
-            .get("settings", {})
-            .get("adapters_sequences", {})
-            .get("r1")
-            else ""
-        ),
+        adapters=lambda wc: _fastp_adapter_flags(paired=False),
         extra=lambda wc: (
             f"--length_required {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('min_length',0)} "
             f"--qualified_quality_phred {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('min_quality',0)} "
@@ -77,34 +68,9 @@ rule remove_adapters_paired_with_fastp:
         "{species}/processed/read_module/reads_trimmed/{sample}_trimmed.pe.log",
     threads: 10
     params:
-        # Pass each flag only when set; if neither is set, let fastp auto-detect.
-        adapters=lambda wc: (
-            " ".join(
-                f"{flag} {seq}"
-                for flag, seq in (
-                    (
-                        "--adapter_sequence",
-                        (config.get("pipeline") or {})
-                        .get("read_module", {})
-                        .get("adapter_removal", {})
-                        .get("settings", {})
-                        .get("adapters_sequences", {})
-                        .get("r1"),
-                    ),
-                    (
-                        "--adapter_sequence_r2",
-                        (config.get("pipeline") or {})
-                        .get("read_module", {})
-                        .get("adapter_removal", {})
-                        .get("settings", {})
-                        .get("adapters_sequences", {})
-                        .get("r2"),
-                    ),
-                )
-                if seq
-            )
-            or "--detect_adapter_for_pe"
-        ),
+        # If neither adapter is set, let fastp auto-detect.
+        adapters=lambda wc: _fastp_adapter_flags(paired=True)
+        or "--detect_adapter_for_pe",
         extra=lambda wc: (
             f"--length_required {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('min_length',0)} "
             f"--trim_poly_x "
