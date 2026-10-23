@@ -20,6 +20,8 @@ except ImportError:
 if not _is_snakemake_subprocess:
 
     species_section = config.get("species", {})
+    # REVEAL inputs that clash only stop the run when reveal_module will use them.
+    _reveal_on = config.get("pipeline", {}).get("reveal_module", {}).get("execute", True)
     species_lines = []
     for sname, sdata in species_section.items():
         display_name = f"{sdata.get('name', sname)} [{sname}]"
@@ -102,13 +104,23 @@ if not _is_snakemake_subprocess:
                 lines.append(f"    Feature Libraries ignored ({len(ignored_feat_libs)}) [not selected in config]:")
                 for lib_id, lib_path in ignored_feat_libs:
                     lines.append(f"      - {lib_id}: {lib_path}")
-        except ConfigValidationError:
-            raise
+        except ConfigValidationError as e:
+            if _reveal_on:
+                raise
+            lines.append(f"    WARNING: {e} (ignored, reveal_module is off)")
         except Exception:
             lines.append("    Feature Libraries: (none found)")
 
-        scg_libs = get_scg_library_file_list_for_species(sname)
-        if scg_libs:
+        try:
+            scg_libs = get_scg_library_file_list_for_species(sname)
+        except ConfigValidationError as e:
+            if _reveal_on:
+                raise
+            lines.append(f"    WARNING: {e} (ignored, reveal_module is off)")
+            scg_libs = None
+        if scg_libs is None:
+            pass
+        elif scg_libs:
             lines.append(f"    SCG Libraries ({len(scg_libs)}):")
             for lib_id, lib_path in scg_libs:
                 lines.append(f"      - {lib_id}: {lib_path}")

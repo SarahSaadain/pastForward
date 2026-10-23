@@ -219,6 +219,23 @@ class TestScgSelectorDefaults(ExpectedOutputManagerTestCase):
         with self.assertRaises(ns["ConfigValidationError"]):
             ns["get_expected_output_reveal_module_processing"]("Dmel")
 
+    def test_reveal_input_clash_only_warns_when_reveal_module_off(self):
+        # check.py runs on every start. Clashing REVEAL inputs must not stop a run that
+        # never uses them, but must still stop one that does.
+        testlib.write_fasta("Dmel/input/reveal_module/scg/first.fasta")
+        testlib.write_fasta("Dmel/input/reveal_module/scg/second.fasta")
+        testlib.write_fasta("Dmel/input/reveal_module/feature_library/lib.fa")
+        testlib.write_fasta("Dmel/input/reveal_module/feature_library/lib.fasta")
+        off = dict(self.base_config, pipeline={"reveal_module": {"execute": False}})
+        with self.assertLogs(level="INFO") as logs:
+            load_pipeline_namespace(off, include_check=True)
+        summary = "\n".join(logs.output)
+        self.assertIn("WARNING: Species 'Dmel': found 2 SCG files", summary)
+        self.assertIn("WARNING: Species 'Dmel': feature library files", summary)
+        with self.assertRaises(Exception) as ctx:
+            load_pipeline_namespace(dict(self.base_config), include_check=True)
+        self.assertEqual(type(ctx.exception).__name__, "ConfigValidationError")
+
     def test_no_feature_library_returns_scg_outputs_only(self):
         testlib.build_species_library(
             self.project_dir, species="NoLib", include_second_reference=False, include_feature_library=False
