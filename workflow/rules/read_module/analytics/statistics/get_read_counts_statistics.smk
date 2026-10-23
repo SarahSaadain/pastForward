@@ -99,10 +99,7 @@ rule combine_counts_per_species:
         counts="{species}/results/read_module/statistics/{species}_reads_counts.csv",
     log:
         "{species}/results/read_module/statistics/{species}_reads_counts.log",
-    conda:
-        "../../../../envs/python_and_r.yaml"
     run:
-        data = []
         pd.concat(
             [
                 pd.read_csv(
