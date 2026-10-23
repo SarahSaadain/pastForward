@@ -94,10 +94,12 @@ def get_raw_read_path_for_stem(species: str, stem: str) -> str:
     reads_dir = f"{species}/input/read_module"
     for ext in RAW_READ_EXTENSIONS:
         candidate = os.path.join(reads_dir, f"{stem}{ext}")
-        if os.path.exists(candidate):
+        # Reads placed directly in <species>/ are moved into reads_dir by prepare_raw_reads, so
+        # still return the reads_dir path: that makes Snakemake run the move rule first.
+        if os.path.exists(candidate) or os.path.exists(os.path.join(species, f"{stem}{ext}")):
             return candidate
     raise FileNotFoundError(
-        f"No raw read file found for '{stem}' in {reads_dir} (tried extensions: {', '.join(RAW_READ_EXTENSIONS)})."
+        f"No raw read file found for '{stem}' in {reads_dir} or {species} (tried extensions: {', '.join(RAW_READ_EXTENSIONS)})."
     )
 
 # -----------------------------------------------------------------------------------------------

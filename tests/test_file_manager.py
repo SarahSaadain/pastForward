@@ -125,6 +125,25 @@ class TestReadDiscovery(FileManagerTestCase):
             fm.get_read2_counterpart_path(unmatched)
 
 
+class TestRawReadPathForStem(FileManagerTestCase):
+    fixture_kwargs = None
+
+    def test_found_in_reads_dir(self):
+        os.makedirs("Sp/input/read_module")
+        open("Sp/input/read_module/A_R1.fastq.gz", "w").close()
+        self.assertEqual(fm.get_raw_read_path_for_stem("Sp", "A_R1"), "Sp/input/read_module/A_R1.fastq.gz")
+
+    def test_species_dir_returns_reads_dir_path(self):
+        os.makedirs("Sp")
+        open("Sp/A_R1.fq.gz", "w").close()
+        self.assertEqual(fm.get_raw_read_path_for_stem("Sp", "A_R1"), "Sp/input/read_module/A_R1.fq.gz")
+
+    def test_missing_raises(self):
+        os.makedirs("Sp")
+        with self.assertRaises(FileNotFoundError):
+            fm.get_raw_read_path_for_stem("Sp", "A_R1")
+
+
 class TestIndividualsAndSamples(FileManagerTestCase):
     def test_individuals_discovered_sorted_excluding_unmatched(self):
         self.assertEqual(fm.get_individuals_for_species("Dmel"), ["IND001", "IND002", "IND003"])
