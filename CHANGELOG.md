@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - **Plot logs in one place**: the logs of the read-count, coverage, endogenous-read and raw-vs-endogenous plots were written under `processed/`, while the SNP-divergence plot and the REVEAL plots log under `results/` next to their output. They now all log next to the plot under `results/`, and so do their `.benchmark.jsonl` files. Old logs under `processed/.../plots/` are no longer updated
-- **Less disk and I/O for pass-through copies**: the final BAM, the rescaled BAM, the final trimmed and quality-filtered reads, and single-sample read merges are now hard links instead of full copies. Input files stay in place. The rules fall back to a copy when the files are on different filesystems
+- **Less disk and I/O for pass-through copies**: the final BAM, the rescaled BAM, the final trimmed and quality-filtered reads, and single-sample read merges are now hard links instead of full copies. Input files stay in place. The rules fall back to a copy when the files are on different filesystems. A symlinked input, such as a raw read when adapter removal is off, is linked to the file it points to, so a relative symlink does not break
 - **Less disk use with `bwa-aln` mapping in the REVEAL module**: the sorted BAM that still holds unmapped reads is now deleted after filtering, as the `bwa-mem2` and `minimap2` outputs already were. Only the filtered BAM is kept per individual and library
 
 ### Bug Fixes

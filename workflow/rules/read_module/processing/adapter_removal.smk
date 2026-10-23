@@ -141,7 +141,7 @@ rule get_adapter_removal_final:
         echo "Output: {output}" >>"{log}" 2>&1
         set -- {input}
         if [ $# -eq 1 ]; then
-            ln -f "$1" "{output}" 2>/dev/null || cp "$1" "{output}"
+            ln -fL "$1" "{output}" 2>/dev/null || cp "$1" "{output}"
         else
             cat "$@" >"{output}"
         fi

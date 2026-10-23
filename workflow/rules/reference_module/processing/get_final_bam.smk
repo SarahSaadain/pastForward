@@ -64,8 +64,8 @@ if _filter_remove:
             echo "Linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}..." >"{log}" 2>&1
             echo "Input bam: {input.bam}" >>"{log}" 2>&1
             echo "Output bam: {output.bam}" >>"{log}" 2>&1
-            ln -f "{input.bam}" "{output.bam}" 2>/dev/null || cp "{input.bam}" "{output.bam}" >>"{log}" 2>&1
-            ln -f "{input.bai}" "{output.bai}" 2>/dev/null || cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
+            ln -fL "{input.bam}" "{output.bam}" 2>/dev/null || cp "{input.bam}" "{output.bam}" >>"{log}" 2>&1
+            ln -fL "{input.bai}" "{output.bai}" 2>/dev/null || cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
             echo "Done linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}." >>"{log}" 2>&1
             """
 
@@ -96,7 +96,7 @@ else:
             echo "Linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}..." >"{log}" 2>&1
             echo "Input bam: {input.bam}" >>"{log}" 2>&1
             echo "Output bam: {output.bam}" >>"{log}" 2>&1
-            ln -f "{input.bam}" "{output.bam}" 2>/dev/null || cp "{input.bam}" "{output.bam}" >>"{log}" 2>&1
-            ln -f "{input.bai}" "{output.bai}" 2>/dev/null || cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
+            ln -fL "{input.bam}" "{output.bam}" 2>/dev/null || cp "{input.bam}" "{output.bam}" >>"{log}" 2>&1
+            ln -fL "{input.bai}" "{output.bai}" 2>/dev/null || cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
             echo "Done linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}." >>"{log}" 2>&1
             """

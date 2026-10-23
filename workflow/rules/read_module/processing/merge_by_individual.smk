@@ -26,7 +26,7 @@ rule merge_reads_by_individual:
 
         set -- {input}
         if [ $# -eq 1 ]; then
-            ln -f "$1" "{output}" 2>/dev/null || cp "$1" "{output}"
+            ln -fL "$1" "{output}" 2>/dev/null || cp "$1" "{output}"
         else
             cat "$@" >"{output}"
         fi

@@ -58,4 +58,4 @@ rule get_quality_filtered_final:
     message:
         "Selecting quality filtered reads for {wildcards.sample}"
     shell:
-        'ln -f "{input.source}" "{output.final}" 2>/dev/null || cp "{input.source}" "{output.final}" > "{log}" 2>&1'
+        'echo "Source: {input.source}" > "{log}" 2>&1; ln -fL "{input.source}" "{output.final}" 2>/dev/null || cp "{input.source}" "{output.final}" >> "{log}" 2>&1'

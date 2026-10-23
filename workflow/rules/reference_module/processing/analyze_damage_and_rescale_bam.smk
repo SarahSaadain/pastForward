@@ -104,6 +104,6 @@ rule move_rescaled_bam:
         "Move rescaled BAM and index to processed directory for {input.sorted_bam}"
     shell:
         """
-        ln -f "{input.sorted_bam}" "{output.sorted_bam}" >"{log}" 2>&1 || cp "{input.sorted_bam}" "{output.sorted_bam}" >>"{log}" 2>&1
-        ln -f "{input.bam_index}" "{output.bam_index}" >>"{log}" 2>&1 || cp "{input.bam_index}" "{output.bam_index}" >>"{log}" 2>&1
+        ln -fL "{input.sorted_bam}" "{output.sorted_bam}" >"{log}" 2>&1 || cp "{input.sorted_bam}" "{output.sorted_bam}" >>"{log}" 2>&1
+        ln -fL "{input.bam_index}" "{output.bam_index}" >>"{log}" 2>&1 || cp "{input.bam_index}" "{output.bam_index}" >>"{log}" 2>&1
         """
