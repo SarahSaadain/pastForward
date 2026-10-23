@@ -171,7 +171,10 @@ def _read_lock(lock_path: Path) -> dict | None:
         return None
 
 
-def _pid_alive(pid: int) -> bool:
+def _pid_alive(pid) -> bool:
+    # pid <= 0 would make os.kill signal a process group; a missing/garbled lock pid is not alive.
+    if not isinstance(pid, int) or pid <= 0:
+        return False
     try:
         os.kill(pid, 0)
     except ProcessLookupError:

@@ -5,6 +5,8 @@ import shutil
 import sys
 from pathlib import Path
 
+from scripts.species_paths import _pid_alive as _is_alive  # one PID check, stdlib-only module
+
 
 STATE_DIR = Path(".pastforward")
 LOG_DIR = Path("logs")
@@ -141,16 +143,6 @@ def _ensure_project_root(require_snakemake=True, require_config=False, configfil
     # neither (print-log only reads files back out of logs/).
     if require_snakemake and shutil.which("snakemake") is None:
         _die("pastForward: `snakemake` not found on PATH. Activate its conda env first.")
-
-
-def _is_alive(pid):
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
 
 
 def _format_duration(seconds):

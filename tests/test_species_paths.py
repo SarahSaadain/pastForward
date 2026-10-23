@@ -196,6 +196,11 @@ class TestCrossProjectLock(SpeciesPathsTestCase):
         with self.assertRaises(sp.CrossProjectLockError):
             sp._acquire_project_lock(target, "Dmel", "processed")
 
+    def test_pid_alive_edge_cases(self):
+        self.assertTrue(sp._pid_alive(os.getpid()))
+        for bad in (0, -1, None):
+            self.assertFalse(sp._pid_alive(bad))
+
     def test_dead_pid_same_host_is_taken_over(self):
         target = self.make_external_dir("pf_test_stale_target_")
         dead_pid = 999999

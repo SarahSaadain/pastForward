@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 
 ### CI / Maintenance
 
+- **One process-alive check**: the CLI and the cross-project lock had two copies of the same PID check, and the CLI one treated pid 0 or -1 as alive. Both now use the one in `species_paths.py`, which returns not alive for those.
 - **Dedup cluster input functions share one parser**: `dedup_merge_split_bams_input` and `dedup_merge_split_jsons_input` read the cluster file names in two slightly different ways. Both now use one helper. The cluster files are always `cluster_<int>_<int>.bed`, so the requested files are unchanged.
 - **Startup log shows the Linux distro name again**: the platform line now ends with the distro (for example `Ubuntu 26.04.1 LTS`), read from `/etc/os-release`. The old `platform.linux_distribution()` call never worked on Python 3.8 or later, and the dead macOS version code is gone (macOS already shows its version in the same line).
 
