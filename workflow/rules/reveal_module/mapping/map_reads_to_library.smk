@@ -139,7 +139,9 @@ elif _dyn_mapper == "bwa-aln":
         input:
             "{species}/processed/reveal_module/{feature_library}/mapped/{individual}_{feature_library}_and_scg.unsorted.with_unmapped.bam",
         output:
-            "{species}/processed/reveal_module/{feature_library}/mapped/{individual}_{feature_library}_and_scg.sorted.with_unmapped.bam",
+            temp(
+                "{species}/processed/reveal_module/{feature_library}/mapped/{individual}_{feature_library}_and_scg.sorted.with_unmapped.bam"
+            ),
         log:
             "{species}/processed/reveal_module/{feature_library}/mapped/{individual}_{feature_library}_and_scg_sort_bam.log",
         threads: 8

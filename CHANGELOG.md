@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **Less disk use with `bwa-aln` mapping in the REVEAL module**: the sorted BAM that still holds unmapped reads is now deleted after filtering, as the `bwa-mem2` and `minimap2` outputs already were. Only the filtered BAM is kept per individual and library
+
 ### Bug Fixes
 
 - **`skip_low_coverage_individuals` hid real REVEAL normalize errors**: any failure of `REVEAL normalize`, such as a corrupt coverage file, was treated as low coverage and the individual was silently excluded. Only the `Insufficient coverage to normalize` error is skipped now. Other errors fail the rule
