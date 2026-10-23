@@ -339,7 +339,7 @@ def get_competition_fasta_input(wildcards):
     path = get_competition_fasta_for_species(wildcards.species)
     if not path:
         raise ValueError(
-            f"pipeline.reveal_module.mapping.competitive_mapping.execute is true, but no competition "
+            f"pipeline.reveal_module.mapping.settings.competitive_mapping is true, but no competition "
             f"FASTA was found in '{wildcards.species}/input/reveal_module/competition/' for species "
             f"'{wildcards.species}'. Place exactly one FASTA file there to use competitive mapping."
         )
