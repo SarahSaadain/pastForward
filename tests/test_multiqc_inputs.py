@@ -118,6 +118,23 @@ class MultiqcInputsTestCase(unittest.TestCase):
             self.assertTrue(files)
             self.assertFalse([f for f in files if "/reference_module/" in f])
 
+    def test_dedup_merge_inputs_share_cluster_ranges(self):
+        ns = self.load()
+        folder = os.path.join(self.project_dir, "clusters")
+        os.makedirs(folder)
+        for name in ("cluster_1_50.bed", "cluster_51_120.bed", "other.bed"):
+            open(os.path.join(folder, name), "w").close()
+        checkpoint = SimpleNamespace(get=lambda **kw: SimpleNamespace(output=SimpleNamespace(cluster_folder=folder)))
+        ns["checkpoints"] = SimpleNamespace(dedup_create_all_contig_clusters=checkpoint)
+        wc = SimpleNamespace(species="Dmel", reference="genome", individual="IND001")
+        self.assertEqual(ns["_dedup_cluster_ranges"](wc), [(1, 50), (51, 120)])
+        bams = ns["dedup_merge_split_bams_input"](wc)
+        jsons = ns["dedup_merge_split_jsons_input"](wc)
+        self.assertEqual(len(bams), 3)  # two clusters + unmapped reads
+        self.assertTrue(bams[1].endswith("dedup_51_120/IND001_genome_cluster_51_120_rmdup.bam"))
+        self.assertTrue(jsons[0].endswith("dedup_1_50/IND001_genome_cluster_1_50.dedup.json"))
+        self.assertEqual(len(jsons), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

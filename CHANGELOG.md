@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Less disk use with `bwa-aln` mapping in the REVEAL module**: the sorted BAM that still holds unmapped reads is now deleted after filtering, as the `bwa-mem2` and `minimap2` outputs already were. Only the filtered BAM is kept per individual and library
 
 ### Bug Fixes
+
 - **Wrong config key in the competition FASTA error**: the error for a missing competition FASTA named `pipeline.reveal_module.mapping.competitive_mapping.execute`. It now names the real key, `pipeline.reveal_module.mapping.settings.competitive_mapping`
 - **Paired-end adapter flags**: Setting only `adapters_sequences.r1` no longer passes an empty `--adapter_sequence_r2` to fastp. Each adapter flag is now passed only when its value is set.
 - **Clashing reference, feature library and SCG file names now stop the run**: two FASTA files that resolve to the same ID (e.g. `genome.fa` next to `genome.fna`, or `X.0.fna` next to `X_0.fna`) used to be silently reduced to one. More than one SCG file per species used to pick one by chance. Both now fail at startup with an error naming the files.
@@ -23,6 +24,7 @@ All notable changes to this project will be documented in this file.
 
 ### CI / Maintenance
 
+- **Dedup cluster input functions share one parser**: `dedup_merge_split_bams_input` and `dedup_merge_split_jsons_input` read the cluster file names in two slightly different ways. Both now use one helper. The cluster files are always `cluster_<int>_<int>.bed`, so the requested files are unchanged.
 - **Startup log shows the Linux distro name again**: the platform line now ends with the distro (for example `Ubuntu 26.04.1 LTS`), read from `/etc/os-release`. The old `platform.linux_distribution()` call never worked on Python 3.8 or later, and the dead macOS version code is gone (macOS already shows its version in the same line).
 
 ## [2.2.0] - 2026-10-06

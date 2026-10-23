@@ -236,33 +236,36 @@ def create_multiqc_species_input(wildcards):
     return file_list
 
 
-def dedup_merge_split_bams_input(wildcards):
+def _dedup_cluster_ranges(wildcards):
     """
-    Get all dedup BAMs corresponding to the contig group files named as 'cluster_{start}_{end}.bed'.
+    (start, end) of every contig cluster file 'cluster_{start}_{end}.bed' written by
+    the dedup_create_all_contig_clusters checkpoint.
     """
-    # Get checkpoint output folder
-    # we use the checkpoint here to make sure that the files are generated before we try to access them
+    # the checkpoint makes sure the files exist before we glob them
     # for more info see: https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution
-    checkpoint_output = checkpoints.dedup_create_all_contig_clusters.get(
+    cluster_folder = checkpoints.dedup_create_all_contig_clusters.get(
         species=wildcards.species, reference=wildcards.reference
     ).output.cluster_folder
 
-    # Find all group files
-    group_files = sorted(glob.glob(os.path.join(checkpoint_output, "cluster_*.bed")))
-
+    group_files = sorted(glob.glob(os.path.join(cluster_folder, "cluster_*_*.bed")))
     logger.debug(f"Found {len(group_files)} contig cluster files for deduplication.")
-    logger.debug(f"Cluster files: {group_files}")
 
-    bam_files = []
-    for group_file in group_files:
-        group_name = os.path.splitext(os.path.basename(group_file))[0]  # "group_1_50"
-        start_end = group_name.split("_")[1:]  # ["1", "50"]
-        start, end = map(int, start_end)
-        bam_path = (
-            f"{wildcards.species}/processed/reference_module/{wildcards.reference}/dedup_cluster/"
-            f"{wildcards.individual}/dedup_{start}_{end}/{wildcards.individual}_{wildcards.reference}_cluster_{start}_{end}_rmdup.bam"
-        )
-        bam_files.append(bam_path)
+    # "cluster_1_50.bed" -> (1, 50)
+    return [
+        tuple(map(int, os.path.splitext(os.path.basename(f))[0].split("_")[1:]))
+        for f in group_files
+    ]
+
+
+def dedup_merge_split_bams_input(wildcards):
+    """
+    Get all dedup BAMs corresponding to the contig cluster files.
+    """
+    bam_files = [
+        f"{wildcards.species}/processed/reference_module/{wildcards.reference}/dedup_cluster/"
+        f"{wildcards.individual}/dedup_{start}_{end}/{wildcards.individual}_{wildcards.reference}_cluster_{start}_{end}_rmdup.bam"
+        for start, end in _dedup_cluster_ranges(wildcards)
+    ]
 
     # add unmapped reads bam file to the list of bams to merge
     bam_files.append(
@@ -277,35 +280,13 @@ def dedup_merge_split_bams_input(wildcards):
 
 def dedup_merge_split_jsons_input(wildcards):
     """
-    Get all DeDup JSON files corresponding to contig group files
-    named as 'cluster_{start}_{end}.bed'.
+    Get all DeDup JSON files corresponding to the contig cluster files.
     """
-    # Resolve checkpoint output folder (forces execution before globbing)
-    checkpoint_output = checkpoints.dedup_create_all_contig_clusters.get(
-        species=wildcards.species, reference=wildcards.reference
-    ).output.cluster_folder
-
-    # Find all contig group files
-    group_files = sorted(glob.glob(os.path.join(checkpoint_output, "cluster_*_*.bed")))
-
-    logger.info(f"Found {len(group_files)} contig group files.")
-    logger.debug(f"Group files: {group_files}")
-
-    json_files = []
-
-    for group_file in group_files:
-        # group_1_500.txt → start=1, end=500
-        group_name = os.path.basename(group_file)
-        group_name = os.path.splitext(group_name)[0]
-
-        _, start, end = group_name.split("_", 2)
-
-        json_path = (
-            f"{wildcards.species}/processed/reference_module/{wildcards.reference}/dedup_cluster/"
-            f"{wildcards.individual}/dedup_{start}_{end}/{wildcards.individual}_{wildcards.reference}_cluster_{start}_{end}.dedup.json"
-        )
-
-        json_files.append(json_path)
+    json_files = [
+        f"{wildcards.species}/processed/reference_module/{wildcards.reference}/dedup_cluster/"
+        f"{wildcards.individual}/dedup_{start}_{end}/{wildcards.individual}_{wildcards.reference}_cluster_{start}_{end}.dedup.json"
+        for start, end in _dedup_cluster_ranges(wildcards)
+    ]
 
     logger.info(f"Requesting {len(json_files)} DeDup JSON files for MultiQC.")
     logger.debug(f"DeDup JSON files: {json_files}")
