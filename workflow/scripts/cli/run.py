@@ -58,7 +58,8 @@ def _build_run_cmd(extra_args, defaults=DEFAULT_RUN_FLAGS):
 
 def _with_default_cores(extra_args):
     extra_args = list(extra_args)
-    if not any(a in CORES_FLAGS for a in extra_args):
+    # split("="): --cores=8 counts too, not only --cores 8.
+    if not any(a.split("=")[0] in CORES_FLAGS for a in extra_args):
         extra_args += ["--cores", "1"]
     return extra_args
 
@@ -131,7 +132,7 @@ def cmd_run(argv, extra_flags=(), name="run"):
     # than by argparse so it can sit anywhere among the passed-through snakemake args.
     extra = [a for a in argv if a not in ("--fg", "--foreground")]
     foreground = len(extra) != len(argv)
-    if not any(a in CORES_FLAGS for a in extra):
+    if not any(a.split("=")[0] in CORES_FLAGS for a in extra):
         _die(f"pastForward {name}: pass --cores <N> (e.g. --cores 8, or --cores all).")
     for flag in extra_flags:
         if flag not in extra:

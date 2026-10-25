@@ -70,6 +70,11 @@ class BuildCmdTestCase(unittest.TestCase):
             ["snakemake", "--software-deployment-method", "conda", "--keep-going", "--rerun-trigger", "mtime", "-j", "8", "--dryrun"],
         )
 
+    def test_dryrun_cmd_respects_user_cores_with_equals(self):
+        cmd = cli.run._build_dryrun_cmd(["--cores=8"])
+        self.assertIn("--cores=8", cmd)
+        self.assertNotIn("1", cmd)
+
     def test_dryrun_cmd_uses_same_rerun_trigger_as_run(self):
         # A dry run must predict what `run` does. Without --rerun-trigger mtime, Snakemake
         # falls back to its full default trigger set and reports reruns (e.g. "Code has
@@ -129,6 +134,7 @@ class StatusHelpersTestCase(unittest.TestCase):
         self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "--software-deployment-method", "conda", "--cores", "8", "--forceall"]), "8")
         self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "-j", "all"]), "all")
         self.assertIsNone(cli.monitor._cores_from_cmd(["snakemake"]))
+        self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "--cores=8"]), "8")
 
     def test_configfiles_from_cmd(self):
         self.assertEqual(cli.monitor._configfiles_from_cmd(["snakemake", "--configfile", "other.yaml"]), ["other.yaml"])
@@ -257,6 +263,16 @@ class ArgvValidationTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit):
             cli.run.cmd_run(["--forceall"])
         self.assertFalse(cli.common.STATE_FILE.exists())
+
+    def test_run_accepts_cores_with_equals(self):
+        captured = {}
+        orig = cli.run._run_background
+        cli.run._run_background = lambda cmd, log_path: captured.setdefault("cmd", cmd)
+        try:
+            cli.run.cmd_run(["--cores=8"])
+        finally:
+            cli.run._run_background = orig
+        self.assertIn("--cores=8", captured["cmd"])
 
     def test_resume_without_cores_exits_before_spawning_anything(self):
         with self.assertRaises(SystemExit):

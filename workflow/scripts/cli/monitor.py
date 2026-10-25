@@ -123,6 +123,9 @@ def _print_failed_job_log(path, tail=FAILED_JOB_LOG_TAIL_LINES):
 
 def _cores_from_cmd(cmd):
     for i, a in enumerate(cmd):
+        flag, eq, value = a.partition("=")
+        if flag in CORES_FLAGS and eq:
+            return value
         if a in CORES_FLAGS and i + 1 < len(cmd):
             return cmd[i + 1]
     return None
