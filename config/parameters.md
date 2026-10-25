@@ -45,7 +45,7 @@ Only the steps that list `execute` on this page accept it. `mapping`, `sequence_
 
 Quality checking, adapter removal, quality filtering, merging, taxonomic screening, and read count statistics of raw reads.
 
-> **Read count statistics always run.** Per-stage counts (raw → trimmed → quality-filtered) are written unconditionally as `{species}/results/read_module/statistics/{species}_reads_counts.csv`.
+> **Read count statistics always run.** Per-stage counts (raw → trimmed → quality-filtered) are written unconditionally as `{species}/results/read_module/statistics/{species}_reads_counts.csv`. The read composition after adapter removal (merged, unmerged and unpaired reads, or single-end reads, per sample and per individual) is written next to it as `{species}_read_composition_by_sample.csv` and `{species}_read_composition_by_individual.csv`. It is built from the fastp JSON reports, so it never reruns adapter removal.
 
 #### `analysis`
 

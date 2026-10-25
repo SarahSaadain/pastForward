@@ -74,6 +74,8 @@ class TestCoreOutputsFromMinimalConfig(ExpectedOutputManagerTestCase):
             "Dmel/results/read_module/reads_merged/IND001.fastq.gz",
             "Dmel/results/read_module/reads_merged/IND002.fastq.gz",
             "Dmel/results/read_module/statistics/Dmel_reads_counts.csv",
+            "Dmel/results/read_module/statistics/Dmel_read_composition_by_sample.csv",
+            "Dmel/results/read_module/statistics/Dmel_read_composition_by_individual.csv",
             "Dmel/results/reference_module/genome/mapped/IND001_genome_final.bam",
             "Dmel/results/reference_module/genome/mapped/IND001_genome_final.bam.bai",
             "Dmel/results/reference_module/alt_assembly_v2/mapped/IND003_alt_assembly_v2_final.bam",
@@ -85,6 +87,12 @@ class TestCoreOutputsFromMinimalConfig(ExpectedOutputManagerTestCase):
         ]
         for path in expected_present:
             self.assertIn(path, outputs, f"expected output missing: {path}")
+
+    def test_read_composition_kept_without_adapter_removal(self):
+        # No fastp reports then, but the composition is still written (all reads unmerged).
+        config = dict(self.config, pipeline={"read_module": {"adapter_removal": {"execute": False}}})
+        outputs = self.get_all_outputs(config)
+        self.assertIn("Dmel/results/read_module/statistics/Dmel_read_composition_by_sample.csv", outputs)
 
     def test_unmapped_reads_filtering_absent_by_default(self):
         # filter_unmapped_reads.execute defaults to False (unlike almost every other switch,

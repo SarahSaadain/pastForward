@@ -198,7 +198,11 @@ def get_expected_output_read_module(species):
     expected_outputs += get_expected_output_taxonomic_screening(species)
 
     # Read count statistics always run
-    expected_outputs.append(f"{species}/results/read_module/statistics/{species}_reads_counts.csv")   
+    expected_outputs.append(f"{species}/results/read_module/statistics/{species}_reads_counts.csv")
+
+    # Read composition (merged/unmerged/unpaired), also written when adapter removal is skipped
+    expected_outputs.append(f"{species}/results/read_module/statistics/{species}_read_composition_by_sample.csv")
+    expected_outputs.append(f"{species}/results/read_module/statistics/{species}_read_composition_by_individual.csv")
 
     # Add analytics outputs (MultiQC reports and read count plots)
     expected_outputs += get_expected_output_analytics(species)

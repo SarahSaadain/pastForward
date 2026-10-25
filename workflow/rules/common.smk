@@ -91,6 +91,25 @@ def determine_reads_trimmed_final_input(wildcards):
         return reads
 
 
+def fastp_jsons_for_species(species):
+    # The fastp JSON is kept (not temp), so reading it never reruns adapter removal.
+    # Empty when adapter removal is skipped, since then no report exists.
+    if (
+        not config.get("pipeline", {})
+        .get("read_module", {})
+        .get("adapter_removal", {})
+        .get("execute", True)
+    ):
+        return []
+    reports = []
+    for sample in get_sample_ids_for_species(species):
+        layout = "pe" if len(get_raw_reads_for_sample(species, sample)) == 2 else "se"
+        reports.append(
+            f"{species}/results/read_module/reads_trimmed/fastp_report/{sample}_trimmed.{layout}.json"
+        )
+    return reports
+
+
 def merge_reads_by_individual_input(wildcards):
 
     species = wildcards.species

@@ -117,3 +117,33 @@ rule combine_counts_per_species:
             ],
             ignore_index=True,
         ).to_csv(output.counts, index=False)
+
+
+# Rule: Split adapter-removed reads into merged, unmerged and unpaired reads
+# Reads only the kept fastp JSON and the trimmed count, so existing projects do not rerun fastp.
+# With adapter removal skipped there is no JSON: paired-end reads are then all unmerged.
+rule read_composition_per_species:
+    input:
+        fastp_json=lambda wc: fastp_jsons_for_species(wc.species),
+        counts=lambda wc: expand(
+            "{species}/processed/read_module/statistics/{sample}_trimmed.count",
+            sample=get_sample_ids_for_species(wc.species),
+            species=wc.species,
+        ),
+    output:
+        by_sample="{species}/results/read_module/statistics/{species}_read_composition_by_sample.csv",
+        by_individual="{species}/results/read_module/statistics/{species}_read_composition_by_individual.csv",
+    log:
+        "{species}/results/read_module/statistics/{species}_read_composition.log",
+    conda:
+        "../../../../envs/python_and_r.yaml"
+    params:
+        samples=lambda wc: get_sample_ids_for_species(wc.species),
+        paired=lambda wc: [
+            len(get_raw_reads_for_sample(wc.species, s)) == 2
+            for s in get_sample_ids_for_species(wc.species)
+        ],
+    message:
+        "Summarising read composition after adapter removal for {wildcards.species}"
+    script:
+        "../../../../scripts/read_module/analytics/statistics/read_composition.py"
