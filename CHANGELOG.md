@@ -22,6 +22,10 @@ All notable changes to this project will be documented in this file.
 - **Less disk and I/O for pass-through copies**: the final BAM, the rescaled BAM, the final trimmed and quality-filtered reads, and single-sample read merges are now hard links instead of full copies. Input files stay in place. The rules fall back to a copy when the files are on different filesystems. A symlinked input is linked to the file it points to, so a relative symlink does not break. Raw reads passed through when adapter removal is off are still copied: they stay on disk, and a hard link would share their timestamp and could make Snakemake rerun jobs after results are synced or `.snakemake` is deleted
 - **Less disk use with `bwa-aln` mapping in the REVEAL module**: the sorted BAM that still holds unmapped reads is now deleted after filtering, as the `bwa-mem2` and `minimap2` outputs already were. Only the filtered BAM is kept per individual and library
 
+### Removed
+
+- **Unused `plot_coverage_breadth_bins.R`**: no rule, test or expected output called it, so it looked like a real output but never ran
+
 ### Bug Fixes
 
 - **`filter_unmapped_reads` default action is now `keep` in the code too**: the docs, schema, sample configs and config designer all said `keep`, but the pipeline used `remove` when `settings.action` was missing. So turning the step on without setting `action` dropped unmapped reads from the final BAM. Now it keeps them, as documented. Set `action: remove` to get a mapped-only BAM
