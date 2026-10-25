@@ -76,7 +76,9 @@ rule save_unmapped_reads_from_bam:
 # Rule: Split BAM file into contig clusters
 rule dedup_split_bam_into_clusters_by_contig_cluster:
     input:
-        "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam",
+        # the wrapper passes input[0] to samtools, so the BAM must stay first
+        bam="{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam",
+        bai="{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam.bai",
     output:
         bam=temp(
             "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{start}_{end}.bam"
@@ -85,10 +87,11 @@ rule dedup_split_bam_into_clusters_by_contig_cluster:
         "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_{start}_{end}.bam.log",
     threads: 2
     params:
-        extra="-L {species}/processed/reference_module/{reference}/dedup_cluster/clusters/cluster_{start}_{end}.bed",
+        # -M uses the index to read only this cluster's contigs instead of scanning the whole BAM
+        extra="-M -L {species}/processed/reference_module/{reference}/dedup_cluster/clusters/cluster_{start}_{end}.bed",
         region="",  # optional region string
     message:
-        "Splitting BAM file {input} into cluster {wildcards.start}-{wildcards.end} for individual {wildcards.individual} in species {wildcards.species}"
+        "Splitting BAM file {input.bam} into cluster {wildcards.start}-{wildcards.end} for individual {wildcards.individual} in species {wildcards.species}"
     wrapper:
         f"{WRAPPER_VERSION}/bio/samtools/view"
 
