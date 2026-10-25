@@ -96,7 +96,7 @@ reference database, and the resulting taxon proportions are used to judge how mu
 |---|---|---|
 | `tools.ecmsd.settings.version_source` | `conda` | Where to get the ECMSD binary. `conda` uses the bioconda-packaged `ecmsd=1.*` release (`workflow/envs/ecmsd.yaml`); `latest_release` always side-loads the newest tagged release from [capoony/ECMSD](https://github.com/capoony/ECMSD) (`ecmsd_git_release.yaml`); `dev` **(experimental)** side-loads the tip of ECMSD's `development` branch, unreleased and untested (`ecmsd_git_development.yaml`). Each value has its own conda env, so switching it builds or reuses that env automatically. Picking up a newer release/commit on an already-built unpinned env still needs a manual rebuild, see [FAQ.md](FAQ.md). |
 | `tools.ecmsd.settings.database` | — | Path to the ECMSD database folder. If omitted, the database is at `resources/ecmsd_database`. A missing or partly built database is built once at this path via `ECMSD --create-db`, before any sample is screened. |
-| `tools.ecmsd.settings.cov_threshold` | `25` | Minimum % of reference covered by reads to retain it. |
+| `tools.ecmsd.settings.cov_threshold` | `5` | Minimum % of reference covered by reads to retain it. |
 | `tools.ecmsd.settings.top_n` | `25` | Number of top references to generate alignment plots for. |
 | `tools.ecmsd.settings.mapping_quality` | `20` | Minimum mapping quality score to include a read. |
 | `tools.ecmsd.settings.taxonomic_hierarchy` | `species` | Taxonomic level at which to aggregate and report results. Options: `species`, `genus`, `family`, `order`. |

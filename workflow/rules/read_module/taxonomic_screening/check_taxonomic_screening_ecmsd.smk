@@ -64,7 +64,7 @@ rule ecmsd_taxonomic_screening:
         .get("tools", {})
         .get("ecmsd", {})
         .get("settings", {})
-        .get("cov_threshold", 25),
+        .get("cov_threshold", 5),
         top_n=config.get("pipeline", {})
         .get("read_module", {})
         .get("taxonomic_screening", {})

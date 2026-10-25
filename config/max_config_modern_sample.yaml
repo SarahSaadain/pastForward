@@ -164,8 +164,8 @@ pipeline:
             # Optional: Path to the ECMSD database folder.
             # If not provided, the database will be auto-created via ECMSD --create-db
             #database: "resources/ecmsd_database"
-            # Minimum % of reference covered by reads to retain it (Default: 25)
-            cov_threshold: 25
+            # Minimum % of reference covered by reads to retain it (Default: 5)
+            cov_threshold: 5
             # Number of top references to generate alignment plots for (Default: 25)
             top_n: 25
             # Minimum mapping quality score to include a read in analysis (Default: 20)
