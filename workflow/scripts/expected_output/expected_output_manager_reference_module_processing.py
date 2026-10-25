@@ -49,6 +49,10 @@ def get_expected_output_reference_module(species):
             if analysis_settings.get("species_multiqc", True) == True:
                 expected_outputs.append(f"{species}/results/reference_module/{reference}/analytics/species_level/{species}_{reference}_multiqc.html")
 
+            # Built only from files other steps already keep, so it never reruns anything.
+            if analysis_settings.get("authenticity_summary", True) == True:
+                expected_outputs.append(f"{species}/results/reference_module/{reference}/analytics/species_level/{species}/authenticity/{reference}_authenticity.tsv")
+
             # Opt-in, matching the reveal_module snp_analysis/indel_analysis precedent for
             # extra SNP-style analyses. Only the species-level combine target is requested
             # per method: Snakemake resolves backwards from it to whichever per-individual

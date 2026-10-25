@@ -38,6 +38,8 @@ include: "reference_module/analytics/create_multiqc_bam.smk"
 include: "reference_module/analytics/create_multiqc_reference.smk"
 # Calculate endogenous reads
 include: "reference_module/analytics/determine_endogenous_reads.smk"
+# Collect per-individual authenticity numbers into one triage table
+include: "reference_module/analytics/create_authenticity_summary.smk"
 # Plot endogenous reads statistics
 include: "reference_module/plotting/plot_endogenous_reads.smk"
 # Plot coverage breadth across the reference

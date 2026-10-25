@@ -1075,6 +1075,38 @@
               </div>
               <div class="toggle-wrap" style="margin-top:6px">
                 <label class="toggle">
+                  <input type="checkbox" id="cov_auth" checked onchange="render()">
+                  <span class="slider"></span>
+                </label>
+                <label class="lbl" for="cov_auth">Write an authenticity triage table per species and reference (verdict ok / check / no_data)</label>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Min Endogenous %</label>
+                <input type="number" id="cov_auth_endo" value="10" min="0" step="0.1" oninput="render()">
+                <p class="hint">Default: 10. Below this, the individual gets check.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Min 5' C-to-T at Position 1</label>
+                <input type="number" id="cov_auth_ct5p" value="0.01" min="0" step="0.001" oninput="render()">
+                <p class="hint">Default: 0.01. Below this, the damage signal is low, for example a modern control or modern contamination.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Min Median Mapped Length</label>
+                <input type="number" id="cov_auth_len" value="30" min="0" step="1" oninput="render()">
+                <p class="hint">Default: 30. Shorter mapped reads point to spurious, often bacterial, mappings.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Max Duplicate Rate</label>
+                <input type="number" id="cov_auth_dup" value="0.5" min="0" step="0.05" oninput="render()">
+                <p class="hint">Default: 0.5. Above this, the library is close to exhausted. Needs deduplication.</p>
+              </div>
+              <div class="field" style="margin-top:6px;margin-left:44px;max-width:220px">
+                <label>Min Mean Depth</label>
+                <input type="number" id="cov_auth_depth" value="1" min="0" step="0.1" oninput="render()">
+                <p class="hint">Default: 1. Below this, coverage is low.</p>
+              </div>
+              <div class="toggle-wrap" style="margin-top:6px">
+                <label class="toggle">
                   <input type="checkbox" id="cov_snp_div" onchange="render()">
                   <span class="slider"></span>
                 </label>
@@ -1798,6 +1830,14 @@ function buildYAML() {
   kv(8, 'qualimap', gb('cov_qualimap'));
   kv(8, 'samtools_stats', gb('cov_samtools_stats'));
   kv(8, 'qualimap_mem_mb', gn('cov_qualimap_mem'));
+  kv(8, 'authenticity_summary', gb('cov_auth'));
+  if (gb('cov_auth')) {
+    kv(8, 'authenticity_min_endogenous_percent', isNaN(parseFloat(gv('cov_auth_endo'))) ? 10 : parseFloat(gv('cov_auth_endo')));
+    kv(8, 'authenticity_min_ct_5p_pos1', isNaN(parseFloat(gv('cov_auth_ct5p'))) ? 0.01 : parseFloat(gv('cov_auth_ct5p')));
+    kv(8, 'authenticity_min_median_mapped_length', isNaN(parseFloat(gv('cov_auth_len'))) ? 30 : parseFloat(gv('cov_auth_len')));
+    kv(8, 'authenticity_max_duplicate_rate', isNaN(parseFloat(gv('cov_auth_dup'))) ? 0.5 : parseFloat(gv('cov_auth_dup')));
+    kv(8, 'authenticity_min_mean_depth', isNaN(parseFloat(gv('cov_auth_depth'))) ? 1 : parseFloat(gv('cov_auth_depth')));
+  }
   kv(8, 'snp_divergence_check', gb('cov_snp_div'));
   if (gb('cov_snp_div')) {
     kv(8, 'snp_divergence_method', gv('cov_snp_div_method'));
@@ -2085,6 +2125,12 @@ function populateForm(c) {
   sb('cov_qualimap',      rpas.qualimap);
   sb('cov_samtools_stats',rpas.samtools_stats);
   sv('cov_qualimap_mem',  rpas.qualimap_mem_mb);
+  sb('cov_auth',                 rpas.authenticity_summary);
+  sv('cov_auth_endo', rpas.authenticity_min_endogenous_percent);
+  sv('cov_auth_ct5p', rpas.authenticity_min_ct_5p_pos1);
+  sv('cov_auth_len', rpas.authenticity_min_median_mapped_length);
+  sv('cov_auth_dup', rpas.authenticity_max_duplicate_rate);
+  sv('cov_auth_depth', rpas.authenticity_min_mean_depth);
   sb('cov_snp_div',              rpas.snp_divergence_check);
   sv('cov_snp_div_method',       rpas.snp_divergence_method);
   sv('cov_snp_div_z',            rpas.snp_divergence_outlier_zscore);
@@ -2197,7 +2243,7 @@ function resetDefaults() {
         deduplication: { execute: true, settings: { min_contigs_per_cluster: 1, max_contigs_per_cluster: 500 } },
         damage_rescaling: { execute: true },
         filter_unmapped_reads: { execute: false, settings: { action: 'keep' } },
-        analysis: { execute: true, settings: { damage_analysis: true, create_plots: true, individual_multiqc: true, species_multiqc: true, preseq_complexitiy_curve: true, qualimap: true, samtools_stats: true, snp_divergence_check: false } }
+        analysis: { execute: true, settings: { damage_analysis: true, create_plots: true, individual_multiqc: true, species_multiqc: true, preseq_complexitiy_curve: true, qualimap: true, samtools_stats: true, authenticity_summary: true, snp_divergence_check: false } }
       },
       reveal_module: {
         execute: true,

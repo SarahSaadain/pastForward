@@ -274,6 +274,23 @@ pipeline:
         # Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources.
         #qualimap_mem_mb: 4096
 
+        # When true, write one authenticity triage table per species and reference:
+        # {species}/results/reference_module/{reference}/analytics/species_level/{species}/authenticity/{reference}_authenticity.tsv
+        # One row per individual with endogenous %, duplicate rate, mapped read length,
+        # 5' C-to-T and 3' G-to-A at position 1, mean depth, breadth and mean MAPQ, plus a
+        # verdict: ok, check (a threshold below fired, the reason column says which) or
+        # no_data (a file was missing). There is no "fail": check means look, not delete.
+        # It only reads files other steps already keep, so it never reruns anything.
+        # Columns of switched-off steps are NA. (Default: true)
+        authenticity_summary: true
+
+        # Optional: thresholds for the verdict. Crossing any of them gives "check".
+        #authenticity_min_endogenous_percent: 10   # endogenous % below this
+        #authenticity_min_ct_5p_pos1: 0.01         # 5' C-to-T at position 1 below this (low damage)
+        #authenticity_min_median_mapped_length: 30 # median mapped read length (bp) below this
+        #authenticity_max_duplicate_rate: 0.5      # DeDup duplicate rate above this
+        #authenticity_min_mean_depth: 1            # mean depth below this
+
         # When true, measure how far each individual diverges from the reference and flag
         # individuals whose divergence is an outlier compared to the rest of the cohort.
         # A flagged individual can mean a wrong reference genome, cross-species

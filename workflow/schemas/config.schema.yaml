@@ -177,6 +177,12 @@ properties:
                   qualimap: {type: boolean}
                   samtools_stats: {type: boolean}
                   qualimap_mem_mb: {type: integer}
+                  authenticity_summary: {type: boolean}
+                  authenticity_min_endogenous_percent: {type: number}
+                  authenticity_min_ct_5p_pos1: {type: number}
+                  authenticity_min_median_mapped_length: {type: number}
+                  authenticity_max_duplicate_rate: {type: number}
+                  authenticity_min_mean_depth: {type: number}
                   snp_divergence_check: {type: boolean}
                   snp_divergence_method: {enum: [samtools_stats, bcftools, both]}
                   snp_divergence_outlier_zscore: {type: number}

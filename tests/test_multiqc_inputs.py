@@ -112,6 +112,48 @@ class MultiqcInputsTestCase(unittest.TestCase):
                 self.assertNotIn(bcftools, self.species_individual(ns, "IND001"))
                 self.assertNotIn(bcftools, self.species(ns))
 
+    def authenticity(self, pipeline=None):
+        ns = self.load(pipeline)
+        return ns["create_authenticity_summary_input"](SimpleNamespace(species="Dmel", reference="genome"))
+
+    def test_authenticity_inputs_default(self):
+        inputs = self.authenticity()
+        self.assertEqual(sorted(inputs), ["coverage", "ct5p", "dedup", "endogenous", "ga3p", "lengths", "stats"])
+        self.assertIn(f"{REF_DIR}/samtools_stats/IND001_genome_final.bam.stats", inputs["stats"])
+        self.assertIn(f"{REF_DIR}/endogenous/IND001_genome.endogenous.csv", inputs["endogenous"])
+        self.assertIn(f"{REF_DIR}/dedup/IND001_genome_final.dedup.json", inputs["dedup"])
+        self.assertIn(f"{REF_DIR}/mapdamage/IND001_genome.5pCtoT_freq.txt", inputs["ct5p"])
+        self.assertIn(f"{REF_DIR}/mapdamage/IND001_genome.3pGtoA_freq.txt", inputs["ga3p"])
+        self.assertIn(f"{REF_DIR}/mapdamage/IND001_genome.lgdistribution.txt", inputs["lengths"])
+        self.assertIn(f"{REF_DIR}/coverage/IND001_genome_coverage_analysis.csv", inputs["coverage"])
+        # Every non-empty group lists one file per individual, in the same order.
+        self.assertEqual(len({len(files) for files in inputs.values()}), 1)
+
+    def test_authenticity_inputs_follow_the_steps_that_make_them(self):
+        # Each group is requested only when another step already makes that file, so the
+        # table never starts a job that a run without it would not have started.
+        no_coverage_consumers = {
+            "reference_module": {"analysis": {"settings": {"create_plots": False, "individual_multiqc": False, "species_multiqc": False}}},
+            "summary_module": {"execute": False},
+        }
+        cases = [
+            ({"reference_module": {"deduplication": {"execute": False}}}, {"dedup": False}),
+            ({"reference_module": {"damage_rescaling": {"execute": False}}}, {"ct5p": True}),
+            ({"reference_module": {"analysis": {"settings": {"damage_analysis": False}}}}, {"ct5p": True}),
+            (
+                {"reference_module": {"damage_rescaling": {"execute": False}, "analysis": {"settings": {"damage_analysis": False}}}},
+                {"ct5p": False, "ga3p": False, "lengths": False},
+            ),
+            ({"reference_module": {"damage_rescaling": {"execute": False}, "analysis": {"execute": False}}}, {"ct5p": False, "coverage": False}),
+            (no_coverage_consumers, {"coverage": False, "stats": True, "endogenous": True}),
+            (dict(no_coverage_consumers, summary_module={"settings": {"species_multiqc": False}}), {"coverage": True}),
+        ]
+        for pipeline, expected in cases:
+            with self.subTest(pipeline=pipeline):
+                inputs = self.authenticity(pipeline)
+                for group, present in expected.items():
+                    self.assertEqual(bool(inputs[group]), present, group)
+
     def test_reference_module_off_drops_reference_inputs(self):
         ns = self.load({"reference_module": {"execute": False}})
         for files in (self.bam(ns, "IND001", "genome"), self.reference(ns, "genome"), self.species(ns)):

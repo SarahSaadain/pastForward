@@ -318,6 +318,19 @@ class TestReferenceModuleToggles(ExpectedOutputManagerTestCase):
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("mapdamage" in o for o in outputs))
 
+    def test_authenticity_summary(self):
+        table = "Dmel/results/reference_module/genome/analytics/species_level/Dmel/authenticity/genome_authenticity.tsv"
+        for settings, analysis_execute, expected in (
+            ({}, True, True),
+            ({"authenticity_summary": False}, True, False),
+            ({}, False, False),
+        ):
+            with self.subTest(settings=settings, analysis_execute=analysis_execute):
+                config = dict(self.base_config, pipeline={
+                    "reference_module": {"analysis": {"execute": analysis_execute, "settings": settings}}
+                })
+                self.assertEqual(table in self.get_all_outputs(config), expected)
+
     def test_filter_unmapped_reads_extract_fastq_adds_output(self):
         config = dict(self.base_config, pipeline={
             "reference_module": {"filter_unmapped_reads": {"execute": True, "settings": {"action": "extract_fastq"}}}

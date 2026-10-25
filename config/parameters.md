@@ -156,6 +156,12 @@ Optionally removes or extracts reads that did not map to the reference. Default:
 | `analysis.settings.qualimap` | on | Include Qualimap BAM QC data in MultiQC reports. |
 | `analysis.settings.samtools_stats` | on | Include samtools stats data in MultiQC reports. |
 | `analysis.settings.qualimap_mem_mb` | `4096` | Memory (MB) requested from the cluster scheduler for Qualimap. Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources. |
+| `analysis.settings.authenticity_summary` | on | Write `{reference}_authenticity.tsv` under `analytics/species_level/{species}/authenticity/`: one row per individual with the number of samples merged into it, total and mapped reads, endogenous %, duplicate rate and cluster factor, median and mean mapped read length, 5' C-to-T and 3' G-to-A at position 1, mean depth, breadth (% of bases at 1x or more) and mean MAPQ, plus `verdict` and `verdict_reason`. Only reads files other steps already keep, so it never reruns a step. Columns of switched-off steps are `NA` (DeDup columns need `deduplication`, mapDamage columns need `damage_rescaling` or `damage_analysis`, depth and breadth need a MultiQC report or `create_plots`). |
+| `analysis.settings.authenticity_min_endogenous_percent` | `10` | `check` when endogenous % is below this. |
+| `analysis.settings.authenticity_min_ct_5p_pos1` | `0.01` | `check` when the 5' C-to-T rate at position 1 is below this. Low damage can mean a modern control or modern contamination. |
+| `analysis.settings.authenticity_min_median_mapped_length` | `30` | `check` when the median mapped read length (bp) is below this. Very short mapped reads point to spurious, often bacterial, mappings. |
+| `analysis.settings.authenticity_max_duplicate_rate` | `0.5` | `check` when the DeDup duplicate rate is above this. |
+| `analysis.settings.authenticity_min_mean_depth` | `1` | `check` when mean depth is below this. |
 | `analysis.settings.snp_divergence_check` | `false` | When `true`, measure how far each individual diverges from the reference and flag individuals whose divergence is a cohort outlier. Flags a possible wrong reference genome, cross-species contamination, or mislabeled individual. Warning only, the run continues. Unrelated to `reveal_module`'s `snp_analysis`. |
 | `analysis.settings.snp_divergence_method` | `samtools_stats` | How the divergence number is obtained. `samtools_stats` reuses the per-individual samtools stats file that is already produced (mismatches / bases mapped), costs no extra runtime and adds no dependency, but gives no heterozygous-call rate. `bcftools` calls SNPs per individual, adding the heterozygous-call rate and a MultiQC panel at real runtime cost. `both` runs the two side by side. Each method writes its own files, named after it, so switching this setting never reuses another method's result. |
 | `analysis.settings.snp_divergence_outlier_zscore` | `3.5` | Modified z-score above which an individual is flagged. Only the high side is flagged. |
@@ -177,6 +183,20 @@ The `status` column of `{reference}_combined_snp_divergence_{method}.csv` holds 
 | `outlier` | Scored against the cohort with a modified z-score above `snp_divergence_outlier_zscore`. Check the reference genome, cross-species contamination, and whether the individual is mislabeled. |
 | `insufficient_data` | Fewer callable bases than `snp_divergence_min_callable_bases`. The individual is not scored and does not affect the cohort median. |
 | `insufficient_cohort` | The individual has enough callable bases, but fewer than three usable individuals were mapped to this reference. The score is cohort relative, and the median and MAD carry no information below three individuals, so no individual is scored and nothing is flagged. This minimum of three is fixed and not configurable. |
+
+The `verdict` column of `{reference}_authenticity.tsv` holds one of three values. `verdict_reason` lists every threshold that fired (e.g. `duplicate_rate>0.5`) and every file that could not be read (e.g. `missing_ct5p`).
+
+| Verdict | Meaning |
+|---|---|
+| `ok` | No threshold fired and every expected file was read. |
+| `check` | At least one threshold fired. Look at the individual. It is not a failure: a low-damage individual can be a deliberate modern control. |
+| `no_data` | No threshold fired, but a file from a switched-on step was empty or unreadable. |
+
+A switched-off step only leaves its columns `NA`. It does not change the verdict.
+
+If a step fails outright for one individual (with `--keep-going`), its file is never written and Snakemake skips the table, as it does for the other combined tables. Rerun once that individual is fixed or removed from the species allowlist.
+
+The length columns are mapped read lengths from mapDamage, not the length of the whole library. The damage columns come from mapDamage on the deduplicated (or sorted) BAM, before rescaling.
 
 ### Stage: `reveal_module`
 

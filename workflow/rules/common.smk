@@ -307,6 +307,66 @@ def create_multiqc_species_input(wildcards):
     return file_list
 
 
+def create_authenticity_summary_input(wildcards):
+    """
+    Per-individual files for the authenticity table, grouped by source. A group is listed
+    only when another step already makes and keeps that file, so the table never starts a
+    job a run without it would skip. Otherwise the group is empty and its columns are NA.
+    """
+    pipeline = config.get("pipeline", {})
+    reference_module = pipeline.get("reference_module", {})
+    analysis = reference_module.get("analysis", {})
+    analysis_on = analysis.get("execute", True) == True
+    settings = analysis.get("settings", {})
+    summary_module = pipeline.get("summary_module", {})
+    summary_settings = summary_module.get("settings", {})
+
+    # Same switches as the steps that already make each file (see _multiqc_individual_input,
+    # analyze_mapdamage_and_rescale_bam and the expected output manager).
+    mapdamage_on = reference_module.get("damage_rescaling", {}).get(
+        "execute", True
+    ) == True or (analysis_on and settings.get("damage_analysis", True) == True)
+    coverage_on = analysis_on and (
+        settings.get("create_plots", True) == True
+        or settings.get("individual_multiqc", True) == True
+        or settings.get("species_multiqc", True) == True
+        or (
+            summary_module.get("execute", True) == True
+            and (
+                summary_settings.get("species_multiqc", True) == True
+                or summary_settings.get("individual_multiqc", True) == True
+            )
+        )
+    )
+
+    individual_dir = f"{wildcards.species}/results/reference_module/{wildcards.reference}/analytics/individual_level/{{individual}}"
+    stem = f"{{individual}}_{wildcards.reference}"
+    patterns = {
+        "stats": (True, f"{individual_dir}/samtools_stats/{stem}_final.bam.stats"),
+        "endogenous": (True, f"{individual_dir}/endogenous/{stem}.endogenous.csv"),
+        "dedup": (_dedup_enabled(), f"{individual_dir}/dedup/{stem}_final.dedup.json"),
+        "ct5p": (mapdamage_on, f"{individual_dir}/mapdamage/{stem}.5pCtoT_freq.txt"),
+        "ga3p": (mapdamage_on, f"{individual_dir}/mapdamage/{stem}.3pGtoA_freq.txt"),
+        "lengths": (
+            mapdamage_on,
+            f"{individual_dir}/mapdamage/{stem}.lgdistribution.txt",
+        ),
+        "coverage": (
+            coverage_on,
+            f"{individual_dir}/coverage/{stem}_coverage_analysis.csv",
+        ),
+    }
+    individuals = get_individuals_for_species(wildcards.species)
+    return {
+        group: (
+            [pattern.format(individual=individual) for individual in individuals]
+            if on
+            else []
+        )
+        for group, (on, pattern) in patterns.items()
+    }
+
+
 def _dedup_cluster_ranges(wildcards):
     """
     (start, end) of every contig cluster file 'cluster_{start}_{end}.bed' written by
