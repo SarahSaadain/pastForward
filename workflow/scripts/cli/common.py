@@ -1,4 +1,5 @@
 """Shared by every command: project/state paths, colors, error exit, project-root check."""
+import json
 import os
 import re
 import shutil
@@ -143,6 +144,17 @@ def _ensure_project_root(require_snakemake=True, require_config=False, configfil
     # neither (print-log only reads files back out of logs/).
     if require_snakemake and shutil.which("snakemake") is None:
         _die("pastForward: `snakemake` not found on PATH. Activate its conda env first.")
+
+
+def _live_tracked_pid():
+    """PID of the tracked background run if it is still alive, else None."""
+    if not STATE_FILE.exists():
+        return None
+    try:
+        pid = json.loads(STATE_FILE.read_text())["pid"]
+    except (json.JSONDecodeError, KeyError):
+        return None
+    return pid if _is_alive(pid) else None
 
 
 def _format_duration(seconds):

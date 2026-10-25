@@ -306,6 +306,21 @@ class ArgvValidationTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit):
             cli.run.cmd_run(["--cores", "4"])
 
+    def test_doctor_rebuild_refuses_while_a_tracked_run_is_alive(self):
+        env_dir = Path(self.project_dir) / "env_in_use"
+        env_dir.mkdir()
+        cli.common.STATE_DIR.mkdir(parents=True, exist_ok=True)
+        cli.common.STATE_FILE.write_text(json.dumps({"pid": os.getpid()}))
+        orig = cli.doctor._list_conda_envs
+        cli.doctor._list_conda_envs = lambda: [{"env_file": "workflow/envs/x.yaml", "location": str(env_dir)}]
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as cm:
+                cli.doctor.cmd_doctor(["--rebuild-envs"])
+        finally:
+            cli.doctor._list_conda_envs = orig
+        self.assertIn("a run is active", str(cm.exception))
+        self.assertTrue(env_dir.is_dir())
+
     def test_unlock_rejects_arguments(self):
         with self.assertRaises(SystemExit):
             cli.run.cmd_unlock(["--foo"])

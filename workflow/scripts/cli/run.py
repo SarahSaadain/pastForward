@@ -23,6 +23,7 @@ from .common import (
     _die,
     _ensure_project_root,
     _is_alive,
+    _live_tracked_pid,
     _load_config,
     _strip_configfile_args,
 )
@@ -94,16 +95,12 @@ def _run_foreground(cmd, log_path):
 
 
 def _run_background(cmd, log_path):
-    if STATE_FILE.exists():
-        try:
-            old_pid = json.loads(STATE_FILE.read_text())["pid"]
-        except (json.JSONDecodeError, KeyError):
-            old_pid = None
-        if old_pid is not None and _is_alive(old_pid):
-            _die(
-                f"pastForward: a run is already tracked here (PID {old_pid}, still running). "
-                "Use `./pastForward status` to check it or `./pastForward abort` to stop it first."
-            )
+    old_pid = _live_tracked_pid()
+    if old_pid is not None:
+        _die(
+            f"pastForward: a run is already tracked here (PID {old_pid}, still running). "
+            "Use `./pastForward status` to check it or `./pastForward abort` to stop it first."
+        )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     logf = open(log_path, "w")
     proc = subprocess.Popen(

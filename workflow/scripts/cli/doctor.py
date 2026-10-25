@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .common import CYAN, DIM, GREEN, RED, SDM_FLAG, YELLOW, _color, _die, _ensure_project_root
+from .common import CYAN, DIM, GREEN, RED, SDM_FLAG, YELLOW, _color, _die, _ensure_project_root, _live_tracked_pid
 
 
 def _known_env_names():
@@ -68,6 +68,13 @@ def cmd_doctor(argv):
         print()
         print(_color(DIM, "Add --rebuild-envs [name ...] to force one or more of these to be recreated."))
         return
+
+    pid = _live_tracked_pid()
+    if pid is not None:
+        _die(
+            f"pastForward doctor: a run is active here (PID {pid}) and may be using these envs. "
+            "Wait for it to finish or stop it with `./pastForward abort`, then retry."
+        )
 
     print()
     removed = [e for e in targets if Path(e["location"]).is_dir()]

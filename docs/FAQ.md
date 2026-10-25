@@ -477,7 +477,7 @@ The `latest_release`/`dev` builds of REVEAL and ECMSD are installed by a conda p
 ./pastForward doctor --rebuild-envs ecmsd_git_release   # or: ecmsd_git_development, reveal_git_release, reveal_git_development
 ./pastForward doctor --rebuild-envs                      # rebuilds every conda env, not just these
 ```
-`--rebuild-envs` deletes that environment's folder under `.snakemake/conda/` and runs `snakemake --software-deployment-method conda --conda-create-envs-only` to recreate it, the same as `snakemake --cores <N> --software-deployment-method conda --conda-create-envs-only --conda-cleanup-envs` by hand. `./pastForward doctor` on its own lists every conda environment the pipeline uses and whether each is built, without changing anything.
+`--rebuild-envs` deletes that environment's folder under `.snakemake/conda/` and runs `snakemake --software-deployment-method conda --conda-create-envs-only` to recreate it, the same as `snakemake --cores <N> --software-deployment-method conda --conda-create-envs-only --conda-cleanup-envs` by hand. It refuses to start while a tracked run is still active, since that run may be using the environments. `./pastForward doctor` on its own lists every conda environment the pipeline uses and whether each is built, without changing anything.
 
 The install-once behavior is on purpose: it keeps a pipeline run reproducible even when `version_source` is a moving target, at the cost of not updating mid-project.
 
