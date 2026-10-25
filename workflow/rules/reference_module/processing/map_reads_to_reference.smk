@@ -8,17 +8,8 @@ _ref_settings = (
     .get("settings", {})
 )
 _ref_mapper = _ref_settings.get("mapper", "bwa-mem2")
-_BWA_ALN_DEFAULTS = (
-    "-n 0.01 -k 2 -l 1024 -o 2"  # Oliva et al. 2021 (10.1093/bib/bbab076)
-)
-_MINIMAP2_DEFAULTS = "-ax sr"
 _ref_mapper_extra = _ref_settings.get(
-    "mapper_extra_params",
-    (
-        _BWA_ALN_DEFAULTS
-        if _ref_mapper == "bwa-aln"
-        else _MINIMAP2_DEFAULTS if _ref_mapper == "minimap2" else ""
-    ),
+    "mapper_extra_params", _mapper_default_extra(_ref_mapper)
 )
 
 if _ref_mapper == "minimap2":

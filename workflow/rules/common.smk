@@ -15,6 +15,15 @@ import os
 WRAPPER_VERSION = "v9.3.0"
 
 
+def _mapper_default_extra(mapper):
+    """Default extra flags for a mapper, used when the config sets none."""
+    if mapper == "bwa-aln":
+        return "-n 0.01 -k 2 -l 1024 -o 2"  # Oliva et al. 2021 (10.1093/bib/bbab076)
+    if mapper == "minimap2":
+        return "-ax sr"
+    return ""
+
+
 def _fastp_adapter_flags(paired):
     # Only set adapters get a flag. `adapters_sequences:` left empty in YAML is None, not {}.
     seqs = (config.get("pipeline") or {}).get("read_module", {}).get(

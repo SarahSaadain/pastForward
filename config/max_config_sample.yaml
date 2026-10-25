@@ -359,7 +359,8 @@ pipeline:
         # Uncomment to override. Options: "bwa-mem2", "bwa-aln", "minimap2"
         #mapper: "minimap2"
         # Extra parameters passed directly to the mapper.
-        # Defaults to pipeline.reveal_module.mapping.settings.mapper_extra_params if set,
+        # Defaults to pipeline.reveal_module.mapping.settings.mapper_extra_params if set
+        # and both steps use the same mapper,
         # otherwise falls back to mapper-specific defaults (bwa-aln: Oliva et al. 2021, minimap2: "-ax sr").
         #mapper_extra_params: ""
         # Number of top-ranked SCGs to keep (Default: 20)

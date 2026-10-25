@@ -16,19 +16,16 @@ _dyn_settings = (
 )
 _dyn_mapper_default = _dyn_settings.get("mapper", "bwa-mem2")
 _scg_sel_mapper = _scg_sel_settings.get("mapper") or _dyn_mapper_default
-_SCG_BWA_ALN_DEFAULTS = (
-    "-n 0.01 -k 2 -l 1024 -o 2"  # Oliva et al. 2021 (10.1093/bib/bbab076)
-)
-_SCG_MINIMAP2_DEFAULTS = "-ax sr"
-_mapper_extra_fallback = (
-    _SCG_BWA_ALN_DEFAULTS
-    if _scg_sel_mapper == "bwa-aln"
-    else (_SCG_MINIMAP2_DEFAULTS if _scg_sel_mapper == "minimap2" else "")
-)
+# Borrow the mapping step's flags only when both steps use the same mapper.
+# Flags for one mapper break another (bwa-aln flags handed to minimap2).
 _scg_sel_mapper_extra = (
     _scg_sel_settings.get("mapper_extra_params")
-    or _dyn_settings.get("mapper_extra_params")
-    or _mapper_extra_fallback
+    or (
+        _dyn_settings.get("mapper_extra_params")
+        if _scg_sel_mapper == _dyn_mapper_default
+        else None
+    )
+    or _mapper_default_extra(_scg_sel_mapper)
 )
 _scg_keep_bam = _scg_sel_settings.get("keep_mapped_bam", False)
 _scg_min_mapq = _scg_sel_settings.get("min_mapq", 0)

@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **SCG mapping no longer gets flags meant for another mapper**: `scg_selector` used to borrow `reveal_module.mapping.settings.mapper_extra_params` even when it used a different mapper. For example, bwa-aln flags went to minimap2, which then also lacked `-ax sr`. The flags are now borrowed only when both steps use the same mapper. Otherwise the SCG mapper's own defaults apply. The default flags for each mapper now live in one helper in `common.smk`
 - **`./pastForward doctor --rebuild-envs` no longer deletes envs in use**: it now stops with an error while a tracked run is still active. Wait for the run to finish or stop it with `./pastForward abort`, then retry
 - **`--cores=N` now works**: `./pastForward run --cores=8` was rejected and `./pastForward dryrun --cores=8` added `--cores 1` on top. Both now accept the `=` form. `./pastForward status` also reads the core count from it
 - **Workflow catalog lint failed on the Snakemake version check**: the Snakemake workflow catalog lints every clone with its own pinned Snakemake (9.21.0), so the `9.26.1` minimum stopped `snakemake --lint` at parse time. The minimum version is no longer checked when `--lint` is passed. Lint runs no jobs, so the older version is safe there. Every other command still requires 9.26.1

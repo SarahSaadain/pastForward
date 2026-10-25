@@ -198,7 +198,7 @@ Can also be used standalone (without feature libraries) to produce an SCG rankin
 |---|---|---|
 | `execute` | `true` | Enable SCG auto-determination when no user-provided FASTA is present. |
 | `settings.mapper` | *(inherits from `reveal_module.mapping.settings.mapper`)* | Mapper for reads-to-SCG-library mapping. Uncomment to override. Options: `bwa-mem2`, `bwa-aln`, `minimap2`. |
-| `settings.mapper_extra_params` | *(inherits from `reveal_module.mapping.settings.mapper_extra_params`)* | Optional extra parameters for the mapper. Falls back to mapper-specific defaults if not set. |
+| `settings.mapper_extra_params` | *(inherits from `reveal_module.mapping.settings.mapper_extra_params` when both steps use the same mapper)* | Optional extra parameters for the mapper. If not set, the value from `reveal_module.mapping` is used, but only when both steps use the same mapper. Otherwise the mapper-specific defaults apply (bwa-aln: `-n 0.01 -k 2 -l 1024 -o 2`, minimap2: `-ax sr`, bwa-mem2: none). |
 | `settings.num_top_scgs` | `20` | Number of top-ranked SCGs to retain as normalisers. |
 | `settings.min_length_scg` | `4000` | Minimum SCG sequence length in bp to include from BUSCO results. |
 | `settings.max_length_scg` | `8000` | Maximum SCG sequence length in bp to include from BUSCO results. |
