@@ -22,11 +22,7 @@ rule prepare_custom_data_reads_processing_absolute_values:
             == False
             else (
                 f"{wildcards.species}/results/reference_module/{wildcards.reference}/analytics/individual_level/{wildcards.individual}/dedup/{wildcards.individual}_{wildcards.reference}_final.dedup.json"
-                if config.get("pipeline", {})
-                .get("reference_module", {})
-                .get("deduplication", {})
-                .get("execute", True)
-                == True
+                if _dedup_enabled()
                 else []
             )
         ),

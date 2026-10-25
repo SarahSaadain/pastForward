@@ -8,9 +8,7 @@ _ref_settings = (
     .get("settings", {})
 )
 _ref_mapper = _ref_settings.get("mapper", "bwa-mem2")
-_ref_mapper_extra = _ref_settings.get(
-    "mapper_extra_params", _mapper_default_extra(_ref_mapper)
-)
+_ref_mapper_extra = _mapper_extra(_ref_settings, _ref_mapper)
 
 if _ref_mapper == "minimap2":
 

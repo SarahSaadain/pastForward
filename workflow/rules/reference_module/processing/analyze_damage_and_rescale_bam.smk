@@ -8,11 +8,7 @@ rule analyze_mapdamage_and_rescale_bam:
     input:
         bam=lambda wildcards: (
             f"{wildcards.species}/processed/reference_module/{wildcards.reference}/mapped/{wildcards.individual}_{wildcards.reference}_sorted_dedupped.bam"
-            if config.get("pipeline", {})
-            .get("reference_module", {})
-            .get("deduplication", {})
-            .get("execute", True)
-            == True
+            if _dedup_enabled()
             else f"{wildcards.species}/processed/reference_module/{wildcards.reference}/mapped/{wildcards.individual}_{wildcards.reference}_sorted.bam"
         ),
         ref="{species}/processed/reference_module/{reference}/reference/{reference}.fa",

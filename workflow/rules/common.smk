@@ -24,6 +24,38 @@ def _mapper_default_extra(mapper):
     return ""
 
 
+def _mapper_extra(settings, mapper):
+    """Configured extra flags for a mapper. Missing or empty ("") falls back to the default."""
+    # `or`, not a .get() default: "" would drop minimap2's -ax sr and make it write PAF.
+    return (settings.get("mapper_extra_params") or "").strip() or _mapper_default_extra(
+        mapper
+    )
+
+
+def _scg_mapper_and_extra(scg_settings, mapping_settings):
+    """Mapper and extra flags for SCG mapping. Unset values come from the mapping step."""
+    mapping_mapper = mapping_settings.get("mapper", "bwa-mem2")
+    mapper = scg_settings.get("mapper") or mapping_mapper
+    # Borrow the mapping step's flags only when both steps use the same mapper.
+    # Flags for one mapper break another (bwa-aln flags handed to minimap2).
+    extra = (scg_settings.get("mapper_extra_params") or "").strip() or (
+        _mapper_extra(mapping_settings, mapper)
+        if mapper == mapping_mapper
+        else _mapper_default_extra(mapper)
+    )
+    return mapper, extra
+
+
+def _dedup_enabled():
+    """True unless pipeline.reference_module.deduplication.execute is false."""
+    return (
+        (config.get("pipeline") or {})
+        .get("reference_module", {})
+        .get("deduplication", {})
+        .get("execute", True)
+    )
+
+
 def _fastp_adapter_flags(paired):
     # Only set adapters get a flag. `adapters_sequences:` left empty in YAML is None, not {}.
     seqs = (config.get("pipeline") or {}).get("read_module", {}).get(

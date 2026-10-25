@@ -10,10 +10,7 @@ rule determine_mapped_reads_endogenous:
         # Endogenous counts mapped reads before deduplication, so take them from DeDup when it runs.
         dedup=(
             "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/dedup/{individual}_{reference}_final.dedup.json"
-            if config.get("pipeline", {})
-            .get("reference_module", {})
-            .get("deduplication", {})
-            .get("execute", True)
+            if _dedup_enabled()
             else []
         ),
     output:

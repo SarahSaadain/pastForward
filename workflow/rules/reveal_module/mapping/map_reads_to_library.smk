@@ -8,9 +8,7 @@ _dyn_settings = (
     .get("settings", {})
 )
 _dyn_mapper = _dyn_settings.get("mapper", "bwa-mem2")
-_dyn_mapper_extra = _dyn_settings.get(
-    "mapper_extra_params", _mapper_default_extra(_dyn_mapper)
-)
+_dyn_mapper_extra = _mapper_extra(_dyn_settings, _dyn_mapper)
 _dyn_keep_mapped_bam = _dyn_settings.get("keep_mapped_bam", False)
 _dyn_min_mapq_scg = _dyn_settings.get("min_mapq_scg", 0)
 _dyn_min_mapq_fle = _dyn_settings.get("min_mapq_fle", 0)

@@ -216,6 +216,8 @@ pipeline:
         # Optional: extra parameters passed directly to the mapper
         # For bwa-aln, defaults to "-n 0.01 -k 2 -l 1024 -o 2" (Oliva et al. 2021, 10.1093/bib/bbab076)
         # For minimap2, defaults to "-ax sr"
+        # Empty ("") also uses these defaults. Flags you set for minimap2 must include an -a preset,
+        # or minimap2 writes PAF instead of SAM.
         #mapper_extra_params: ""
 
     # Deduplication settings
@@ -359,7 +361,7 @@ pipeline:
         # Uncomment to override. Options: "bwa-mem2", "bwa-aln", "minimap2"
         #mapper: "minimap2"
         # Extra parameters passed directly to the mapper.
-        # Defaults to pipeline.reveal_module.mapping.settings.mapper_extra_params if set
+        # Defaults to pipeline.reveal_module.mapping.settings.mapper_extra_params if set (not empty)
         # and both steps use the same mapper,
         # otherwise falls back to mapper-specific defaults (bwa-aln: Oliva et al. 2021, minimap2: "-ax sr").
         #mapper_extra_params: ""
@@ -387,6 +389,7 @@ pipeline:
         mapper: "bwa-mem2"
         # Optional: extra parameters passed directly to the mapper
         # For bwa-aln, defaults to "-n 0.01 -k 2 -l 1024 -o 2" (Oliva et al. 2021, 10.1093/bib/bbab076)
+        # For minimap2, defaults to "-ax sr". Empty ("") also uses these defaults.
         #mapper_extra_params: ""
         # When true, the filtered sorted BAM (and its index) produced by the REVEAL mapping step
         # are kept as permanent outputs in {species}/processed/reveal_module/{feature_library}/mapped/.

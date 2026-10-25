@@ -13,12 +13,7 @@ if (
     .get("execute", True)
 ):
     _pre_filter_bam = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_rescaled.bam"
-elif (
-    config.get("pipeline", {})
-    .get("reference_module", {})
-    .get("deduplication", {})
-    .get("execute", True)
-):
+elif _dedup_enabled():
     _pre_filter_bam = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam"
 else:
     _pre_filter_bam = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam"
