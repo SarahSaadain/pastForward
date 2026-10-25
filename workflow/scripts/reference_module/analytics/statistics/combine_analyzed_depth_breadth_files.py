@@ -16,7 +16,8 @@ def combine_analysis_files(individual_analysis_files, combined_file_path, combin
 
     for analysis_file in individual_analysis_files:
         try:
-            df_analysis = pd.read_csv(analysis_file)
+            # Scaffold names stay text: "4" stays "4" and "NA" is a name, not missing
+            df_analysis = pd.read_csv(analysis_file, dtype={"scaffold": str}, keep_default_na=False)
 
             if df_analysis.empty:
                 print(f"Analysis file {analysis_file} is empty.")

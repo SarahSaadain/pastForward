@@ -34,6 +34,8 @@ def analyze_coverage_file(coverage_file, analysis_file_path):
     try:
         for chunk in pd.read_csv(coverage_file, sep="\t", header=None,
                                  names=["scaffold", "position", "depth"],
+                                 # Scaffold names stay text: no per-chunk number guessing, and "NA" is a name, not missing
+                                 dtype={"scaffold": str}, keep_default_na=False,
                                  chunksize=chunk_size):
 
             grouped = chunk.groupby("scaffold")

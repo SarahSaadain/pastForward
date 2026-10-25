@@ -10,10 +10,11 @@ reference = snakemake.params.reference
 df = pd.read_csv(input_file)
 
 # Calculate requested summary values
-total_avg_depth = df["avg_depth"].mean()
 max_depth = df["max_depth"].max()
 total_covered_bases = df["covered_bases"].sum()
 total_total_bases = df["total_bases"].sum()
+# Weight by scaffold length, so many small unplaced scaffolds do not drag the genome-wide depth down
+total_avg_depth = (df["avg_depth"] * df["total_bases"]).sum() / total_total_bases if total_total_bases > 0 else 0
 total_percent_covered = total_covered_bases / total_total_bases * 100 if total_total_bases > 0 else 0
 
 # Prepare header and row

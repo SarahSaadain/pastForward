@@ -48,6 +48,14 @@ read filenames" sections.
   (`parse_endogenous_from_stats.py`, `combine_endogenous_reads.py`): stats parsing, malformed
   values, division-by-zero, and multi-file combination.
 
+- **`test_coverage_summary.py`**: the per-scaffold depth analysis
+  (`analyze_samtools_depth_individual_file.py`), the combined coverage CSVs
+  (`combine_analyzed_depth_breadth_files.py`) and the MultiQC coverage summary
+  (`summarize_coverage.py`): scaffold names kept as text across read chunks (no split `4` row,
+  no dropped `NA` scaffold) and a length-weighted average depth, each script alone and as one
+  chain. It needs pandas, and skips
+  itself when pandas is not installed.
+
 `scg_selector.execute` defaults to `True` in
 `expected_output_manager_reveal_module_processing.py`, the same as in
 `file_manager.should_auto_determine_scg()`, `check.py`, and the docs. Writing these tests turned
