@@ -15,8 +15,8 @@ plot_endogenous_reads_bar <- function(source_file, output_file) {
   df <- read.table(source_file, sep = "\t", header = TRUE) %>%
     mutate(
       individual = sub("_.*", "", individual),
-      percent_endogenous = (mapped_endogenous_reads / after_quality_filter) * 100,
-      percent_after_dup_removal = (endogenous_duplicates_removed / after_quality_filter) * 100,
+      percent_endogenous = (mapped_endogenous_reads / mapped_input_reads) * 100,
+      percent_after_dup_removal = (endogenous_duplicates_removed / mapped_input_reads) * 100,
       percent_duplicates_removed = percent_endogenous - percent_after_dup_removal
     ) %>%
     distinct(individual, .keep_all = TRUE)

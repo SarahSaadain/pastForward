@@ -8,8 +8,8 @@ def determine_endogenous_reads_from_stats(stats_file, output_file, individual_id
 
     Endogenous = mapped reads before deduplication, out of all filtered reads
     that went into mapping. The stats file is taken from the deduplicated BAM
-    when deduplication runs, so the DeDup JSON then supplies the mapped count
-    and the removed duplicates are added back to the total.
+    when deduplication runs, so the duplicates DeDup removed are added back
+    to both the mapped count and the total.
 
     Args:
         stats_file (str): Path to the samtools stats file.
@@ -53,9 +53,11 @@ def determine_endogenous_reads_from_stats(stats_file, output_file, individual_id
 
     if dedup_file:
         with open(dedup_file) as f:
-            dedup_metrics = json.load(f)["metrics"]
-        mapped_reads = int(dedup_metrics["mapped_reads"])
-        total_reads += int(dedup_metrics["total_removed"])
+            removed = int(json.load(f)["metrics"]["total_removed"])
+        # Not DeDup's mapped_reads: it also counts secondary and supplementary
+        # alignments, while samtools stats counts each read once.
+        mapped_reads += removed
+        total_reads += removed
 
     # 2. Calculate proportion
     proportion = mapped_reads / total_reads * 100 if total_reads > 0 else 0.0
