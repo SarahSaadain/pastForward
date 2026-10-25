@@ -31,7 +31,7 @@ _filter_remove = (
     .get("reference_module", {})
     .get("filter_unmapped_reads", {})
     .get("settings", {})
-    .get("action", "remove")
+    .get("action", "keep")
     == "remove"
 )
 

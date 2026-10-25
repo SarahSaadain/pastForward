@@ -11,7 +11,10 @@
 #
 # Config option (reference_module.filter_unmapped_reads):
 #   execute: false          # set to true to enable
-#   action: "remove"        # "remove" | "extract_fastq" | "extract_fasta"
+#   action: "keep"          # "keep" (default) | "remove" | "extract_fastq" | "extract_fasta"
+#
+# action = "keep"
+#   No filtering. get_final_bam copies the unmodified pre-filter BAM.
 #
 # action = "remove"
 #   Produces a mapped-reads-only BAM as a temp intermediate, which

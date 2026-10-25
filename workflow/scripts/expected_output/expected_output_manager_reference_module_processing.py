@@ -78,7 +78,7 @@ def get_expected_output_reference_module(species):
                 logging.info(f"Skipping analysis for species {species} and individual {individual} to reference {reference}. Disabled in config.")
 
             if filter_unmapped_reads_cfg.get("execute", False) == True:
-                action = filter_unmapped_reads_cfg.get("settings", {}).get("action", "remove")
+                action = filter_unmapped_reads_cfg.get("settings", {}).get("action", "keep")
                 if action in ("keep", "remove"):
                     # keep: unmapped reads stay in the final BAM (no extra output)
                     # remove: _mapped_only.bam is a temp intermediate; get_final_bam copies to _final.bam
