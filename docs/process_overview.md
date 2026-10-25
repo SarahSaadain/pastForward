@@ -109,7 +109,7 @@ Four additional tools are run to produce complementary QC metrics:
 
 ### Endogenous Read Fraction
 
-The samtools stats output is parsed to determine how many reads mapped to the reference genome. This endogenous content is reported per individual and combined across all individuals into a species-level file. Together with the raw read counts from Module 1, this shows how much of the sequenced data is target-derived.
+Endogenous reads are the reads that mapped to the reference genome before deduplication, out of all filtered reads that went into mapping. When deduplication runs, the mapped count comes from DeDup and the duplicates it removed are added back to the samtools stats total. When deduplication is off, both numbers come from samtools stats. Every endogenous output uses this one definition: the endogenous CSV, both endogenous plots and the MultiQC reads summary. This endogenous content is reported per individual and combined across all individuals into a species-level file. Together with the raw read counts from Module 1, this shows how much of the sequenced data is target-derived.
 
 ### Plots
 

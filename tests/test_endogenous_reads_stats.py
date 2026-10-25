@@ -88,6 +88,17 @@ class TestDetermineEndogenousReadsFromStats(EndogenousStatsTestCase):
         # total_reads falls back to 0 -> proportion must also be 0, not a ZeroDivisionError
         self.assertEqual(rows[1][2:], ["800", "0", "0.0000"])
 
+    def test_dedup_json_gives_mapped_reads_before_dedup(self):
+        # stats come from the deduplicated BAM: 700 left, 600 mapped after 200 duplicates removed
+        stats_path = self.write_stats("sample.stats", raw_total=700, mapped=600)
+        dedup_path = self.path("sample.dedup.json")
+        with open(dedup_path, "w") as f:
+            f.write('{"metrics": {"mapped_reads": 800, "total_removed": 200}}')
+        out_path = self.path("out.csv")
+        determine_endogenous_reads_from_stats(stats_path, out_path, "IND001", dedup_path)
+        rows = _read_csv_rows(out_path)
+        self.assertEqual(rows[1][2:], ["800", "900", "88.8889"])
+
 
 class TestCombineEndogenousFiles(EndogenousStatsTestCase):
     def _write_individual_csv(self, name, filename, individual, mapped, total, proportion):

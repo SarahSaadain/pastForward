@@ -1,14 +1,21 @@
+import json
 import os
 import sys
 
-def determine_endogenous_reads_from_stats(stats_file, output_file, individual_id):
+def determine_endogenous_reads_from_stats(stats_file, output_file, individual_id, dedup_file=None):
     """
     Parse samtools stats file and compute mapped/unmapped proportion.
-    
+
+    Endogenous = mapped reads before deduplication, out of all filtered reads
+    that went into mapping. The stats file is taken from the deduplicated BAM
+    when deduplication runs, so the DeDup JSON then supplies the mapped count
+    and the removed duplicates are added back to the total.
+
     Args:
         stats_file (str): Path to the samtools stats file.
         output_file (str): Path to the output CSV file.
         individual_id (str): The ID of the individual (from Snakemake wildcards).
+        dedup_file (str, optional): Merged DeDup JSON, given when deduplication is enabled.
     """
     total_reads = 0
     mapped_reads = 0
@@ -44,6 +51,11 @@ def determine_endogenous_reads_from_stats(stats_file, output_file, individual_id
         total_reads = 0
         mapped_reads = 0
 
+    if dedup_file:
+        with open(dedup_file) as f:
+            dedup_metrics = json.load(f)["metrics"]
+        mapped_reads = int(dedup_metrics["mapped_reads"])
+        total_reads += int(dedup_metrics["total_removed"])
 
     # 2. Calculate proportion
     proportion = mapped_reads / total_reads * 100 if total_reads > 0 else 0.0
@@ -69,5 +81,6 @@ if __name__ == "__main__":
     determine_endogenous_reads_from_stats(
         snakemake.input.stats,
         snakemake.output.csv,
-        individual_id
+        individual_id,
+        snakemake.input.get("dedup") or None,
     )

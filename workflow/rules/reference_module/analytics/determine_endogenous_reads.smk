@@ -7,6 +7,15 @@
 rule determine_mapped_reads_endogenous:
     input:
         stats="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/samtools_stats/{individual}_{reference}_final.bam.stats",
+        # Endogenous counts mapped reads before deduplication, so take them from DeDup when it runs.
+        dedup=(
+            "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/dedup/{individual}_{reference}_final.dedup.json"
+            if config.get("pipeline", {})
+            .get("reference_module", {})
+            .get("deduplication", {})
+            .get("execute", True)
+            else []
+        ),
     output:
         csv="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/endogenous/{individual}_{reference}.endogenous.csv",
     log:

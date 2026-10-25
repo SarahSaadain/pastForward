@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **One definition of endogenous reads**: the endogenous CSV and the raw-and-endogenous plot counted mapped reads after deduplication. The endogenous plot and the MultiQC summary counted them before deduplication. All of them now count mapped reads before deduplication, out of the filtered reads that went into mapping. With deduplication on, the count comes from DeDup and the removed duplicates are added back to the total. With deduplication off, samtools stats is used as before. Projects with deduplication on rerun the endogenous CSV and the raw-and-endogenous plot once
 - **SCG mapping no longer gets flags meant for another mapper**: `scg_selector` used to borrow `reveal_module.mapping.settings.mapper_extra_params` even when it used a different mapper. For example, bwa-aln flags went to minimap2, which then also lacked `-ax sr`. The flags are now borrowed only when both steps use the same mapper. Otherwise the SCG mapper's own defaults apply. The default flags for each mapper now live in one helper in `common.smk`
 - **`./pastForward doctor --rebuild-envs` no longer deletes envs in use**: it now stops with an error while a tracked run is still active. Wait for the run to finish or stop it with `./pastForward abort`, then retry
 - **`--cores=N` now works**: `./pastForward run --cores=8` was rejected and `./pastForward dryrun --cores=8` added `--cores 1` on top. Both now accept the `=` form. `./pastForward status` also reads the core count from it
