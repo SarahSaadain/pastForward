@@ -11,15 +11,6 @@ def analyze_coverage_file(coverage_file, analysis_file_path):
 
     print(f"Performing extended analysis for {coverage_file_base_name}")
 
-    # Count total lines for progress
-    try:
-        with open(coverage_file, 'r') as f:
-            total_lines = sum(1 for _ in f)
-    except Exception as e:
-        raise Exception(f"Error counting lines in {coverage_file_base_name}: {e}")
-    
-    print(f"Total lines in {coverage_file_base_name} to analyze: {total_lines:,}")
-
     summary_data = collections.defaultdict(lambda: {
         "depth_sum": 0,
         "max_depth": 0,
@@ -29,7 +20,6 @@ def analyze_coverage_file(coverage_file, analysis_file_path):
 
     lines_processed = 0
     chunk_size = 10**6
-    milestones = {25: False, 50: False, 75: False}
 
     try:
         for chunk in pd.read_csv(coverage_file, sep="\t", header=None,
@@ -49,14 +39,9 @@ def analyze_coverage_file(coverage_file, analysis_file_path):
                 summary_data[scaffold]["total_bases"] += len(group)
 
             lines_processed += len(chunk)
-            percent_done = (lines_processed / total_lines) * 100
-
-            for milestone in milestones:
-                if not milestones[milestone] and percent_done >= milestone:
-                    print(f"Progress for {coverage_file_base_name}: {milestone}% completed")
-                    milestones[milestone] = True
-
-            #print(f"Progress for {coverage_file_base_name}: {lines_processed:,}/{total_lines:,} lines ({percent_done:.1f}%) processed")
+            # No total line count: counting means a second full read of a file with one line per reference base
+            if lines_processed % (100 * chunk_size) == 0:
+                print(f"Progress for {coverage_file_base_name}: {lines_processed:,} positions processed")
 
     except Exception as e:
         raise Exception(f"Failed during processing of {coverage_file}: {e}")

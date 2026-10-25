@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 - **Plot logs in one place**: the logs of the read-count, coverage, endogenous-read and raw-vs-endogenous plots were written under `processed/`, while the SNP-divergence plot and the REVEAL plots log under `results/` next to their output. They now all log next to the plot under `results/`, and so do their `.benchmark.jsonl` files. Old logs under `processed/.../plots/` are no longer updated
 - **Less disk and I/O for pass-through copies**: the final BAM, the rescaled BAM, the final trimmed and quality-filtered reads, and single-sample read merges are now hard links instead of full copies. Input files stay in place. The rules fall back to a copy when the files are on different filesystems. A symlinked input is linked to the file it points to, so a relative symlink does not break. Raw reads passed through when adapter removal is off are still copied: they stay on disk, and a hard link would share their timestamp and could make Snakemake rerun jobs after results are synced or `.snakemake` is deleted
 - **Less disk use with `bwa-aln` mapping in the REVEAL module**: the sorted BAM that still holds unmapped reads is now deleted after filtering, as the `bwa-mem2` and `minimap2` outputs already were. Only the filtered BAM is kept per individual and library
+- **Coverage analysis reads the depth file once**: `samtools depth -aa` writes one line per reference base, and the analysis script used to read the whole file once only to count lines for its progress messages, then read it again. It now reads it once, which cuts the script's run time by about a quarter (54 s to 40 s on a 200 Mb test genome). The output is the same. Progress is now logged every 100 million positions instead of at 25, 50 and 75%
 
 ### Removed
 
@@ -28,6 +29,7 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **Typos in coverage outputs**: the coverage MultiQC table column `avgerage_depth` is now `average_depth`, and the y-axis label of the breadth violin plot reads "Breadth Coverage" instead of "Breadth Coverege". Anything that reads the old column name from the coverage summary must use the new one
 - **`filter_unmapped_reads` default action is now `keep` in the code too**: the docs, schema, sample configs and config designer all said `keep`, but the pipeline used `remove` when `settings.action` was missing. So turning the step on without setting `action` dropped unmapped reads from the final BAM. Now it keeps them, as documented. Set `action: remove` to get a mapped-only BAM
 
 - **MultiQC "Coverage Overview" depth was too low**: the average depth was a plain mean over scaffolds, so each scaffold counted the same whatever its length. With many small unplaced scaffolds (dm6 has 1,870) the value was far below the real depth. It is now weighted by scaffold length, as the combined coverage CSV and the authenticity table already were

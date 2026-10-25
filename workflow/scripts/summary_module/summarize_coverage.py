@@ -20,7 +20,7 @@ total_percent_covered = total_covered_bases / total_total_bases * 100 if total_t
 # Prepare header and row
 header = [
     "individual",
-    "avgerage_depth",
+    "average_depth",
     "max_depth",
     "total_covered_bases",
     "total_bases",

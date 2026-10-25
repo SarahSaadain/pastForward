@@ -87,11 +87,11 @@ class SummarizeCoverageTestCase(unittest.TestCase):
         rows = [("2L", 1.0, 5, 23_000_000, 23_000_000, 100.0)]
         rows += [(f"Un{i}", 0.0, 0, 0, 1_000, 0.0) for i in range(100)]
         row = self.summarize(rows)
-        self.assertAlmostEqual(row["avgerage_depth"], 23_000_000 / 23_100_000)
+        self.assertAlmostEqual(row["average_depth"], 23_000_000 / 23_100_000)
 
     def test_zero_length_input_gives_zero_depth(self):
         row = self.summarize([("2L", 0.0, 0, 0, 0, 0.0)])
-        self.assertEqual(row["avgerage_depth"], 0)
+        self.assertEqual(row["average_depth"], 0)
 
 
 class CoverageChainTestCase(unittest.TestCase):
@@ -136,8 +136,25 @@ class CoverageChainTestCase(unittest.TestCase):
         sm = SimpleNamespace(input=[analysis], output=[summary], params=SimpleNamespace(individual="IND001", reference="dm6"))
         runpy.run_path(SUMMARIZE, init_globals={"snakemake": sm})
         row = pd.read_csv(summary, sep="\t").iloc[0]
-        self.assertAlmostEqual(row["avgerage_depth"], 10 / 7)
+        self.assertAlmostEqual(row["average_depth"], 10 / 7)
         self.assertEqual((row["total_covered_bases"], row["total_bases"]), (4, 7))
+
+    def test_depth_file_read_once(self):
+        # depth -aa writes one line per reference base (tens of GB on a 3 Gb genome), so read it in one pass only
+        depth = os.path.join(self.tmp, "IND001_dm6.depth.txt")
+        with open(depth, "w") as f:
+            f.write("2L\t1\t3\n2L\t2\t0\n")
+        opened = []
+        real_open = open
+
+        def counting_open(file, *args, **kwargs):
+            if isinstance(file, (str, os.PathLike)) and os.fspath(file) == depth:
+                opened.append(file)
+            return real_open(file, *args, **kwargs)
+
+        with mock.patch("builtins.open", counting_open):
+            depth_mod.analyze_coverage_file(depth, os.path.join(self.tmp, "out.csv"))
+        self.assertEqual(len(opened), 1)
 
 
 if __name__ == "__main__":

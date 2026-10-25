@@ -23,7 +23,7 @@ df <- df %>%
 violin_plot <- ggplot(df, aes(x = factor(individual), y = percent_covered)) +
   geom_violin(scale = "width", trim = TRUE, fill = "grey30") +
   theme_bw() +
-  ylab("Breadth Coverege (per scaffold) [%]") +
+  ylab("Breadth Coverage (per scaffold) [%]") +
   xlab("Individual") +
   ggtitle(paste0("Distribution of Coverage Breadth per Scaffold: ", species)) +
   theme(axis.text.x = element_text(size = 14, angle = 45, vjust = 1, hjust = 1),
