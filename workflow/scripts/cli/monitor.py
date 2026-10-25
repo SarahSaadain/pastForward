@@ -13,7 +13,6 @@ from pathlib import Path
 
 from .common import (
     ABORTING_RE,
-    CORES_FLAGS,
     CYAN,
     DEFAULT_CONFIGFILE,
     DIM,
@@ -31,6 +30,7 @@ from .common import (
     _ensure_project_root,
     _format_duration,
     _is_alive,
+    _cores_from_args,
 )
 
 
@@ -119,16 +119,6 @@ def _print_failed_job_log(path, tail=FAILED_JOB_LOG_TAIL_LINES):
     lines = p.read_text(errors="replace").splitlines()[-tail:]
     for line in lines:
         print(f"    {_colorize(line, SNAKEMAKE_LINE_RULES)}")
-
-
-def _cores_from_cmd(cmd):
-    for i, a in enumerate(cmd):
-        flag, eq, value = a.partition("=")
-        if flag in CORES_FLAGS and eq:
-            return value
-        if a in CORES_FLAGS and i + 1 < len(cmd):
-            return cmd[i + 1]
-    return None
 
 
 def _configfiles_from_cmd(cmd):
@@ -318,7 +308,7 @@ def _print_status(tail=None):
     # Later files override earlier ones, and config/config.yaml (when present) comes first.
     names = [_read_project_name(f) for f in [DEFAULT_CONFIGFILE] + configfiles]
     project_name = next((n for n in reversed(names) if n), None) or _color(DIM, "(unknown)")
-    cores = _cores_from_cmd(state["cmd"]) or "?"
+    cores = _cores_from_args(state["cmd"]) or "?"
     # `run`/`resume` pass unknown flags straight through to Snakemake, so `run --cores N -n`
     # tracks a dry run in the state file. A dry run executes nothing, so none of the progress
     # or exit-classification reporting below applies to it.

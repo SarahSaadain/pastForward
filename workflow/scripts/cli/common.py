@@ -14,6 +14,7 @@ LOG_DIR = Path("logs")
 STATE_FILE = STATE_DIR / "run_state.json"
 
 CORES_FLAGS = ("--cores", "-c", "-j", "--jobs")
+
 DRYRUN_FLAGS = ("--dryrun", "--dry-run", "-n")
 CONFIGFILE_FLAGS = ("--configfile", "--configfiles")
 DEFAULT_CONFIGFILE = "config/config.yaml"  # matches initialize.smk's `configfile:` directive
@@ -62,6 +63,21 @@ def _colorize(line, rules):
 
 def _die(msg):
     sys.exit(_color(RED, msg))
+
+
+def _cores_from_args(args):
+    """Value of the first cores flag in args, "" for a bare trailing flag, None if absent."""
+    for i, a in enumerate(args):
+        flag, eq, value = a.partition("=")
+        # --cores=8 counts too, not only --cores 8.
+        if flag in CORES_FLAGS and eq:
+            return value
+        if a in CORES_FLAGS:
+            return args[i + 1] if i + 1 < len(args) else ""
+        # Attached short form (-c8, -jall); digits/"all" only, so other -c... args don't misfire.
+        if a[:2] in CORES_FLAGS and not a.startswith("--") and (a[2:].isdigit() or a[2:] == "all"):
+            return a[2:]
+    return None
 
 
 def _configfiles_from_args(argv):

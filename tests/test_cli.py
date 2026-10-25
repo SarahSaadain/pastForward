@@ -130,11 +130,28 @@ class StatusHelpersTestCase(unittest.TestCase):
         self.assertIn("1 installed", line(False, a + a_done))
         self.assertIn("workflow/envs/b.yaml not finished", line(False, a + a_done + b))
 
+    def test__cores_from_args_forms(self):
+        find = cli.common._cores_from_args
+        self.assertEqual(find(["-c", "8"]), "8")
+        self.assertEqual(find(["-c8"]), "8")
+        self.assertEqual(find(["-j8"]), "8")
+        self.assertEqual(find(["-jall"]), "all")
+        self.assertEqual(find(["--jobs=4"]), "4")
+        self.assertEqual(find(["--cores"]), "")  # bare trailing flag still counts as present
+        self.assertIsNone(find(["--cores-something", "8"]))
+        self.assertIsNone(find(["-cfoo", "--configfile", "c.yaml"]))
+        self.assertIsNone(find(["--c8"]))
+
+    def test_dryrun_cmd_respects_attached_short_cores(self):
+        cmd = cli.run._build_dryrun_cmd(["-c8"])
+        self.assertNotIn("--cores", cmd)
+        self.assertIn("-c8", cmd)
+
     def test_cores_from_cmd(self):
-        self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "--software-deployment-method", "conda", "--cores", "8", "--forceall"]), "8")
-        self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "-j", "all"]), "all")
-        self.assertIsNone(cli.monitor._cores_from_cmd(["snakemake"]))
-        self.assertEqual(cli.monitor._cores_from_cmd(["snakemake", "--cores=8"]), "8")
+        self.assertEqual(cli.common._cores_from_args(["snakemake", "--software-deployment-method", "conda", "--cores", "8", "--forceall"]), "8")
+        self.assertEqual(cli.common._cores_from_args(["snakemake", "-j", "all"]), "all")
+        self.assertIsNone(cli.common._cores_from_args(["snakemake"]))
+        self.assertEqual(cli.common._cores_from_args(["snakemake", "--cores=8"]), "8")
 
     def test_configfiles_from_cmd(self):
         self.assertEqual(cli.monitor._configfiles_from_cmd(["snakemake", "--configfile", "other.yaml"]), ["other.yaml"])

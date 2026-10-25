@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 
 from .common import (
-    CORES_FLAGS,
     DIM,
     GREEN,
     LOG_DIR,
@@ -26,6 +25,7 @@ from .common import (
     _live_tracked_pid,
     _load_config,
     _strip_configfile_args,
+    _cores_from_args,
 )
 
 
@@ -59,8 +59,7 @@ def _build_run_cmd(extra_args, defaults=DEFAULT_RUN_FLAGS):
 
 def _with_default_cores(extra_args):
     extra_args = list(extra_args)
-    # split("="): --cores=8 counts too, not only --cores 8.
-    if not any(a.split("=")[0] in CORES_FLAGS for a in extra_args):
+    if _cores_from_args(extra_args) is None:
         extra_args += ["--cores", "1"]
     return extra_args
 
@@ -129,7 +128,7 @@ def cmd_run(argv, extra_flags=(), name="run"):
     # than by argparse so it can sit anywhere among the passed-through snakemake args.
     extra = [a for a in argv if a not in ("--fg", "--foreground")]
     foreground = len(extra) != len(argv)
-    if not any(a.split("=")[0] in CORES_FLAGS for a in extra):
+    if _cores_from_args(extra) is None:
         _die(f"pastForward {name}: pass --cores <N> (e.g. --cores 8, or --cores all).")
     for flag in extra_flags:
         if flag not in extra:
