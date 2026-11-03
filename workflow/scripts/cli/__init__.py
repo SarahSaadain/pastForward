@@ -25,7 +25,7 @@ import textwrap
 from pathlib import Path
 
 from .benchmark import cmd_benchmark
-from .common import BOLD_GREEN, CYAN, RED, _color, _ensure_project_root
+from .common import BOLD_GREEN, CYAN, _color, _die, _ensure_project_root
 from .discover import cmd_check, cmd_preview
 from .doctor import cmd_doctor
 from .monitor import cmd_abort, cmd_print_log, cmd_status
@@ -187,6 +187,7 @@ def _print_help():
     print()
     print("Run from a project root: the folder containing workflow/ and config/.")
     print("Logs for `run`/`dryrun`/`touch` are written to logs/<command>_<timestamp>.log.")
+    print("Set PASTFORWARD_QUIET=1 to hide the CLI's little jokes.")
 
 
 def main(argv=None):
@@ -199,7 +200,7 @@ def main(argv=None):
     if func is None:
         close = difflib.get_close_matches(command, COMMANDS, n=1)
         hint = f" Did you mean `{close[0]}`?" if close else " Run ./pastForward --help for the list."
-        sys.exit(_color(RED, f"pastForward: unknown command '{command}'.{hint}"))
+        _die(f"pastForward: unknown command '{command}'.{hint}", quip="typo" if close else None)
     # `--help` after a command shows that command's entry. Without this it would reach the
     # command itself: `run --help` failed on the missing --cores, `check --help` on the argument.
     # `tools` prints its own, longer help.

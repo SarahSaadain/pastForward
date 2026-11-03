@@ -22,6 +22,7 @@ from .common import (
     _die,
     _ensure_project_root,
     _is_alive,
+    _quip,
     _live_tracked_pid,
     _load_config,
     _strip_configfile_args,
@@ -81,15 +82,29 @@ def _build_touch_cmd(extra_args):
     return _build_run_cmd(_with_default_cores(extra_args), defaults=[("--rerun-trigger", "mtime")]) + ["--touch"]
 
 
-def _run_foreground(cmd, log_path):
+def _run_foreground(cmd, log_path, resumable=False):
     log_path.parent.mkdir(parents=True, exist_ok=True)
     print(_color(DIM, f"$ {' '.join(cmd)}"))
     print(_color(DIM, f"Logging to {log_path}"))
     with open(log_path, "w") as logf:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-        for line in proc.stdout:
-            sys.stdout.write(_colorize(line, SNAKEMAKE_LINE_RULES))
-            logf.write(line)
+
+        def copy_output():
+            for line in proc.stdout:
+                sys.stdout.write(_colorize(line, SNAKEMAKE_LINE_RULES))
+                logf.write(line)
+
+        try:
+            copy_output()
+        except KeyboardInterrupt:
+            # Snakemake got the same Ctrl-C and stops its jobs. Keep logging its shutdown
+            # instead of dying with a Python traceback.
+            copy_output()
+            print(_color(YELLOW, "Interrupted."), file=sys.stderr)
+            if resumable:
+                print(_color(DIM, "Resume with: ./pastForward resume --cores <N>"), file=sys.stderr)
+            _quip("interrupt")
+            return proc.wait() or 130
         return proc.wait()
 
 
@@ -135,8 +150,15 @@ def cmd_run(argv, extra_flags=(), name="run"):
             extra.append(flag)
     cmd = _build_run_cmd(extra)
     log_path = LOG_DIR / f"run_{_timestamp()}.log"
+    if name == "resume":
+        _quip("resume")
+    cores = _cores_from_args(extra)
+    if cores == "1":
+        _quip("one_core")
+    elif cores.isdigit() and int(cores) > 64:
+        _quip("many_cores")
     if foreground:
-        sys.exit(_run_foreground(cmd, log_path))
+        sys.exit(_run_foreground(cmd, log_path, resumable=True))
     _run_background(cmd, log_path)
 
 
@@ -150,7 +172,10 @@ def cmd_dryrun(argv):
     _ensure_project_root(require_config=True, configfiles=_configfiles_from_args(argv))
     cmd = _build_dryrun_cmd(argv)
     log_path = LOG_DIR / f"dryrun_{_timestamp()}.log"
-    sys.exit(_run_foreground(cmd, log_path))
+    code = _run_foreground(cmd, log_path)
+    if code == 0:
+        _quip("dryrun")
+    sys.exit(code)
 
 
 def cmd_touch(argv):
@@ -191,6 +216,8 @@ def cmd_unlock(argv):
         _die(f"pastForward unlock: unknown argument(s): {' '.join(rest)}")
     _ensure_project_root(configfiles=configfiles)
     code = subprocess.call(["snakemake", "--unlock", "--cores", "1"])
+    if code == 0:
+        _quip("unlock")
 
     locks = _cross_project_locks(_load_config(configfiles))
     if not locks:

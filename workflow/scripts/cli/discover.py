@@ -96,7 +96,7 @@ def cmd_check(argv):
     text = _capture_pipeline_log(include_check=True, configfiles=_configfiles_only(argv, "check"))
     m = DETECTED_SPECIES_RE.search(text)
     if not m:
-        _die("pastForward: no species found — check the config.")
+        _die("pastForward: no species found — check the config.", quip="no_species")
     # check.py's tree lines all start with "-" or indentation (or are blank, between species) -
     # the first line that starts with anything else is the next, unrelated log message.
     lines = text[m.start() :].splitlines()

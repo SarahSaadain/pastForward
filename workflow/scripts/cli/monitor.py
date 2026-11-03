@@ -32,6 +32,7 @@ from .common import (
     _format_duration,
     _is_alive,
     _cores_from_args,
+    _quip,
 )
 
 
@@ -353,6 +354,11 @@ def _print_status(tail=None):
         bar = _progress_bar(0.0, DIM)
         steps = _color(DIM, "(no progress logged yet)")
     print(f"{_color(CYAN, 'Progress:')}  {bar}  {steps}")
+    # Seeded with the PID so `status --watch` keeps the same quip on every refresh.
+    if state_key == "completed":
+        _quip("nothing_to_do" if NOTHING_TO_DO_RE.search(text) else "done", sys.stdout, pid, LABEL_INDENT)
+    elif alive and progress and 45 <= float(progress.group(3)) <= 55:
+        _quip("halfway", sys.stdout, pid, LABEL_INDENT)
     conda_line = _conda_env_line(alive, text)
     if conda_line:
         print(f"{_color(CYAN, 'Conda envs:')} {conda_line}")
@@ -405,6 +411,7 @@ def cmd_abort(argv):
         os.kill(pid, signal.SIGTERM)
         print(_color(YELLOW, f"Sent SIGTERM to PID {pid}. Snakemake will shut its subprocesses down itself."))
         print(_color(DIM, "Use --force (-f) to kill the whole process group immediately instead."))
+    _quip("abort")
 
 
 def _live_run_log():

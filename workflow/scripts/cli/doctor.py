@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .common import CYAN, DIM, GREEN, RED, SDM_FLAG, YELLOW, _color, _die, _ensure_project_root, _live_tracked_pid
+from .common import CYAN, DIM, GREEN, RED, SDM_FLAG, YELLOW, _color, _die, _ensure_project_root, _live_tracked_pid, _quip
 
 
 def _known_env_names():
@@ -67,6 +67,8 @@ def cmd_doctor(argv):
     if not rebuild:
         print()
         print(_color(DIM, "Add --rebuild-envs [name ...] to force one or more of these to be recreated."))
+        if all(Path(e["location"]).is_dir() for e in envs):
+            _quip("doctor_ok")
         return
 
     pid = _live_tracked_pid()

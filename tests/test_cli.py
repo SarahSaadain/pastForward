@@ -19,6 +19,7 @@ import signal
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from datetime import datetime
 from pathlib import Path
 
@@ -1286,9 +1287,9 @@ class ToolsTestCase(unittest.TestCase):
 
 class MainDispatchTestCase(unittest.TestCase):
     def test_unknown_command_suggests_the_closest_one(self):
-        with self.assertRaises(SystemExit) as cm:
+        with contextlib.redirect_stderr(io.StringIO()) as err, self.assertRaises(SystemExit):
             cli.main(["stauts"])
-        self.assertIn("Did you mean `status`?", str(cm.exception))
+        self.assertIn("Did you mean `status`?", err.getvalue())
 
     def test_help_after_a_command_shows_only_that_command(self):
         # Must not reach cmd_run, which would die on the missing --cores.
@@ -1298,6 +1299,84 @@ class MainDispatchTestCase(unittest.TestCase):
         self.assertIn("--cores <N>", out.getvalue())
         self.assertIn("check [--configfile", out.getvalue())
         self.assertNotIn("print-log", out.getvalue())
+
+
+class _FakeTty(io.StringIO):
+    def isatty(self):
+        return True
+
+
+class QuipsTestCase(unittest.TestCase):
+    def test_every_quip_used_in_the_cli_exists(self):
+        import re
+
+        # Every quoted word on a line that calls _quip(...) or passes quip=... to _die().
+        used = set()
+        for path in Path(REPO_ROOT, "workflow/scripts/cli").glob("*.py"):
+            for line in path.read_text().splitlines():
+                if "_quip(" in line or "quip=" in line:
+                    used |= set(re.findall(r'"(\w+)"', line))
+        self.assertGreater(len(used), 10)
+        self.assertEqual(used - set(cli.common.QUIPS), set())
+
+    def test_quip_prints_one_of_the_pool_on_a_terminal(self):
+        out = _FakeTty()
+        with unittest.mock.patch.dict(os.environ, {"PASTFORWARD_QUIET": ""}):
+            cli.common._quip("unlock", out)
+        self.assertIn(out.getvalue().strip(), cli.common.QUIPS["unlock"])
+
+    def test_quip_is_stable_for_a_seed(self):
+        picks = set()
+        for _ in range(10):
+            out = _FakeTty()
+            with unittest.mock.patch.dict(os.environ, {"PASTFORWARD_QUIET": ""}):
+                cli.common._quip("done", out, seed=1234)
+            picks.add(out.getvalue())
+        self.assertEqual(len(picks), 1)
+
+    def test_quip_silent_when_quiet_or_not_a_terminal(self):
+        out = _FakeTty()
+        with unittest.mock.patch.dict(os.environ, {"PASTFORWARD_QUIET": "1"}):
+            cli.common._quip("unlock", out)
+        self.assertEqual(out.getvalue(), "")
+        plain = io.StringIO()
+        cli.common._quip("unlock", plain)
+        self.assertEqual(plain.getvalue(), "")
+
+    def test_ctrl_c_in_foreground_run_logs_shutdown_and_hints_resume(self):
+        class FakeProc:
+            def __init__(self, *a, **k):
+                lines = iter(["Job started\n", None, "Shutting down\n"])
+
+                class Out:
+                    def __iter__(self):
+                        return self
+
+                    def __next__(self):
+                        line = next(lines)
+                        if line is None:
+                            raise KeyboardInterrupt
+                        return line
+
+                self.stdout = Out()
+
+            def wait(self):
+                return 0
+
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp, "run.log")
+            with unittest.mock.patch("subprocess.Popen", FakeProc), contextlib.redirect_stdout(io.StringIO()), \
+                    contextlib.redirect_stderr(io.StringIO()) as err:
+                code = cli.run._run_foreground(["snakemake"], log, resumable=True)
+            self.assertEqual(code, 130)
+            self.assertEqual(log.read_text(), "Job started\nShutting down\n")
+        self.assertIn("Interrupted.", err.getvalue())
+        self.assertIn("./pastForward resume", err.getvalue())
+
+    def test_die_with_quip_still_exits_1(self):
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as ctx:
+            cli.common._die("boom", quip="typo")
+        self.assertEqual(ctx.exception.code, 1)
 
 
 if __name__ == "__main__":

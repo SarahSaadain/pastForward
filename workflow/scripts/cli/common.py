@@ -1,6 +1,7 @@
 """Shared by every command: project/state paths, colors, error exit, project-root check."""
 import json
 import os
+import random
 import re
 import shutil
 import subprocess
@@ -62,8 +63,131 @@ def _colorize(line, rules):
     return line
 
 
-def _die(msg):
-    sys.exit(_color(RED, msg))
+# Short jokes printed next to some CLI messages, one picked at random per event. Never shown
+# when the output is not a terminal (logs, pipes, scripts) or when PASTFORWARD_QUIET is set.
+QUIPS = {
+    "unlock": (
+        "Lock removed. The tomb is open.",
+        "Unlocked. The dig site is open again.",
+        "The seal is broken. Proceed carefully.",
+        "Unlocked. No curse was triggered, probably.",
+        "Lock lifted. Mind the dust.",
+        "The vault is open. Archaeologists first.",
+    ),
+    "abort": (
+        "Run stopped. The past can wait.",
+        "Stopped. The fossils are not going anywhere.",
+        "Run halted. The samples waited centuries, a little longer is fine.",
+        "Shovels down. The dig is paused.",
+        "The dig crew has gone home.",
+        "Run stopped. The sediment will not mind.",
+    ),
+    "dryrun": (
+        "Nothing was touched. Time travel stays hypothetical.",
+        "Dry run done. No samples were harmed.",
+        "A rehearsal. The real excavation comes later.",
+        "Plans drawn. No dirt moved yet.",
+        "Map of the dig site ready.",
+        "Test trench only. Nothing was excavated.",
+    ),
+    "nothing_to_do": (
+        "Nothing to do. The past is already up to date.",
+        "All caught up. History is complete, for now.",
+        "Every bone is already catalogued.",
+        "Nothing left to dig up here.",
+        "The museum is already full.",
+        "Up to date. Even the past has nothing new.",
+    ),
+    "doctor_ok": (
+        "All conda envs healthy. No fossils in here.",
+        "Every env is built. Clean bill of health.",
+        "All envs alive and well. No extinctions today.",
+        "Everything is installed. The lab is ready.",
+        "Diagnosis: perfectly healthy.",
+        "All envs present and accounted for.",
+    ),
+    "no_species": (
+        "Did they go extinct?",
+        "Not even a fossil.",
+        "The sediment is empty.",
+        "No species. Not even a cockroach, and they survive everything.",
+        "Empty dig site. Check the map.",
+        "No species. Even the bacteria left.",
+    ),
+    "typo": (
+        "Even DNA has typos.",
+        "A point mutation, maybe?",
+        "Sequencing error detected.",
+        "A little damage at the ends, just like ancient reads.",
+        "That command got deaminated.",
+        "Close, but one base off.",
+    ),
+    "halfway": (
+        "Halfway through the Holocene.",
+        "Halfway there. Keep digging.",
+        "Half the layers removed.",
+        "Fifty percent. The past is getting closer.",
+        "Halfway down the core sample.",
+        "Past the midpoint. Downhill from here.",
+    ),
+    "done": (
+        "Fully fossilised.",
+        "Done. The past has moved forward.",
+        "Excavation complete. Time to write the paper.",
+        "All reads mapped to the present.",
+        "The past has been delivered.",
+        "Run complete. History, processed.",
+    ),
+    "one_core": (
+        "One core. Patience of a paleontologist.",
+        "One core. Slow and steady, like sediment.",
+        "One core. Geological timescales ahead.",
+        "One core. Bring a snack. Maybe several.",
+        "One core. The tortoise approach.",
+        "One core. Carbon dating might be faster.",
+    ),
+    "many_cores": (
+        "Unleashing the herd.",
+        "That many cores? Stampede!",
+        "A whole swarm of cores. The flies would be proud.",
+        "Full excavation crew on site.",
+        "So many cores. The cluster admin is watching.",
+        "Cores everywhere. Like flies on a banana.",
+    ),
+    "resume": (
+        "Picking up where the dig left off.",
+        "Back to the excavation.",
+        "The trench is still there. Carrying on.",
+        "Resuming. The fossils did not move.",
+        "Dusting off the tools.",
+        "Round two. The bones are still waiting.",
+    ),
+    "interrupt": (
+        "The fossils will wait.",
+        "The bones will keep.",
+        "They waited centuries. They can wait a bit longer.",
+        "Paused mid-layer.",
+        "Brushes down for now.",
+        "Time stopped. Briefly.",
+    ),
+}
+
+
+def _quip(event, stream=None, seed=None, indent=""):
+    """Print a random quip for event, dimmed. seed makes the pick stable, e.g. across the
+    refreshes of `status --watch`. stream defaults to stderr, looked up at call time."""
+    stream = stream or sys.stderr
+    if os.environ.get("PASTFORWARD_QUIET") or not stream.isatty():
+        return
+    print(_color(DIM, indent + random.Random(seed).choice(QUIPS[event])), file=stream)
+
+
+def _die(msg, quip=None):
+    if quip is None:
+        sys.exit(_color(RED, msg))
+    print(_color(RED, msg), file=sys.stderr)
+    _quip(quip)
+    sys.exit(1)
 
 
 def _cores_from_args(args):
