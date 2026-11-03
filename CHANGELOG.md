@@ -55,6 +55,7 @@ All notable changes to this project will be documented in this file.
 
 ### CI / Maintenance
 
+- **SCG ranking has a unit test**: the ranking logic moved into a function. Output is unchanged.
 - **Rules read settings through one helper**: `_setting()` in `common.smk` replaces about 60 copied `config.get(...)` chains. Defaults are unchanged.
 - **Unit tests run in CI**: a second job runs `python -m unittest discover tests` on every push and pull request.
 - **Shared helpers in `common.smk`**: `_dedup_enabled`, `_mapper_extra` and `_scg_mapper_and_extra` replace repeated code in the rule files. The SCG mapper choice is unit tested in `tests/test_common_helpers.py`. Behaviour is unchanged.
