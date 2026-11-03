@@ -128,7 +128,7 @@ Same ID format as references (filename stem, dots → underscores). If omitted, 
 pastForward raises an error at startup and aborts before any processing starts. The error message lists which IDs were not found and shows all available IDs, so you can correct the config. This prevents silent misconfiguration where a typo would cause a run to silently skip data.
 
 **Q: Can I add new samples after the first run?**
-Yes, at any time. Add the new FASTQ files to the matching `<species>/input/read_module/` folder. pastForward detects and processes them on the next run.
+Yes, at any time. Add the new FASTQ files to the matching `<species>/input/read_module/` folder, or drop them straight into `<species>/` and pastForward moves them there. pastForward detects and processes them on the next run. If a file with the same name is in both folders, pastForward stops with an error, so remove or rename one copy.
 
 In case you use `skip_existing_files: true`, pastForward will not re-process existing files, so only the new samples will be processed without affecting previous results. This might be an issue if summary reports need to be updated to include the new samples, as they may rely on outputs from all samples. Either you can re-run pastForward without `skip_existing_files` to regenerate all outputs including the new samples, or you can remove the summary reports, so they will be regenerated with the new samples included.
 

@@ -1,6 +1,7 @@
 
 import os
 import glob
+from collections import Counter
 import re
 import logging
 
@@ -53,22 +54,31 @@ RAW_READ_EXTENSIONS = (".fastq.gz", ".fq.gz")
 _RAW_READ_PATTERN_HINT = " or ".join(f"<Individual>*_R1*{ext} or <Individual>*_1*{ext}" for ext in RAW_READ_EXTENSIONS)
 
 # -----------------------------------------------------------------------------------------------
-# Get all raw read files for a given species
+# Get all raw read files for a given species, from both input/read_module/ and the species folder
+# itself. Reads dropped into <species>/ are moved into input/read_module/ by prepare_raw_reads,
+# so both folders are always scanned: reads added to the species folder after the first run
+# would otherwise never be seen.
 def get_read_files_for_species(species: str) -> list[str]:
 
     read_folder = f"{species}/input/read_module"
 
-    try:
-        logger.debug(f"Looking for read files in {read_folder} for species {species}.")
-        read_files = []
+    read_files = []
+    for folder in (read_folder, species):
+        if not os.path.isdir(folder):
+            continue
+        logger.debug(f"Looking for read files in {folder} for species {species}.")
         for ext in RAW_READ_EXTENSIONS:
-            read_files += get_files_in_folder_matching_pattern(read_folder, f"*{ext}")
-    except Exception as e:
-        # Try looking in species folder directly as fallback.
-        logger.debug(f"Read folder not found for species {species}. Trying species folder directly.")
-        read_files = []
-        for ext in RAW_READ_EXTENSIONS:
-            read_files += get_files_in_folder_matching_pattern(species, f"*{ext}")
+            read_files += get_files_in_folder_matching_pattern(folder, f"*{ext}")
+
+    # The move rule can't move a file onto one that already exists, so the copy in the
+    # species folder would be silently dropped. Stop instead, since the two may differ.
+    names = [os.path.basename(f) for f in read_files]
+    duplicates = sorted(n for n, count in Counter(names).items() if count > 1)
+    if duplicates:
+        raise ConfigValidationError(
+            f"Species '{species}': these read files exist both in {read_folder} and in {species}: "
+            f"{duplicates}. Remove or rename one copy of each, then re-run."
+        )
 
     if len(read_files) == 0:
         logger.warning(f"No read files found for species {species}. Make sure the files are named with the pattern {_RAW_READ_PATTERN_HINT} and are located in either {read_folder} or {species}.")
@@ -103,25 +113,19 @@ def get_raw_read_path_for_stem(species: str, stem: str) -> str:
     )
 
 # -----------------------------------------------------------------------------------------------
-# (internal) Discover uncompressed *.fastq/*.fq files in a species' raw read folder (or the
-# species folder directly, as a fallback - mirrors get_read_files_for_species). The pipeline only
-# picks up the compressed extensions in RAW_READ_EXTENSIONS, so any bare uncompressed files found
-# here are silently skipped during processing.
+# (internal) Discover uncompressed *.fastq/*.fq files in a species' raw read folder and the
+# species folder itself (mirrors get_read_files_for_species). The pipeline only picks up the
+# compressed extensions in RAW_READ_EXTENSIONS, so any bare uncompressed files found here are
+# silently skipped during processing.
 def _discover_uncompressed_fastq_files_for_species(species: str) -> list[str]:
     read_folder = f"{species}/input/read_module"
     uncompressed_patterns = ["*.fastq", "*.fq"]
 
-    try:
-        files = []
-        for pattern in uncompressed_patterns:
-            files += get_files_in_folder_matching_pattern(read_folder, pattern)
-    except Exception:
-        try:
-            files = []
+    files = []
+    for folder in (read_folder, species):
+        if os.path.isdir(folder):
             for pattern in uncompressed_patterns:
-                files += get_files_in_folder_matching_pattern(species, pattern)
-        except Exception:
-            files = []
+                files += get_files_in_folder_matching_pattern(folder, pattern)
 
     logger.debug(f"Uncompressed .fastq/.fq files found for species {species}: {files}")
     return files

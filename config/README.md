@@ -75,7 +75,7 @@ Or let pastForward do step 1 for you. Run `./pastForward tools create-species Dm
 
 #### Providing Your Data
 
-The simplest option: drop your raw read files and reference genome inside the `<species>` folder. The first time you run pastForward, it finds them and moves them to the right place. This shortcut only works for reads and the reference genome. REVEAL input files (feature library, and optionally SCG) must go in their specific folders, not just anywhere in `<species>`.
+The simplest option: drop your raw read files and reference genome inside the `<species>` folder. When you run pastForward, it finds them and moves them to the right place. Read files added to `<species>` after the first run are moved too. This shortcut only works for reads and the reference genome. REVEAL input files (feature library, and optionally SCG) must go in their specific folders, not just anywhere in `<species>`.
 
 If you want to put the files straight into their final location, put them here:
 

@@ -144,6 +144,30 @@ class TestRawReadPathForStem(FileManagerTestCase):
             fm.get_raw_read_path_for_stem("Sp", "A_R1")
 
 
+class TestReadsInBothFolders(FileManagerTestCase):
+    """Reads dropped into <species>/ after the first run (when input/read_module/ already
+    exists) must still be found, and resolve to the read_module path the move rule produces."""
+    fixture_kwargs = None
+
+    def setUp(self):
+        super().setUp()
+        os.makedirs("Sp/input/read_module")
+        open("Sp/input/read_module/A_R1.fastq.gz", "w").close()
+        open("Sp/B_R1.fastq.gz", "w").close()
+
+    def test_both_folders_are_scanned(self):
+        self.assertEqual(sorted(fm.get_sample_ids_for_species("Sp")), ["A", "B"])
+
+    def test_root_read_resolves_to_read_module_path(self):
+        self.assertEqual(fm.get_raw_reads_for_sample("Sp", "B"), ["Sp/input/read_module/B_R1.fastq.gz"])
+
+    def test_same_name_in_both_folders_raises(self):
+        open("Sp/A_R1.fastq.gz", "w").close()
+        with self.assertRaises(fm.ConfigValidationError) as ctx:
+            fm.get_read_files_for_species("Sp")
+        self.assertIn("A_R1.fastq.gz", str(ctx.exception))
+
+
 class TestIndividualsAndSamples(FileManagerTestCase):
     def test_individuals_discovered_sorted_excluding_unmatched(self):
         self.assertEqual(fm.get_individuals_for_species("Dmel"), ["IND001", "IND002", "IND003"])

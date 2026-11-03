@@ -26,6 +26,7 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **Reads added to the species folder after the first run were ignored**: read files dropped into `<species>/` are now found and moved into `input/read_module/` on every run. If the same file name is in both folders, the run stops: remove or rename one copy.
 - **Typos in coverage outputs**: the MultiQC column `avgerage_depth` is now `average_depth`, and the breadth violin plot axis reads "Breadth Coverage". Update anything that reads the old column name.
 - **`filter_unmapped_reads` default action is `keep` in the code too**: docs and schema said `keep`, but the code used `remove` when `settings.action` was missing. Set `action: remove` for a mapped-only BAM.
 - **MultiQC "Coverage Overview" depth was too low**: it was a plain mean over scaffolds, so many small scaffolds (dm6 has 1,870) pulled it down. It is now weighted by scaffold length, like the combined coverage CSV and the authenticity table.
