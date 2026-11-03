@@ -21,7 +21,7 @@ Paired-end reads receive additional treatment: overlapping read pairs are merged
 
 ### Quality Filtering
 
-After adapter removal, reads go through a second dedicated quality filtering step, again using **fastp**, controlled by `pipeline.read_module.quality_filtering.execute`. Adapter trimming is explicitly disabled here so the step acts purely as a quality gate. The minimum quality score (`pipeline.read_module.quality_filtering.settings.min_quality`, default 15) and minimum read length (`settings.min_length`, default 15) are configured independently from the adapter removal thresholds, so each stage can be tuned on its own. The step produces its own HTML and JSON reports per sample.
+After adapter removal, reads go through a second dedicated quality filtering step, again using **fastp**, controlled by `pipeline.read_module.quality_filtering.execute`. Adapter trimming is explicitly disabled here so the step acts purely as a quality gate. The minimum quality score (`pipeline.read_module.quality_filtering.settings.min_quality`, default 15) and minimum read length (`settings.min_length`, default 30) are configured independently from the adapter removal thresholds, so each stage can be tuned on its own. The step produces its own HTML and JSON reports per sample.
 
 ### Merge by Individual
 

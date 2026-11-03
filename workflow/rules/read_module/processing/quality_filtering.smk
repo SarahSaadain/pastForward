@@ -25,7 +25,7 @@ rule filter_reads_by_quality:
         extra=(
             f"--disable_adapter_trimming "
             f"--qualified_quality_phred {config.get('pipeline',{}).get('read_module',{}).get('quality_filtering',{}).get('settings',{}).get('min_quality', '15')} "
-            f"--length_required {config.get('pipeline',{}).get('read_module',{}).get('quality_filtering',{}).get('settings',{}).get('min_length', '15')} "
+            f"--length_required {config.get('pipeline',{}).get('read_module',{}).get('quality_filtering',{}).get('settings',{}).get('min_length',30)} "
             f"--unqualified_percent_limit {config.get('pipeline',{}).get('read_module',{}).get('quality_filtering',{}).get('settings',{}).get('unqualified_percent_limit',40)} "
             f"--n_base_limit {config.get('pipeline',{}).get('read_module',{}).get('quality_filtering',{}).get('settings',{}).get('n_base_limit',5)}"
         ),
