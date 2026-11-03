@@ -169,6 +169,7 @@ class TestReadsInBothFolders(FileManagerTestCase):
         with self.assertRaises(fm.ConfigValidationError) as ctx:
             fm.get_read_files_for_species("Sp")
         self.assertIn("A_R1.fastq.gz", str(ctx.exception))
+        self.assertIn("0 bytes in Sp/input/read_module", str(ctx.exception))
 
 
 class TestReadDiscoveryIsCached(FileManagerTestCase):

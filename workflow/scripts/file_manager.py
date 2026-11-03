@@ -79,9 +79,17 @@ def get_read_files_for_species(species: str) -> list[str]:
     names = [os.path.basename(f) for f in read_files]
     duplicates = sorted(n for n, count in Counter(names).items() if count > 1)
     if duplicates:
+        # A move across disks copies first and deletes the source last, so after a crash the
+        # read_module copy can be cut short while the species-folder copy is still whole.
+        sizes = "\n".join(
+            f"  {n}: {os.path.getsize(os.path.join(species, n))} bytes in {species}, "
+            f"{os.path.getsize(os.path.join(read_folder, n))} bytes in {read_folder}"
+            for n in duplicates
+        )
         raise ConfigValidationError(
-            f"Species '{species}': these read files exist both in {read_folder} and in {species}: "
-            f"{duplicates}. Remove or rename one copy of each, then re-run."
+            f"Species '{species}': these read files exist both in {read_folder} and in {species}:\n"
+            f"{sizes}\nThe copy in {species} is the original. If the sizes differ, a move was cut "
+            f"short: delete the copy in {read_folder}. If they match, delete either copy. Then re-run."
         )
 
     if len(read_files) == 0:
