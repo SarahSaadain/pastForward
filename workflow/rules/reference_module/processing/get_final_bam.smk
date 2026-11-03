@@ -6,12 +6,7 @@
 # (filter_unmapped_reads.smk, analytics rules, etc.).
 ####################################################
 
-if (
-    config.get("pipeline", {})
-    .get("reference_module", {})
-    .get("damage_rescaling", {})
-    .get("execute", True)
-):
+if _setting("reference_module", "damage_rescaling", "execute", default=True):
     _pre_filter_bam = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_rescaled.bam"
 elif _dedup_enabled():
     _pre_filter_bam = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam"
@@ -23,15 +18,14 @@ else:
 ####################################################
 
 _filter_remove = (
-    config.get("pipeline", {})
-    .get("reference_module", {})
-    .get("filter_unmapped_reads", {})
-    .get("execute", False)
-    and config.get("pipeline", {})
-    .get("reference_module", {})
-    .get("filter_unmapped_reads", {})
-    .get("settings", {})
-    .get("action", "keep")
+    _setting("reference_module", "filter_unmapped_reads", "execute", default=False)
+    and _setting(
+        "reference_module",
+        "filter_unmapped_reads",
+        "settings",
+        "action",
+        default="keep",
+    )
     == "remove"
 )
 

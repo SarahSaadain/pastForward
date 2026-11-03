@@ -1,12 +1,8 @@
 ####################################################
 # Snakemake rules
 ####################################################
-_ref_mapper = (
-    config.get("pipeline", {})
-    .get("reference_module", {})
-    .get("mapping", {})
-    .get("settings", {})
-    .get("mapper", "bwa-mem2")
+_ref_mapper = _setting(
+    "reference_module", "mapping", "settings", "mapper", default="bwa-mem2"
 )
 
 

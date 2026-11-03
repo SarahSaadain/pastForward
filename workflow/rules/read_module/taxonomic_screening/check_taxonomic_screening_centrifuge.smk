@@ -4,14 +4,8 @@
 # Determine index path: use config if provided, otherwise use downloaded
 # We use the index from https://benlangmead.github.io/aws-indexes/centrifuge
 # Refseq: bacteria, archaea, viral, human
-_configured_index = (
-    config.get("pipeline", {})
-    .get("read_module", {})
-    .get("taxonomic_screening", {})
-    .get("tools", {})
-    .get("centrifuge", {})
-    .get("settings", {})
-    .get("index")
+_configured_index = _setting(
+    "read_module", "taxonomic_screening", "tools", "centrifuge", "settings", "index"
 )
 
 
@@ -61,13 +55,15 @@ rule centrifuge_taxonomic_screening:
     log:
         "{species}/results/read_module/taxonomic_screening/centrifuge/{individual}/{sample}/{sample}_centrifuge.log",
     conda:
-        config.get("pipeline", {})
-        .get("read_module", {})
-        .get("taxonomic_screening", {})
-        .get("tools", {})
-        .get("centrifuge", {})
-        .get("settings", {})
-        .get("conda_env", "../../../envs/centrifuge.yaml")
+        _setting(
+            "read_module",
+            "taxonomic_screening",
+            "tools",
+            "centrifuge",
+            "settings",
+            "conda_env",
+            default="../../../envs/centrifuge.yaml",
+        )
     threads: 15
     params:
         index=lambda wildcards: (
@@ -137,13 +133,15 @@ rule analyze_centrifuge_report_top_taxa:
         "../../../envs/python_and_r.yaml"
     params:
         sample="{sample}",
-        include_human=config.get("pipeline", {})
-        .get("read_module", {})
-        .get("taxonomic_screening", {})
-        .get("tools", {})
-        .get("centrifuge", {})
-        .get("settings", {})
-        .get("include_human_taxid", False),
+        include_human=_setting(
+            "read_module",
+            "taxonomic_screening",
+            "tools",
+            "centrifuge",
+            "settings",
+            "include_human_taxid",
+            default=False,
+        ),
     script:
         "../../../scripts/read_module/taxonomic_screening/check_taxonomic_screening_centrifuge_script_analyze_centrifuge_report_top_taxa.py"
 

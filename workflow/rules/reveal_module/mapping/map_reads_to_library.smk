@@ -1,23 +1,14 @@
 ####################################################
 # Snakemake rules
 ####################################################
-_dyn_settings = (
-    config.get("pipeline", {})
-    .get("reveal_module", {})
-    .get("mapping", {})
-    .get("settings", {})
-)
+_dyn_settings = _setting("reveal_module", "mapping", "settings", default={})
 _dyn_mapper = _dyn_settings.get("mapper", "bwa-mem2")
 _dyn_mapper_extra = _mapper_extra(_dyn_settings, _dyn_mapper)
 _dyn_keep_mapped_bam = _dyn_settings.get("keep_mapped_bam", False)
 _dyn_min_mapq_scg = _dyn_settings.get("min_mapq_scg", 0)
 _dyn_min_mapq_fle = _dyn_settings.get("min_mapq_fle", 0)
-_comp_execute = (
-    config.get("pipeline", {})
-    .get("reveal_module", {})
-    .get("mapping", {})
-    .get("settings", {})
-    .get("competitive_mapping", False)
+_comp_execute = _setting(
+    "reveal_module", "mapping", "settings", "competitive_mapping", default=False
 )
 
 _MAPPED_BAM = "{species}/processed/reveal_module/{feature_library}/mapped/{individual}_{feature_library}_and_scg.sorted.bam"

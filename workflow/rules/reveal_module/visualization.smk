@@ -17,11 +17,13 @@ rule prepare_visualization_plotables_of_individual:
     conda:
         REVEAL_CONDA_ENV
     params:
-        bin_size=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("visualization", {})
-        .get("settings", {})
-        .get("visualization_bin_size", "target:5000"),
+        bin_size=lambda _: _setting(
+            "reveal_module",
+            "visualization",
+            "settings",
+            "visualization_bin_size",
+            default="target:5000",
+        ),
     message:
         "Preparing REVEAL visualization for {wildcards.individual} of {wildcards.species}."
     shell:
@@ -48,11 +50,13 @@ rule run_visualization_plots_of_individual:
         REVEAL_CONDA_ENV
     threads: 15
     params:
-        log_threshhold=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("visualization", {})
-        .get("settings", {})
-        .get("y_axis_log_scale_threshold_individual", 25),
+        log_threshhold=lambda _: _setting(
+            "reveal_module",
+            "visualization",
+            "settings",
+            "y_axis_log_scale_threshold_individual",
+            default=25,
+        ),
     message:
         "Running REVEAL visualization for {wildcards.individual} of {wildcards.species}."
     shell:
@@ -84,11 +88,13 @@ rule run_visualization_plots_of_species:
         REVEAL_CONDA_ENV
     threads: 15
     params:
-        log_threshhold=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("visualization", {})
-        .get("settings", {})
-        .get("y_axis_log_scale_threshold_species", 25),
+        log_threshhold=lambda _: _setting(
+            "reveal_module",
+            "visualization",
+            "settings",
+            "y_axis_log_scale_threshold_species",
+            default=25,
+        ),
     message:
         "Running REVEAL visualization for {wildcards.species}."
     shell:

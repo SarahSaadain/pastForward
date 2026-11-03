@@ -24,10 +24,10 @@ rule filter_reads_by_quality:
     params:
         extra=(
             f"--disable_adapter_trimming "
-            f"--qualified_quality_phred {config.get('pipeline',{}).get('read_module',{}).get('quality_filtering',{}).get('settings',{}).get('min_quality', '15')} "
-            f"--length_required {config.get('pipeline',{}).get('read_module',{}).get('quality_filtering',{}).get('settings',{}).get('min_length',30)} "
-            f"--unqualified_percent_limit {config.get('pipeline',{}).get('read_module',{}).get('quality_filtering',{}).get('settings',{}).get('unqualified_percent_limit',40)} "
-            f"--n_base_limit {config.get('pipeline',{}).get('read_module',{}).get('quality_filtering',{}).get('settings',{}).get('n_base_limit',5)}"
+            f"--qualified_quality_phred {_setting('read_module', 'quality_filtering', 'settings', 'min_quality', default= '15')} "
+            f"--length_required {_setting('read_module', 'quality_filtering', 'settings', 'min_length', default=30)} "
+            f"--unqualified_percent_limit {_setting('read_module', 'quality_filtering', 'settings', 'unqualified_percent_limit', default=40)} "
+            f"--n_base_limit {_setting('read_module', 'quality_filtering', 'settings', 'n_base_limit', default=5)}"
         ),
     message:
         "Quality filtering reads in {input.sample}"
@@ -41,10 +41,7 @@ rule get_quality_filtered_final:
         # If quality filtering is not enabled, use the trimmed reads as input for the next steps in the pipeline.
         source=lambda wildcards: (
             f"{wildcards.species}/processed/read_module/reads_quality_filtered/{wildcards.sample}_quality_filtered.fastq.gz"
-            if config.get("pipeline", {})
-            .get("read_module", {})
-            .get("quality_filtering", {})
-            .get("execute", True)
+            if _setting("read_module", "quality_filtering", "execute", default=True)
             else f"{wildcards.species}/processed/read_module/reads_trimmed/{wildcards.sample}_trimmed_final.fastq.gz"
         ),
     output:

@@ -15,10 +15,8 @@ rule analyze_bam_with_qualimap:
     # and which can be used to request RAM during cluster job submission as `{resources.mem_mb}`:
     # https://snakemake.readthedocs.io/en/latest/executing/cluster.html#job-properties
     resources:
-        mem_mb=config.get("pipeline", {})
-        .get("reference_module", {})
-        .get("analysis", {})
-        .get("settings", {})
-        .get("qualimap_mem_mb", 4096),
+        mem_mb=_setting(
+            "reference_module", "analysis", "settings", "qualimap_mem_mb", default=4096
+        ),
     wrapper:
         f"{WRAPPER_VERSION}/bio/qualimap/bamqc"

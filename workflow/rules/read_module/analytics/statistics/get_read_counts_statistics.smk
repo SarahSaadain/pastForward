@@ -27,10 +27,7 @@ rule count_reads_trimmed:
     input:
         source=lambda wc: (
             f"{wc.species}/processed/read_module/reads_trimmed/{wc.sample}_trimmed_final.fastq.gz"
-            if config.get("pipeline", {})
-            .get("read_module", {})
-            .get("adapter_removal", {})
-            .get("execute", True)
+            if _setting("read_module", "adapter_removal", "execute", default=True)
             else f"{wc.species}/processed/read_module/statistics/{wc.sample}_raw.count"
         ),
     output:
@@ -51,10 +48,7 @@ rule count_reads_quality_filtered:
     input:
         source=lambda wc: (
             f"{wc.species}/processed/read_module/reads_quality_filtered/{wc.sample}_quality_filtered_final.fastq.gz"
-            if config.get("pipeline", {})
-            .get("read_module", {})
-            .get("quality_filtering", {})
-            .get("execute", True)
+            if _setting("read_module", "quality_filtering", "execute", default=True)
             else f"{wc.species}/processed/read_module/statistics/{wc.sample}_trimmed.count"
         ),
     output:

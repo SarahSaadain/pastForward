@@ -2,12 +2,8 @@
 # Module-level settings for rules
 ####################################################
 
-_comp_execute = (
-    config.get("pipeline", {})
-    .get("reveal_module", {})
-    .get("mapping", {})
-    .get("settings", {})
-    .get("competitive_mapping", False)
+_comp_execute = _setting(
+    "reveal_module", "mapping", "settings", "competitive_mapping", default=False
 )
 
 ####################################################
@@ -32,31 +28,41 @@ rule determine_visualization_of_individual_bam_to_so:
     conda:
         REVEAL_CONDA_ENV
     params:
-        mapqth=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("sequence_overview", {})
-        .get("settings", {})
-        .get("mapping_quality_threshold", 5),
-        mc_snp=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("sequence_overview", {})
-        .get("settings", {})
-        .get("minimum_count_snp", 5),
-        mf_snp=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("sequence_overview", {})
-        .get("settings", {})
-        .get("minimum_frequency_snp", 0.1),
-        mc_indel=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("sequence_overview", {})
-        .get("settings", {})
-        .get("minimum_count_indel", 3),
-        mf_indel=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("sequence_overview", {})
-        .get("settings", {})
-        .get("minimum_frequency_indel", 0.01),
+        mapqth=lambda _: _setting(
+            "reveal_module",
+            "sequence_overview",
+            "settings",
+            "mapping_quality_threshold",
+            default=5,
+        ),
+        mc_snp=lambda _: _setting(
+            "reveal_module",
+            "sequence_overview",
+            "settings",
+            "minimum_count_snp",
+            default=5,
+        ),
+        mf_snp=lambda _: _setting(
+            "reveal_module",
+            "sequence_overview",
+            "settings",
+            "minimum_frequency_snp",
+            default=0.1,
+        ),
+        mc_indel=lambda _: _setting(
+            "reveal_module",
+            "sequence_overview",
+            "settings",
+            "minimum_count_indel",
+            default=3,
+        ),
+        mf_indel=lambda _: _setting(
+            "reveal_module",
+            "sequence_overview",
+            "settings",
+            "minimum_frequency_indel",
+            default=0.01,
+        ),
     message:
         "Determining REVEAL coverage for {wildcards.individual} of {wildcards.species} using bam2so."
     shell:

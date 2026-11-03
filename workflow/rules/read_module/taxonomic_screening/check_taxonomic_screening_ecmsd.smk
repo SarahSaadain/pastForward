@@ -1,14 +1,14 @@
 # Module-level settings for rules
 ####################################################
 
-_ecmsd_taxonomic_hierarchy = (
-    config.get("pipeline", {})
-    .get("read_module", {})
-    .get("taxonomic_screening", {})
-    .get("tools", {})
-    .get("ecmsd", {})
-    .get("settings", {})
-    .get("taxonomic_hierarchy", "species")
+_ecmsd_taxonomic_hierarchy = _setting(
+    "read_module",
+    "taxonomic_screening",
+    "tools",
+    "ecmsd",
+    "settings",
+    "taxonomic_hierarchy",
+    default="species",
 )
 
 _ecmsd_tax_hierarchy_proportions_txt_output = f"{{species}}/results/read_module/taxonomic_screening/ecmsd/{{individual}}/{{sample}}/mapping/{{sample}}_Mito_summary_{_ecmsd_taxonomic_hierarchy}_proportions.txt"
@@ -58,34 +58,42 @@ rule ecmsd_taxonomic_screening:
         ECMSD_CONDA_ENV
     threads: 15
     params:
-        cov_threshold=config.get("pipeline", {})
-        .get("read_module", {})
-        .get("taxonomic_screening", {})
-        .get("tools", {})
-        .get("ecmsd", {})
-        .get("settings", {})
-        .get("cov_threshold", 5),
-        top_n=config.get("pipeline", {})
-        .get("read_module", {})
-        .get("taxonomic_screening", {})
-        .get("tools", {})
-        .get("ecmsd", {})
-        .get("settings", {})
-        .get("top_n", 25),
-        mapping_quality=config.get("pipeline", {})
-        .get("read_module", {})
-        .get("taxonomic_screening", {})
-        .get("tools", {})
-        .get("ecmsd", {})
-        .get("settings", {})
-        .get("mapping_quality", 20),
-        taxonomic_hierarchy=config.get("pipeline", {})
-        .get("read_module", {})
-        .get("taxonomic_screening", {})
-        .get("tools", {})
-        .get("ecmsd", {})
-        .get("settings", {})
-        .get("taxonomic_hierarchy", "species"),
+        cov_threshold=_setting(
+            "read_module",
+            "taxonomic_screening",
+            "tools",
+            "ecmsd",
+            "settings",
+            "cov_threshold",
+            default=5,
+        ),
+        top_n=_setting(
+            "read_module",
+            "taxonomic_screening",
+            "tools",
+            "ecmsd",
+            "settings",
+            "top_n",
+            default=25,
+        ),
+        mapping_quality=_setting(
+            "read_module",
+            "taxonomic_screening",
+            "tools",
+            "ecmsd",
+            "settings",
+            "mapping_quality",
+            default=20,
+        ),
+        taxonomic_hierarchy=_setting(
+            "read_module",
+            "taxonomic_screening",
+            "tools",
+            "ecmsd",
+            "settings",
+            "taxonomic_hierarchy",
+            default="species",
+        ),
         prefix="{sample}",
         db_folder=_ecmsd_db_folder,
         db_files=_ECMSD_DB_FILES,

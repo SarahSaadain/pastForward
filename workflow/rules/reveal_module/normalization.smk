@@ -16,21 +16,23 @@ rule normalize_visualization_of_individual:
     conda:
         REVEAL_CONDA_ENV
     params:
-        end_distance=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("normalization", {})
-        .get("settings", {})
-        .get("end_distance", 100),
-        exclude_quantile=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("normalization", {})
-        .get("settings", {})
-        .get("exclude_quantile", 25),
-        skip_low_coverage=lambda _: config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("normalization", {})
-        .get("settings", {})
-        .get("skip_low_coverage_individuals", False),
+        end_distance=lambda _: _setting(
+            "reveal_module", "normalization", "settings", "end_distance", default=100
+        ),
+        exclude_quantile=lambda _: _setting(
+            "reveal_module",
+            "normalization",
+            "settings",
+            "exclude_quantile",
+            default=25,
+        ),
+        skip_low_coverage=lambda _: _setting(
+            "reveal_module",
+            "normalization",
+            "settings",
+            "skip_low_coverage_individuals",
+            default=False,
+        ),
     message:
         "Normalizing REVEAL coverage for {wildcards.individual} of {wildcards.species}."
     shell:

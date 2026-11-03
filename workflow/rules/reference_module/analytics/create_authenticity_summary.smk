@@ -8,11 +8,8 @@
 # project runs this one job and nothing else.
 ####################################################
 
-_authenticity_settings = (
-    config.get("pipeline", {})
-    .get("reference_module", {})
-    .get("analysis", {})
-    .get("settings", {})
+_authenticity_settings = _setting(
+    "reference_module", "analysis", "settings", default={}
 )
 
 

@@ -53,6 +53,7 @@ All notable changes to this project will be documented in this file.
 
 ### CI / Maintenance
 
+- **Rules read settings through one helper**: `_setting()` in `common.smk` replaces about 60 copied `config.get(...)` chains. Defaults are unchanged.
 - **Unit tests run in CI**: a second job runs `python -m unittest discover tests` on every push and pull request.
 - **Shared helpers in `common.smk`**: `_dedup_enabled`, `_mapper_extra` and `_scg_mapper_and_extra` replace repeated code in the rule files. The SCG mapper choice is unit tested in `tests/test_common_helpers.py`. Behaviour is unchanged.
 - **Removed the unused `prepare_custom_data_depth` rule** and its script. Nothing requested its outputs.

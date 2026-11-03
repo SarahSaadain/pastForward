@@ -2,18 +2,8 @@
 # Snakemake rules
 ####################################################
 
-_scg_sel_settings = (
-    config.get("pipeline", {})
-    .get("reveal_module", {})
-    .get("scg_selector", {})
-    .get("settings", {})
-)
-_dyn_settings = (
-    config.get("pipeline", {})
-    .get("reveal_module", {})
-    .get("mapping", {})
-    .get("settings", {})
-)
+_scg_sel_settings = _setting("reveal_module", "scg_selector", "settings", default={})
+_dyn_settings = _setting("reveal_module", "mapping", "settings", default={})
 _scg_sel_mapper, _scg_sel_mapper_extra = _scg_mapper_and_extra(
     _scg_sel_settings, _dyn_settings
 )

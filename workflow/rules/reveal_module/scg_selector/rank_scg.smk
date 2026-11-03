@@ -53,11 +53,9 @@ rule filter_top_scgs:
         "../../../envs/python_and_r.yaml"
     params:
         num_top_scgs=lambda wildcards: (
-            config.get("pipeline", {})
-            .get("reveal_module", {})
-            .get("scg_selector", {})
-            .get("settings", {})
-            .get("num_top_scgs", 20)
+            _setting(
+                "reveal_module", "scg_selector", "settings", "num_top_scgs", default=20
+            )
         ),
     message:
         "Selecting top {params.num_top_scgs} SCGs for {wildcards.species}"

@@ -38,16 +38,20 @@ checkpoint dedup_create_all_contig_clusters:
         "../../../envs/python_and_r.yaml"
     params:
         cores=workflow.cores,
-        min_contigs_per_cluster=config.get("pipeline", {})
-        .get("reference_module", {})
-        .get("deduplication", {})
-        .get("settings", {})
-        .get("min_contigs_per_cluster", 1),
-        max_contigs_per_cluster=config.get("pipeline", {})
-        .get("reference_module", {})
-        .get("deduplication", {})
-        .get("settings", {})
-        .get("max_contigs_per_cluster", 500),
+        min_contigs_per_cluster=_setting(
+            "reference_module",
+            "deduplication",
+            "settings",
+            "min_contigs_per_cluster",
+            default=1,
+        ),
+        max_contigs_per_cluster=_setting(
+            "reference_module",
+            "deduplication",
+            "settings",
+            "max_contigs_per_cluster",
+            default=500,
+        ),
     message:
         "Creating contig clusters for deduplication for species {wildcards.species} and reference {wildcards.reference}"
     script:
@@ -134,17 +138,13 @@ rule dedup_deduplicate_bam_cluster:
     conda:
         "../../../envs/dedup.yaml"
     resources:
-        mem_mb=config.get("pipeline", {})
-        .get("reference_module", {})
-        .get("deduplication", {})
-        .get("settings", {})
-        .get("mem_mb", 20000),
+        mem_mb=_setting(
+            "reference_module", "deduplication", "settings", "mem_mb", default=20000
+        ),
     params:
-        mem_mb=config.get("pipeline", {})
-        .get("reference_module", {})
-        .get("deduplication", {})
-        .get("settings", {})
-        .get("mem_mb", 20000),
+        mem_mb=_setting(
+            "reference_module", "deduplication", "settings", "mem_mb", default=20000
+        ),
     message:
         "Deduplicating BAM file for {input.bam} using dedup for individual {wildcards.individual} in species {wildcards.species}"
     shell:

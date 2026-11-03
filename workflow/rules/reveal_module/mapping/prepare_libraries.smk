@@ -2,12 +2,8 @@
 # Module-level settings for rules
 ####################################################
 
-_comp_execute = (
-    config.get("pipeline", {})
-    .get("reveal_module", {})
-    .get("mapping", {})
-    .get("settings", {})
-    .get("competitive_mapping", False)
+_comp_execute = _setting(
+    "reveal_module", "mapping", "settings", "competitive_mapping", default=False
 )
 
 ####################################################

@@ -20,11 +20,8 @@
 # for the current one when the config changes.
 ####################################################
 
-_snp_divergence_settings = (
-    config.get("pipeline", {})
-    .get("reference_module", {})
-    .get("analysis", {})
-    .get("settings", {})
+_snp_divergence_settings = _setting(
+    "reference_module", "analysis", "settings", default={}
 )
 
 _SNP_DIVERGENCE_ENABLED = (

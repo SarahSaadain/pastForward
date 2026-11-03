@@ -8,18 +8,12 @@ rule prepare_custom_data_reads_processing_absolute_values:
         reads="{species}/results/read_module/statistics/{species}_reads_counts.csv",
         endogenous=lambda wildcards: (
             f"{wildcards.species}/results/reference_module/{wildcards.reference}/analytics/individual_level/{wildcards.individual}/endogenous/{wildcards.individual}_{wildcards.reference}.endogenous.csv"
-            if config.get("pipeline", {})
-            .get("reference_module", {})
-            .get("execute", True)
-            == True
+            if _setting("reference_module", "execute", default=True) == True
             else []
         ),
         dedup=lambda wildcards: (
             []
-            if config.get("pipeline", {})
-            .get("reference_module", {})
-            .get("execute", True)
-            == False
+            if _setting("reference_module", "execute", default=True) == False
             else (
                 f"{wildcards.species}/results/reference_module/{wildcards.reference}/analytics/individual_level/{wildcards.individual}/dedup/{wildcards.individual}_{wildcards.reference}_final.dedup.json"
                 if _dedup_enabled()

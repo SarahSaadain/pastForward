@@ -15,6 +15,18 @@ import os
 WRAPPER_VERSION = "v9.3.0"
 
 
+def _setting(*keys, default=None):
+    """config["pipeline"][keys[0]]...[keys[-1]], or default when the last key is missing.
+
+    A missing or empty section on the way counts as missing. The last value is returned
+    as is, so an explicit 0, "" or false in the config wins over the default.
+    """
+    node = config.get("pipeline") or {}
+    for key in keys[:-1]:
+        node = node.get(key) or {}
+    return node.get(keys[-1], default)
+
+
 def _mapper_default_extra(mapper):
     """Default extra flags for a mapper, used when the config sets none."""
     if mapper == "bwa-aln":
@@ -48,19 +60,15 @@ def _scg_mapper_and_extra(scg_settings, mapping_settings):
 
 def _dedup_enabled():
     """True unless pipeline.reference_module.deduplication.execute is false."""
-    return (
-        (config.get("pipeline") or {})
-        .get("reference_module", {})
-        .get("deduplication", {})
-        .get("execute", True)
-    )
+    return _setting("reference_module", "deduplication", "execute", default=True)
 
 
 def _fastp_adapter_flags(paired):
     # Only set adapters get a flag. `adapters_sequences:` left empty in YAML is None, not {}.
-    seqs = (config.get("pipeline") or {}).get("read_module", {}).get(
-        "adapter_removal", {}
-    ).get("settings", {}).get("adapters_sequences") or {}
+    seqs = (
+        _setting("read_module", "adapter_removal", "settings", "adapters_sequences")
+        or {}
+    )
     flags = [("--adapter_sequence", "r1")]
     if paired:
         flags.append(("--adapter_sequence_r2", "r2"))
@@ -72,11 +80,8 @@ def determine_reads_trimmed_final_input(wildcards):
     species = wildcards.species
     sample = wildcards.sample
 
-    adapter_removal_active = (
-        config.get("pipeline", {})
-        .get("read_module", {})
-        .get("adapter_removal", {})
-        .get("execute", True)
+    adapter_removal_active = _setting(
+        "read_module", "adapter_removal", "execute", default=True
     )
     reads = get_raw_reads_for_sample(species, sample)
     if adapter_removal_active:
@@ -94,12 +99,7 @@ def determine_reads_trimmed_final_input(wildcards):
 def fastp_jsons_for_species(species):
     # The fastp JSON is kept (not temp), so reading it never reruns adapter removal.
     # Empty when adapter removal is skipped, since then no report exists.
-    if (
-        not config.get("pipeline", {})
-        .get("read_module", {})
-        .get("adapter_removal", {})
-        .get("execute", True)
-    ):
+    if not _setting("read_module", "adapter_removal", "execute", default=True):
         return []
     reports = []
     for sample in get_sample_ids_for_species(species):
@@ -515,13 +515,7 @@ def clean_feature_library_name_input(wildcards):
 
 def _scg_setting(wildcards, key, default):
     """Return pipeline-level reveal_module.scg_selector.settings.{key}, falling back to default."""
-    return (
-        config.get("pipeline", {})
-        .get("reveal_module", {})
-        .get("scg_selector", {})
-        .get("settings", {})
-        .get(key, default)
-    )
+    return _setting("reveal_module", "scg_selector", "settings", key, default=default)
 
 
 def _get_busco_lineage(wildcards):
@@ -546,13 +540,14 @@ _ECMSD_DEFAULT_DB = "resources/ecmsd_database"
 
 def _ecmsd_db_folder(wildcards=None):
     return (
-        config.get("pipeline", {})
-        .get("read_module", {})
-        .get("taxonomic_screening", {})
-        .get("tools", {})
-        .get("ecmsd", {})
-        .get("settings", {})
-        .get("database")
+        _setting(
+            "read_module",
+            "taxonomic_screening",
+            "tools",
+            "ecmsd",
+            "settings",
+            "database",
+        )
         or _ECMSD_DEFAULT_DB
     )
 

@@ -22,13 +22,13 @@ rule remove_adapters_single_with_fastp:
     params:
         adapters=lambda wc: _fastp_adapter_flags(paired=False),
         extra=lambda wc: (
-            f"--length_required {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('min_length',0)} "
-            f"--qualified_quality_phred {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('min_quality',0)} "
+            f"--length_required {_setting('read_module', 'adapter_removal', 'settings', 'min_length', default=0)} "
+            f"--qualified_quality_phred {_setting('read_module', 'adapter_removal', 'settings', 'min_quality', default=0)} "
             f"--trim_poly_x "
-            f"--poly_x_min_len {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('poly_x_min_len',5)} "
-            f"--unqualified_percent_limit {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('unqualified_percent_limit',40)} "
-            f"--n_base_limit {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('n_base_limit',5)} "
-            f"{config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('extra_params', '')}"
+            f"--poly_x_min_len {_setting('read_module', 'adapter_removal', 'settings', 'poly_x_min_len', default=5)} "
+            f"--unqualified_percent_limit {_setting('read_module', 'adapter_removal', 'settings', 'unqualified_percent_limit', default=40)} "
+            f"--n_base_limit {_setting('read_module', 'adapter_removal', 'settings', 'n_base_limit', default=5)} "
+            f"{_setting('read_module', 'adapter_removal', 'settings', 'extra_params', default= '')}"
         ),
     message:
         "Trimming adapters from single-end reads in {input.sample}"
@@ -72,14 +72,14 @@ rule remove_adapters_paired_with_fastp:
         adapters=lambda wc: _fastp_adapter_flags(paired=True)
         or "--detect_adapter_for_pe",
         extra=lambda wc: (
-            f"--length_required {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('min_length',0)} "
+            f"--length_required {_setting('read_module', 'adapter_removal', 'settings', 'min_length', default=0)} "
             f"--trim_poly_x "
-            f"--poly_x_min_len {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('poly_x_min_len',5)} "
-            f"--qualified_quality_phred {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('min_quality',0)} "
-            f"--unqualified_percent_limit {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('unqualified_percent_limit',40)} "
-            f"--n_base_limit {config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('n_base_limit',5)} "
+            f"--poly_x_min_len {_setting('read_module', 'adapter_removal', 'settings', 'poly_x_min_len', default=5)} "
+            f"--qualified_quality_phred {_setting('read_module', 'adapter_removal', 'settings', 'min_quality', default=0)} "
+            f"--unqualified_percent_limit {_setting('read_module', 'adapter_removal', 'settings', 'unqualified_percent_limit', default=40)} "
+            f"--n_base_limit {_setting('read_module', 'adapter_removal', 'settings', 'n_base_limit', default=5)} "
             f"--merge "
-            f"{config.get('pipeline',{}).get('read_module',{}).get('adapter_removal',{}).get('settings',{}).get('extra_params', '')}"
+            f"{_setting('read_module', 'adapter_removal', 'settings', 'extra_params', default= '')}"
         ),
     message:
         "Trimming adapters from paired-end reads and merging for {input.sample}"
@@ -101,10 +101,7 @@ rule get_adapter_removal_final:
     params:
         # Raw reads (adapter removal off) stay on disk, so they get a real copy.
         # A hard link would share their timestamp and could trigger reruns.
-        hardlink=config.get("pipeline", {})
-        .get("read_module", {})
-        .get("adapter_removal", {})
-        .get("execute", True),
+        hardlink=_setting("read_module", "adapter_removal", "execute", default=True),
     message:
         "Getting trimmed reads in {wildcards.sample}"
     shell:
