@@ -3,10 +3,11 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
-from scripts.species_paths import _pid_alive as _is_alive  # one PID check, stdlib-only module
+from scripts.species_paths import _pid_alive  # one PID check, stdlib-only module
 
 
 STATE_DIR = Path(".pastforward")
@@ -160,6 +161,25 @@ def _ensure_project_root(require_snakemake=True, require_config=False, configfil
     # neither (print-log only reads files back out of logs/).
     if require_snakemake and shutil.which("snakemake") is None:
         _die("pastForward: `snakemake` not found on PATH. Activate its conda env first.")
+
+
+def _command_line(pid):
+    """`ps` command line of pid ("" once it has exited), or None when `ps` cannot run."""
+    try:
+        return subprocess.run(["ps", "-o", "command=", "-p", str(pid)], capture_output=True, text=True).stdout
+    except OSError:
+        return None
+
+
+def _is_alive(pid, if_unknown=True):
+    """True while pid runs snakemake. Every PID the CLI saves is a snakemake process (the
+    background run, or the run holding a cross-project lock). Linux reuses PIDs, so days later
+    the same number can be an editor or shell, which must count as stale. if_unknown is the
+    answer when `ps` is missing: True refuses to start a second run, False refuses to kill."""
+    if not _pid_alive(pid):
+        return False
+    cmdline = _command_line(pid)
+    return if_unknown if cmdline is None else "snakemake" in cmdline
 
 
 def _live_tracked_pid():

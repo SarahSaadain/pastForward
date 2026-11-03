@@ -393,8 +393,8 @@ def _print_status(tail=None):
 def cmd_abort(argv):
     state = _read_state()
     pid = state["pid"]
-    if not _is_alive(pid):
-        _die("pastForward: tracked process is not running.")
+    if not _is_alive(pid, if_unknown=False):
+        _die("pastForward: tracked process is not running (or no longer snakemake).")
     if any(a in ("--force", "-f") for a in argv):
         os.killpg(pid, signal.SIGKILL)
         print(_color(RED, f"Force-killed process group {pid} (main process + subprocesses)."))

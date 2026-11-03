@@ -271,8 +271,13 @@ class ArgvValidationTestCase(unittest.TestCase):
         with open(self.configfile, "w") as f:
             f.write("project_name: test\n")
         os.chdir(self.project_dir)
+        # Tests below stand in for a live run with this test process's own PID, so make it
+        # look like snakemake to the PID-reuse check.
+        self._orig_command_line = cli.common._command_line
+        cli.common._command_line = lambda pid: "python /env/bin/snakemake --cores 4"
 
     def tearDown(self):
+        cli.common._command_line = self._orig_command_line
         os.chdir(self._orig_cwd)
         shutil.rmtree(self.project_dir, ignore_errors=True)
 
@@ -533,7 +538,7 @@ class ArgvValidationTestCase(unittest.TestCase):
         killed = []
         orig = (cli.monitor._read_state, cli.monitor._is_alive, cli.monitor.os.killpg)
         cli.monitor._read_state = lambda: {"pid": 12345}
-        cli.monitor._is_alive = lambda pid: True
+        cli.monitor._is_alive = lambda pid, **kw: True
         cli.monitor.os.killpg = lambda pid, sig: killed.append((pid, sig))
         try:
             for flag in ("--force", "-f"):
@@ -800,6 +805,80 @@ class ArgvValidationTestCase(unittest.TestCase):
             cli.monitor.cmd_print_log([])
         self.assertIn("new log", out.getvalue())
         self.assertNotIn("old log", out.getvalue())
+
+
+class TrackedPidTestCase(unittest.TestCase):
+    """Linux reuses PIDs, so a saved PID only counts as the tracked run while `ps` still
+    shows a snakemake command line for it."""
+
+    def _ps(self, stdout="", returncode=0, missing=False):
+        def fake_run(cmd, **kw):
+            self.assertEqual(cmd[:3], ["ps", "-o", "command="])
+            if missing:
+                raise FileNotFoundError("ps")
+            return cli.common.subprocess.CompletedProcess(cmd, returncode, stdout, "")
+
+        return fake_run
+
+    def setUp(self):
+        self._orig = (cli.common.subprocess.run, cli.common._pid_alive)
+        cli.common._pid_alive = lambda pid: True
+
+    def tearDown(self):
+        cli.common.subprocess.run, cli.common._pid_alive = self._orig
+
+    def test_snakemake_command_line_is_alive(self):
+        cli.common.subprocess.run = self._ps("/env/bin/python3 /env/bin/snakemake --cores 8\n")
+        self.assertTrue(cli.common._is_alive(4242))
+
+    def test_foreign_command_line_is_not_alive(self):
+        cli.common.subprocess.run = self._ps("vim notes.txt\n")
+        self.assertFalse(cli.common._is_alive(4242))
+
+    def test_dead_pid_is_not_alive(self):
+        cli.common._pid_alive = lambda pid: False
+        cli.common.subprocess.run = self._ps(missing=True)  # must not even be asked
+        self.assertFalse(cli.common._is_alive(4242))
+        # Died between the two checks: ps exits 1 with no output.
+        cli.common._pid_alive = lambda pid: True
+        cli.common.subprocess.run = self._ps(returncode=1)
+        self.assertFalse(cli.common._is_alive(4242))
+
+    def test_missing_ps_uses_the_callers_safe_default(self):
+        cli.common.subprocess.run = self._ps(missing=True)
+        self.assertTrue(cli.common._is_alive(4242))
+        self.assertFalse(cli.common._is_alive(4242, if_unknown=False))
+
+    def test_abort_does_not_kill_a_foreign_process(self):
+        killed = []
+        orig = (cli.monitor._read_state, cli.monitor.os.kill, cli.monitor.os.killpg)
+        cli.monitor._read_state = lambda: {"pid": 4242}
+        cli.monitor.os.kill = lambda pid, sig: killed.append(pid)
+        cli.monitor.os.killpg = lambda pid, sig: killed.append(pid)
+        try:
+            for stub in (self._ps("bash\n"), self._ps(missing=True)):
+                cli.common.subprocess.run = stub
+                for argv in ([], ["--force"]):
+                    with self.assertRaises(SystemExit):
+                        cli.monitor.cmd_abort(argv)
+        finally:
+            cli.monitor._read_state, cli.monitor.os.kill, cli.monitor.os.killpg = orig
+        self.assertEqual(killed, [])
+
+    def test_foreign_tracked_pid_does_not_block_a_new_run(self):
+        project = tempfile.mkdtemp(prefix="pf_test_cli_pid_")
+        cwd = os.getcwd()
+        os.chdir(project)
+        try:
+            cli.common.STATE_DIR.mkdir()
+            cli.common.STATE_FILE.write_text(json.dumps({"pid": 4242}))
+            cli.common.subprocess.run = self._ps("zsh\n")
+            self.assertIsNone(cli.common._live_tracked_pid())
+            cli.common.subprocess.run = self._ps("python /env/bin/snakemake --cores 2\n")
+            self.assertEqual(cli.common._live_tracked_pid(), 4242)
+        finally:
+            os.chdir(cwd)
+            shutil.rmtree(project, ignore_errors=True)
 
 
 class ParseLastStepsTestCase(unittest.TestCase):
