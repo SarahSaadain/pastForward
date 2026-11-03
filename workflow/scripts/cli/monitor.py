@@ -25,6 +25,7 @@ from .common import (
     YELLOW,
     _color,
     _colorize,
+    _command_line,
     _configfiles_from_args,
     _die,
     _ensure_project_root,
@@ -394,6 +395,8 @@ def cmd_abort(argv):
     state = _read_state()
     pid = state["pid"]
     if not _is_alive(pid, if_unknown=False):
+        if _command_line(pid) is None:
+            _die(f"pastForward: cannot check PID {pid} (`ps` not found). If it is your run, stop it by hand: kill {pid}")
         _die("pastForward: tracked process is not running (or no longer snakemake).")
     if any(a in ("--force", "-f") for a in argv):
         os.killpg(pid, signal.SIGKILL)
