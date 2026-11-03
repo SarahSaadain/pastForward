@@ -16,6 +16,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO_ROOT, "workflow"))
@@ -38,6 +39,8 @@ class FileManagerTestCase(unittest.TestCase):
         self.project_dir = tempfile.mkdtemp(prefix="pf_test_project_")
         os.chdir(self.project_dir)
         fm.config = {}
+        fm.get_read_files_for_species.cache_clear()
+        fm._sample_read_map.cache_clear()
         if self.fixture_kwargs is not None:
             self.lib = testlib.build_species_library(self.project_dir, **self.fixture_kwargs)
 
@@ -166,6 +169,16 @@ class TestReadsInBothFolders(FileManagerTestCase):
         with self.assertRaises(fm.ConfigValidationError) as ctx:
             fm.get_read_files_for_species("Sp")
         self.assertIn("A_R1.fastq.gz", str(ctx.exception))
+
+
+class TestReadDiscoveryIsCached(FileManagerTestCase):
+    def test_folders_are_scanned_once_per_species(self):
+        with mock.patch.object(fm.glob, "glob", wraps=fm.glob.glob) as spy:
+            for sample in fm.get_sample_ids_for_species("Dmel"):
+                fm.get_raw_reads_for_sample("Dmel", sample)
+                fm.get_individuals_for_species("Dmel")
+        # One glob per folder (read_module, species root) and extension.
+        self.assertEqual(spy.call_count, 2 * len(fm.RAW_READ_EXTENSIONS))
 
 
 class TestIndividualsAndSamples(FileManagerTestCase):
@@ -497,6 +510,8 @@ class TestOneReadFileOrPairPerSample(unittest.TestCase):
         self.project_dir = tempfile.mkdtemp(prefix="pf_test_dupreads_")
         os.chdir(self.project_dir)
         fm.config = {}
+        fm.get_read_files_for_species.cache_clear()
+        fm._sample_read_map.cache_clear()
         self.reads_dir = os.path.join(self.project_dir, "Dmel", "input", "read_module")
 
     def tearDown(self):

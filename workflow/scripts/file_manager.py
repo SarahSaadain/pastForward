@@ -2,6 +2,7 @@
 import os
 import glob
 from collections import Counter
+import functools
 import re
 import logging
 
@@ -58,6 +59,9 @@ _RAW_READ_PATTERN_HINT = " or ".join(f"<Individual>*_R1*{ext} or <Individual>*_1
 # itself. Reads dropped into <species>/ are moved into input/read_module/ by prepare_raw_reads,
 # so both folders are always scanned: reads added to the species folder after the first run
 # would otherwise never be seen.
+# Cached for the life of the process, so files added or removed during a run are seen on the
+# next run. Moving root reads into read_module mid-run is fine: paths resolve to read_module anyway.
+@functools.cache
 def get_read_files_for_species(species: str) -> list[str]:
 
     read_folder = f"{species}/input/read_module"
@@ -255,9 +259,9 @@ def _sample_id_from_filename(filename: str, read_num: str):
 # -----------------------------------------------------------------------------------------------
 # (internal) Discover all sample IDs from disk without applying any config filter
 def _discover_all_sample_ids_for_species(species):
-    files = _discover_all_r1_read_files_for_species(species)
-
-    samples = [_sample_id_from_filename(os.path.basename(f), "1") for f in files]
+    samples = [s for s, reads in _sample_read_map(species).items() if reads["1"]]
+    if not samples:
+        _discover_all_r1_read_files_for_species(species)  # raises the "no R1 read files" error
 
     logger.debug(f"Discovered sample IDs for species {species}: {samples}")
 
@@ -285,24 +289,30 @@ def get_sample_ids_for_species(species):
     return samples
 
 # -----------------------------------------------------------------------------------------------
-# (internal) Filter read_files down to those belonging to `sample` for the given read number,
-# i.e. files whose sample ID (see _sample_id_from_filename) is `sample`.
-def _read_files_for_sample(read_files, sample, read_num):
-    return [f for f in read_files if _sample_id_from_filename(f, read_num) == sample]
+# (internal) Map every sample ID (see _sample_id_from_filename) to its R1 and R2 file names,
+# built once per species: rule input functions look samples up thousands of times per run.
+@functools.cache
+def _sample_read_map(species):
+    sample_map = {}
+    for f in get_read_files_for_species(species):
+        name = os.path.basename(f)
+        for read_num in ("1", "2"):
+            sample = _sample_id_from_filename(name, read_num)
+            if sample is not None:
+                sample_map.setdefault(sample, {"1": [], "2": []})[read_num].append(name)
+    return sample_map
 
 def get_raw_reads_for_sample(species, sample):
 
-    read_files = get_read_files_for_species(species)
-
-    # turn read paths into file names only
-    read_files = [os.path.basename(f) for f in read_files]
+    candidates = _sample_read_map(species).get(sample, {"1": [], "2": []})
 
     reads_dir = f"{species}/input/read_module"
 
     # R1
-    candidates_r1 = _read_files_for_sample(read_files, sample, "1")
+    candidates_r1 = candidates["1"]
 
     if not candidates_r1:
+        read_files = [os.path.basename(f) for f in get_read_files_for_species(species)]
         message = (
             f"No R1 found for {sample}. Expected the name '{sample}' with an _R1 (or _1) marker inserted, "
             f"with extension {' or '.join(RAW_READ_EXTENSIONS)}, in {reads_dir}. Found files: {read_files}"
@@ -324,7 +334,7 @@ def get_raw_reads_for_sample(species, sample):
     r1 = os.path.join(reads_dir, candidates_r1[0])
 
     # R2
-    candidates_r2 = _read_files_for_sample(read_files, sample, "2")
+    candidates_r2 = candidates["2"]
 
     if not candidates_r2:
         return [r1]      # Single-end
