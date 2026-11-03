@@ -242,6 +242,85 @@ class TestCrossProjectLock(SpeciesPathsTestCase):
             unchanged = json.load(f)
         self.assertEqual(unchanged, foreign)
 
+    def _live_foreign_lock(self):
+        return {"working_directory": "/racing/project", "pid": 1,
+                "hostname": socket.gethostname(), "start_timestamp": "2026-01-01T00:00:00"}
+
+    def _dead_pid(self):
+        pid = 999999
+        while sp._pid_alive(pid) and pid > 2:
+            pid -= 1
+        return pid
+
+    def test_lock_created_by_racing_run_before_write_raises(self):
+        # Another run creates the lock right after our check: the create must be exclusive.
+        target = self.make_external_dir("pf_test_race_target_")
+        lock_path = os.path.join(target, ".pastforward.lock")
+        foreign = self._live_foreign_lock()
+        real_mkdir = sp.Path.mkdir
+
+        def mkdir_then_race(self_path, *args, **kwargs):
+            real_mkdir(self_path, *args, **kwargs)
+            with open(lock_path, "w") as f:
+                json.dump(foreign, f)
+
+        with mock.patch.object(sp.Path, "mkdir", autospec=True, side_effect=mkdir_then_race):
+            with self.assertRaises(sp.CrossProjectLockError):
+                sp._acquire_project_lock(target, "Dmel", "processed")
+
+        with open(lock_path) as f:
+            self.assertEqual(json.load(f), foreign)
+        self.assertNotIn(target, sp._ACQUIRED_LOCKS)
+
+    def test_stale_lock_replaced_by_racing_run_raises(self):
+        # Two runs find the same stale lock; the other one takes it over first.
+        target = self.make_external_dir("pf_test_stale_race_target_")
+        lock_path = os.path.join(target, ".pastforward.lock")
+        stale = dict(self._live_foreign_lock(), pid=self._dead_pid())
+        with open(lock_path, "w") as f:
+            json.dump(stale, f)
+        foreign = self._live_foreign_lock()
+        real_read = sp._read_lock
+        calls = []
+
+        def read_then_race(path):
+            result = real_read(path)
+            if not calls:
+                with open(lock_path, "w") as f:
+                    json.dump(foreign, f)
+            calls.append(result)
+            return result
+
+        with mock.patch.object(sp, "_read_lock", side_effect=read_then_race):
+            with self.assertRaises(sp.CrossProjectLockError):
+                sp._acquire_project_lock(target, "Dmel", "processed")
+
+        with open(lock_path) as f:
+            self.assertEqual(json.load(f), foreign)
+
+    def test_second_acquisition_of_same_target_fails(self):
+        target = self.make_external_dir("pf_test_twice_target_")
+        sp._acquire_project_lock(target, "Dmel", "processed")
+        sp._ACQUIRED_LOCKS.clear()  # act as a second, separate run on the same host
+        with mock.patch.object(sp, "_pid_alive", return_value=True):
+            with self.assertRaises(sp.CrossProjectLockError):
+                sp._acquire_project_lock(target, "Dmel", "processed")
+
+    def test_garbled_lock_fresh_raises_old_is_taken_over(self):
+        # An empty/garbled lock may be a racing run between create and write: respect it
+        # briefly, then treat it as left over from a crash.
+        target = self.make_external_dir("pf_test_garbled_target_")
+        lock_path = os.path.join(target, ".pastforward.lock")
+        open(lock_path, "w").close()
+        with self.assertRaises(sp.CrossProjectLockError):
+            sp._acquire_project_lock(target, "Dmel", "processed")
+
+        old = 1_000_000_000
+        os.utime(lock_path, (old, old))
+        sp._acquire_project_lock(target, "Dmel", "processed")
+        with open(lock_path) as f:
+            self.assertEqual(json.load(f)["pid"], os.getpid())
+
     def test_release_only_removes_locks_this_run_acquired(self):
         t1 = self.make_external_dir("pf_test_rel1_")
         t2 = self.make_external_dir("pf_test_rel2_")

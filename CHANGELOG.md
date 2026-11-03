@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **Two runs could take the cross-project lock at once**: runs starting at the same moment could both take `.pastforward.lock` on a shared `processed_dir`/`results_dir`. The lock file is now created atomically. An empty or broken lock file blocks a new run for up to 30 s, then is taken over.
 - **The CLI trusted a reused PID**: `status`, `abort`, `run`, `doctor` and `print-log` now check that the saved PID still belongs to snakemake. Before, `abort -f` could kill an unrelated program, and a stale PID could block a new run.
 - **Quality filtering `min_length` defaults to 30, as documented**: the code used 15. Existing outputs do not rerun by themselves, because `--rerun-trigger mtime` ignores parameter changes. To apply the new default, delete the quality-filtered reads or run with `--forcerun filter_reads_by_quality`, which also reruns every later step.
 - **Reads added to the species folder after the first run were ignored**: read files dropped into `<species>/` are now found and moved into `input/read_module/` on every run. If the same file name is in both folders, the run stops: remove or rename one copy.

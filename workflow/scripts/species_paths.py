@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import socket
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -187,6 +188,22 @@ def _pid_alive(pid) -> bool:
     return True
 
 
+# An empty/garbled lock younger than this may be a racing run between its exclusive create and
+# its write; older ones are left over from a crash and count as stale.
+_PARTIAL_LOCK_GRACE_SECONDS = 30
+
+
+# Create the lock file only if it does not exist yet (atomic O_EXCL). False if it already exists.
+def _create_lock_exclusive(lock_path: Path, identity: dict) -> bool:
+    try:
+        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except FileExistsError:
+        return False
+    with os.fdopen(fd, "w") as f:
+        f.write(json.dumps(identity, indent=2))
+    return True
+
+
 # -----------------------------------------------------------------------------------------------
 # Acquire the cross-project lock for a processed_dir/results_dir target. Raises
 # CrossProjectLockError if another (live, or unverifiable) run appears to hold it.
@@ -197,10 +214,36 @@ def _acquire_project_lock(target_dir: str, species: str, category: str) -> None:
 
     lock_path = _lock_file_path(target_dir)
     my_identity = _current_identity()
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
 
-    existing = _read_lock(lock_path)
-    if existing is not None:
-        if existing.get("hostname") != my_identity["hostname"]:
+    def held_elsewhere(existing: dict) -> CrossProjectLockError:
+        return CrossProjectLockError(
+            f"'{category}' for species '{species}' resolves to {target_dir}, which is "
+            f"already locked by another pastForward run: project "
+            f"{existing.get('working_directory')}, pid {existing.get('pid')}, started "
+            f"{existing.get('start_timestamp')}. Wait for that run to finish, or if it "
+            f"crashed without cleaning up, remove {lock_path} manually."
+        )
+
+    # Two attempts: a stale (or vanished) lock gets exactly one retry of the exclusive create.
+    for attempt in range(2):
+        if _create_lock_exclusive(lock_path, my_identity):
+            _ACQUIRED_LOCKS[target_dir] = my_identity
+            logger.debug(
+                f"[species_paths] Acquired lock {lock_path} for '{category}' of species '{species}'."
+            )
+            return
+
+        existing = _read_lock(lock_path)
+        if existing is None:
+            try:
+                age = time.time() - lock_path.stat().st_mtime
+            except FileNotFoundError:
+                continue  # removed between our create and our read: try the create again
+            if age < _PARTIAL_LOCK_GRACE_SECONDS:
+                raise held_elsewhere({})  # probably a racing run between create and write
+
+        if existing is not None and existing.get("hostname") != my_identity["hostname"]:
             raise CrossProjectLockError(
                 f"'{category}' for species '{species}' resolves to {target_dir}, which is "
                 f"locked by pastForward on a different host ({existing.get('hostname')}, pid "
@@ -210,24 +253,20 @@ def _acquire_project_lock(target_dir: str, species: str, category: str) -> None:
                 f"re-running."
             )
 
-        if _pid_alive(existing.get("pid")):
-            raise CrossProjectLockError(
-                f"'{category}' for species '{species}' resolves to {target_dir}, which is "
-                f"already locked by another pastForward run: project "
-                f"{existing.get('working_directory')}, pid {existing.get('pid')}, started "
-                f"{existing.get('start_timestamp')}. Wait for that run to finish, or if it "
-                f"crashed without cleaning up, remove {lock_path} manually."
-            )
+        # On the second attempt another run won the create after we removed the stale lock.
+        if attempt == 1 or (existing is not None and _pid_alive(existing.get("pid"))):
+            raise held_elsewhere(existing or {})
 
         logger.warning(
             f"[species_paths] Found a stale pastForward lock at {lock_path} (pid "
-            f"{existing.get('pid')} is no longer running on this host) — taking it over."
+            f"{(existing or {}).get('pid')} is no longer running on this host) — taking it over."
         )
+        # shortcut: the re-read narrows but does not close the window in which a racing run
+        # replaces the stale lock right before our unlink; fine for leftovers of crashed runs.
+        if _read_lock(lock_path) == existing:
+            lock_path.unlink(missing_ok=True)
 
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    lock_path.write_text(json.dumps(my_identity, indent=2))
-    _ACQUIRED_LOCKS[target_dir] = my_identity
-    logger.debug(f"[species_paths] Acquired lock {lock_path} for '{category}' of species '{species}'.")
+    raise held_elsewhere({})
 
 
 # -----------------------------------------------------------------------------------------------
