@@ -19,3 +19,18 @@ jobs:
           directory: "."
           snakefile: "workflow/Snakefile"
           args: "--lint"
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install "snakemake>=9.26.1" pyyaml jsonschema pandas
+
+      - name: Unit tests
+        run: python -m unittest discover tests -v
