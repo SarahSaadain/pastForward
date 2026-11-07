@@ -327,6 +327,13 @@ class TestReferenceModuleToggles(ExpectedOutputManagerTestCase):
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("mapdamage" in o for o in outputs))
 
+    def test_damage_analysis_requests_gzipped_tables(self):
+        outputs = self.get_all_outputs(self.base_config)
+        for table in ("misincorporation", "dnacomp"):
+            self.assertTrue(
+                any(o.endswith(f".{table}.txt.gz") for o in outputs), table
+            )
+
     def test_authenticity_summary(self):
         table = "Dmel/results/reference_module/genome/analytics/species_level/Dmel/authenticity/genome_authenticity.tsv"
         for settings, analysis_execute, expected in (

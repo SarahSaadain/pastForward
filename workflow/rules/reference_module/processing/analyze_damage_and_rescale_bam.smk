@@ -18,9 +18,13 @@ rule analyze_mapdamage_and_rescale_bam:
         ),
         GtoA3p="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.3pGtoA_freq.txt",
         CtoT5p="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.5pCtoT_freq.txt",
-        dnacomp="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.dnacomp.txt",
+        dnacomp=temp(
+            "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.dnacomp.txt"
+        ),
         lg_dist="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.lgdistribution.txt",
-        misinc="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.misincorporation.txt",
+        misinc=temp(
+            "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.misincorporation.txt"
+        ),
         plot_misinc="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Fragmisincorporation_plot.pdf",
         plot_len="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Length_plot.pdf",
         stats_ref="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.dnacomp_genome.csv",
@@ -42,6 +46,26 @@ rule analyze_mapdamage_and_rescale_bam:
         "Analyze damage and rescale {input.bam}"
     wrapper:
         f"{WRAPPER_VERSION}/bio/mapdamage2"
+
+
+# Rule: Keep the two large mapDamage tables only as .gz. No rule reads them, so the
+# plain .txt files are temp() in analyze_mapdamage_and_rescale_bam.
+rule compress_mapdamage_tables:
+    input:
+        "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.{table}.txt",
+    output:
+        "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.{table}.txt.gz",
+    log:
+        "{species}/processed/reference_module/{reference}/analytics/{individual}/mapdamage/{individual}_{reference}.{table}.compress.log",
+    wildcard_constraints:
+        table="misincorporation|dnacomp",
+    conda:
+        "../../../envs/pigz.yaml"
+    threads: 2
+    message:
+        "Compressing mapDamage {wildcards.table} table for {wildcards.individual}"
+    shell:
+        'pigz -p {threads} -c "{input}" > "{output}" 2> "{log}"'
 
 
 # Rule: Sort rescaled BAM file

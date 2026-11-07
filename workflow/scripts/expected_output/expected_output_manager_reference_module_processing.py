@@ -77,6 +77,8 @@ def get_expected_output_reference_module(species):
 
                 if analysis_settings.get("damage_analysis", True) == True:
                     expected_outputs.append(f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/")
+                    for mapdamage_table in ("misincorporation", "dnacomp"):
+                        expected_outputs.append(f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.{mapdamage_table}.txt.gz")
                 else:
                     logging.info(f"Skipping damage analysis for species {species} and individual {individual} to reference {reference}. Disabled in config.")
             else:

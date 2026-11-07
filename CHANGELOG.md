@@ -26,6 +26,8 @@ All notable changes to this project will be documented in this file.
 - **Less disk use with `bwa-aln` in the REVEAL module**: the sorted BAM holding unmapped reads is deleted after filtering, as for `bwa-mem2` and `minimap2`.
 - **Coverage analysis writes no per-base file**: `samtools depth` output is streamed straight into the analysis script, in one rule (`analyze_mapped_reads_coverage`) instead of two. The temporary `_depth.tsv` (7.9 GB for a 368 Mb genome) is gone. Run time: 91 s to 53 s with 26 M reads, 165 s to 120 s with 204 M reads, 33 s to 3 s on a sparse 145 Mb BAM. The CSV is byte-identical. The step uses a new small conda env, `coverage.yaml`, built once per project. Existing coverage CSVs do not rerun, because `--rerun-trigger mtime` ignores code changes.
 
+- **Smaller mapDamage output**: `misincorporation.txt` and `dnacomp.txt` are kept as `.txt.gz`. No rule reads them. The plain files are deleted after compression. Existing projects compress the files they have and do not rerun mapDamage.
+
 ### Removed
 
 - **Unused `plot_coverage_breadth_bins.R`**: nothing called it.
