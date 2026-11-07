@@ -93,7 +93,7 @@ This optional step is controlled by `pipeline.reference_module.filter_unmapped_r
 
 ### Coverage Analysis
 
-Coverage analysis runs whenever `pipeline.reference_module.analysis.execute` is enabled (default `true`). The final BAM is interrogated using **samtools depth**, which reports per-position depth across the entire reference including zero-coverage sites. A custom Python script then analyses the depth output to compute coverage breadth at multiple depth thresholds and mean depth statistics per individual. All individual results are combined into species-level summary tables, and the data is reformatted into MultiQC-compatible custom content files.
+Coverage analysis runs whenever `pipeline.reference_module.analysis.execute` is enabled (default `true`). The final BAM is streamed through **samtools depth** into a custom Python script, so no per-base file is written. Scaffold lengths from the BAM header supply the zero-coverage sites. The script to compute coverage breadth at multiple depth thresholds and mean depth statistics per individual. All individual results are combined into species-level summary tables, and the data is reformatted into MultiQC-compatible custom content files.
 
 ### Mapping Statistics
 

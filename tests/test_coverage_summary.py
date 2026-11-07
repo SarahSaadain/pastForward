@@ -2,22 +2,23 @@
 """
 Unit tests for the depth/coverage scripts:
 
-    workflow/scripts/reference_module/analytics/statistics/analyze_samtools_depth_individual_file.py
+    workflow/scripts/reference_module/analytics/statistics/analyze_coverage_from_bam.py
     workflow/scripts/reference_module/analytics/statistics/combine_analyzed_depth_breadth_files.py
     workflow/scripts/summary_module/summarize_coverage.py
 
-Needs pandas. Run with either:
+Needs pandas and numpy. No samtools or pysam: the depth text is fed in directly. Run with either:
     python3 tests/test_coverage_summary.py
     python3 -m unittest tests.test_coverage_summary -v          (from the repo root)
 """
+import io
 import os
+import random
 import runpy
 import shutil
 import sys
 import tempfile
 import unittest
 from types import SimpleNamespace
-from unittest import mock
 
 try:
     import pandas as pd
@@ -28,44 +29,77 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO_ROOT, "workflow"))
 
 from scripts.reference_module.analytics.statistics import (  # noqa: E402
-    analyze_samtools_depth_individual_file as depth_mod,
+    analyze_coverage_from_bam as depth_mod,
     combine_analyzed_depth_breadth_files as combine_mod,
 )
 
 SUMMARIZE = os.path.join(REPO_ROOT, "workflow", "scripts", "summary_module", "summarize_coverage.py")
 
 
+def depth_text(lines):
+    return io.StringIO("".join(f"{s}\t{p}\t{d}\n" for s, p, d in lines))
+
+
+def analyze(lines, header, out, chunksize=2):
+    """header: (name, length) pairs in BAM header order. Small chunks so scaffolds span several."""
+    names, lengths = zip(*header)
+    rows = depth_mod.summarize_depth_stream(depth_text(lines), names, lengths, chunksize=chunksize)
+    depth_mod.write_summary(rows, out)
+    return pd.read_csv(out, dtype={"scaffold": str}, keep_default_na=False).set_index("scaffold")
+
+
 class AnalyzeDepthTestCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="pf_test_depth_")
+        self.out = os.path.join(self.tmp, "out.csv")
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def analyze(self, lines, chunksize=2):
-        depth = os.path.join(self.tmp, "depth.txt")
-        out = os.path.join(self.tmp, "out.csv")
-        with open(depth, "w") as f:
-            f.writelines(f"{s}\t{p}\t{d}\n" for s, p, d in lines)
-        real = pd.read_csv
-        # Small chunks so each chunk guesses its own column type, as 1M-line chunks do on real data.
-        with mock.patch.object(depth_mod.pd, "read_csv", lambda *a, **k: real(*a, **{**k, "chunksize": chunksize})):
-            depth_mod.analyze_coverage_file(depth, out)
-        return pd.read_csv(out, dtype={"scaffold": str}, keep_default_na=False).set_index("scaffold")
-
     def test_numeric_scaffold_name_is_one_row_across_chunks(self):
-        # Chunk 1 mixes '2L' and '4' (read as text), chunk 2 holds only 4 (read as a number).
-        lines = [("2L", 1, 1), ("4", 1, 2), ("4", 2, 0), ("4", 3, 2), ("4", 4, 0)]
-        df = self.analyze(lines)
+        # Chunk 1 mixes '2L' and '4', chunk 2 holds only 4. Zero-depth bases are not printed.
+        lines = [("2L", 1, 1), ("4", 1, 2), ("4", 3, 2)]
+        df = analyze(lines, [("2L", 1), ("4", 4)], self.out)
         self.assertEqual(sorted(df.index), ["2L", "4"])
         self.assertEqual(df.loc["4", "total_bases"], 4)
         self.assertEqual(df.loc["4", "covered_bases"], 2)
 
     def test_na_like_scaffold_names_are_kept(self):
-        lines = [("NA", 1, 1), ("NA", 2, 0), ("nan", 1, 3), ("2L", 1, 1)]
-        df = self.analyze(lines)
+        lines = [("NA", 1, 1), ("nan", 1, 3), ("2L", 1, 1)]
+        df = analyze(lines, [("NA", 2), ("nan", 1), ("2L", 1)], self.out)
         self.assertEqual(sorted(df.index), ["2L", "NA", "nan"])
         self.assertEqual(df["total_bases"].sum(), 4)
+
+    def test_uncovered_scaffold_and_no_reads(self):
+        df = analyze([("2L", 5, 7)], [("2L", 10), ("3R", 4)], self.out)
+        self.assertEqual(tuple(df.loc["3R", ["max_depth", "covered_bases", "total_bases"]]), (0, 0, 4))
+        self.assertEqual(df.loc["2L", "max_depth"], 7)
+        # samtools depth prints nothing at all for a BAM without reads
+        df = analyze([], [("2L", 10)], self.out)
+        self.assertEqual((df.loc["2L", "avg_depth"], df.loc["2L", "total_bases"]), (0, 10))
+
+    def test_scaffold_missing_from_header_fails(self):
+        with self.assertRaises(RuntimeError):
+            depth_mod.summarize_depth_stream(depth_text([("chrX", 1, 1)]), ["2L"], [5])
+
+    def test_legacy_order_small_chunks(self):
+        # Bases z z z | b b | a a a in chunks of 4: chunk 1 holds z, b (sorted: b, z), chunk 2 adds a
+        rows = [(n, 0, 0, 0, L) for n, L in [("z", 3), ("b", 2), ("a", 3)]]
+        self.assertEqual([r[0] for r in depth_mod.legacy_order(rows, chunk=4)], ["b", "z", "a"])
+
+    def test_legacy_order_matches_old_chunked_groupby(self):
+        # Old script: one line per base in header order, read in chunks, groupby sorts names per chunk
+        rnd = random.Random(1)
+        for _ in range(50):
+            rows = [(f"s{rnd.randrange(1000)}_{i}", 0, 0, 0, rnd.randint(1, 30)) for i in range(rnd.randint(1, 12))]
+            chunk = rnd.randint(1, 40)
+            bases = [r[0] for r in rows for _ in range(r[4])]
+            expected = []
+            for k in range(0, len(bases), chunk):
+                for n in sorted(set(bases[k:k + chunk])):
+                    if n not in expected:
+                        expected.append(n)
+            self.assertEqual([r[0] for r in depth_mod.legacy_order(rows, chunk=chunk)], expected)
 
 
 class SummarizeCoverageTestCase(unittest.TestCase):
@@ -95,7 +129,7 @@ class SummarizeCoverageTestCase(unittest.TestCase):
 
 
 class CoverageChainTestCase(unittest.TestCase):
-    """samtools depth file -> per-scaffold CSV -> combined CSV -> MultiQC summary."""
+    """samtools depth lines -> per-scaffold CSV -> combined CSV -> MultiQC summary."""
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="pf_test_coverage_")
@@ -106,18 +140,9 @@ class CoverageChainTestCase(unittest.TestCase):
     def test_scaffolds_4_na_2l_with_tiny_chunks(self):
         # Chunk size 2: chunk 2 holds only "4" (would be read as a number) and
         # chunk 3 holds only "NA" (would be read as missing and dropped).
-        depth = os.path.join(self.tmp, "IND001_dm6.depth.txt")
-        with open(depth, "w") as f:
-            f.write("2L\t1\t3\n4\t1\t2\n"
-                    "4\t2\t0\n4\t3\t4\n"
-                    "NA\t1\t1\nNA\t2\t0\n"
-                    "2L\t2\t0\n")
         analysis = os.path.join(self.tmp, "IND001_dm6_coverage_analysis.csv")
-        real = pd.read_csv
-        with mock.patch.object(depth_mod.pd, "read_csv", lambda *a, **k: real(*a, **{**k, "chunksize": 2})):
-            depth_mod.analyze_coverage_file(depth, analysis)
-
-        per_scaffold = pd.read_csv(analysis, dtype={"scaffold": str}, keep_default_na=False).set_index("scaffold")
+        lines = [("2L", 1, 3), ("4", 1, 2), ("4", 3, 4), ("NA", 1, 1)]
+        per_scaffold = analyze(lines, [("2L", 2), ("4", 3), ("NA", 2)], analysis)
         self.assertEqual(
             {s: (r.covered_bases, r.total_bases) for s, r in per_scaffold.iterrows()},
             {"2L": (1, 2), "4": (2, 3), "NA": (1, 2)},
@@ -138,23 +163,6 @@ class CoverageChainTestCase(unittest.TestCase):
         row = pd.read_csv(summary, sep="\t").iloc[0]
         self.assertAlmostEqual(row["average_depth"], 10 / 7)
         self.assertEqual((row["total_covered_bases"], row["total_bases"]), (4, 7))
-
-    def test_depth_file_read_once(self):
-        # depth -aa writes one line per reference base (tens of GB on a 3 Gb genome), so read it in one pass only
-        depth = os.path.join(self.tmp, "IND001_dm6.depth.txt")
-        with open(depth, "w") as f:
-            f.write("2L\t1\t3\n2L\t2\t0\n")
-        opened = []
-        real_open = open
-
-        def counting_open(file, *args, **kwargs):
-            if isinstance(file, (str, os.PathLike)) and os.fspath(file) == depth:
-                opened.append(file)
-            return real_open(file, *args, **kwargs)
-
-        with mock.patch("builtins.open", counting_open):
-            depth_mod.analyze_coverage_file(depth, os.path.join(self.tmp, "out.csv"))
-        self.assertEqual(len(opened), 1)
 
 
 if __name__ == "__main__":

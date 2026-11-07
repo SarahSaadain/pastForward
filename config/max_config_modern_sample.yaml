@@ -251,7 +251,7 @@ pipeline:
         damage_analysis: false
         # Run samtools depth and compute per-individual depth and breadth: coverage
         # plots, the coverage sections of MultiQC and the authenticity depth/breadth
-        # columns. Writes a per-base table that is large for big genomes. (Default: true)
+        # columns. Reads the whole final BAM once. (Default: true)
         coverage_analysis: true
         # When true, generate coverage and endogenous reads plots (Default: true)
         create_plots: true

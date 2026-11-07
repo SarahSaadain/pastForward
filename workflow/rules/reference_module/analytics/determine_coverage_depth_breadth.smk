@@ -3,41 +3,20 @@
 ####################################################
 
 
-# Rule: Calculate coverage depth using samtools
-rule determine_mapped_reads_coverage:
-    input:
-        bams=[
-            "{species}/results/reference_module/{reference}/mapped/{individual}_{reference}_final.bam"
-        ],
-    output:
-        temp(
-            "{species}/processed/reference_module/{reference}/coverage/{individual}/{individual}_{reference}_depth.tsv"
-        ),
-    log:
-        "{species}/processed/reference_module/{reference}/coverage/{individual}/{individual}_{reference}_depth.log",
-    params:
-        # optional bed file passed to -b
-        extra="-aa",  # optional additional parameters as string
-    message:
-        "Calculating coverage depth for {input.bams}"
-    wrapper:
-        f"{WRAPPER_VERSION}/bio/samtools/depth"
-
-
-# Rule: Analyze coverage depth and breadth
+# Rule: Per-scaffold depth and breadth, streamed from samtools depth (no per-base file on disk)
 rule analyze_mapped_reads_coverage:
     input:
-        depth_txt="{species}/processed/reference_module/{reference}/coverage/{individual}/{individual}_{reference}_depth.tsv",
+        bam="{species}/results/reference_module/{reference}/mapped/{individual}_{reference}_final.bam",
     output:
         analysis="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/coverage/{individual}_{reference}_coverage_analysis.csv",
     log:
         "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/coverage/{individual}_{reference}_coverage_analysis.log",
     conda:
-        "../../../envs/python_and_r.yaml"
+        "../../../envs/coverage.yaml"
     message:
-        "Analyzing coverage depth and breadth for {input.depth_txt}"
+        "Analyzing coverage depth and breadth for {input.bam}"
     script:
-        "../../../scripts/reference_module/analytics/statistics/analyze_samtools_depth_individual_file.py"
+        "../../../scripts/reference_module/analytics/statistics/analyze_coverage_from_bam.py"
 
 
 # Rule: Combine coverage analysis files

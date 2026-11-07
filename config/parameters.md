@@ -149,7 +149,7 @@ Optionally removes or extracts reads that did not map to the reference. Default:
 | `damage_rescaling` | on | Profiles cytosine deamination and rescales base quality scores using mapDamage2. |
 | `analysis` | on | Computes coverage breadth and mean depth; runs Qualimap and Preseq. Endogenous content data always generated. |
 | `analysis.settings.damage_analysis` | on | Visualises damage patterns (mapDamage2) and includes them in the MultiQC report. |
-| `analysis.settings.coverage_analysis` | on | Run `samtools depth` and compute per-individual mean depth, max depth and breadth. Feeds the coverage plots, the coverage sections of the MultiQC reports (reference and summary module) and the authenticity depth and breadth columns. The per-base depth table is large for big genomes. `false` drops all of these and keeps every other output. |
+| `analysis.settings.coverage_analysis` | on | Run `samtools depth` and compute per-individual mean depth, max depth and breadth. Feeds the coverage plots, the coverage sections of the MultiQC reports (reference and summary module) and the authenticity depth and breadth columns. It reads the whole final BAM once; no per-base file is written. `false` drops all of these and keeps every other output. |
 | `analysis.settings.create_plots` | on | Generate coverage breadth/depth and endogenous reads plots per reference. |
 | `analysis.settings.individual_multiqc` | on | Generate a per-individual BAM MultiQC report. |
 | `analysis.settings.species_multiqc` | on | Generate a per-reference MultiQC report aggregating all individuals. |
