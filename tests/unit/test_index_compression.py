@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "workflow"))
@@ -13,6 +14,7 @@ from scripts.index_compression import (
     mapper,
     remove_unpacked_indexes,
     restore_indexes,
+    unpack_needed,
 )
 
 OLD = 1_000_000_000
@@ -36,18 +38,24 @@ class IndexCompressionTest(unittest.TestCase):
         os.chdir(self.old_cwd)
         self.tmp.cleanup()
 
-    def test_restore_unpacks_with_archive_mtime_and_keeps_archive(self):
+    def test_restore_makes_empty_placeholder_with_archive_mtime(self):
         restore_indexes(self.cfg, dryrun=False)
-        self.assertEqual(self.raw.read_bytes(), b"x" * 1000)
+        self.assertEqual(self.raw.stat().st_size, 0)
         self.assertEqual(int(self.raw.stat().st_mtime), OLD)
         self.assertTrue(self.gz.exists())
 
-    def test_dryrun_placeholder_is_empty_and_replaced_by_real_unpack(self):
-        restore_indexes(self.cfg, dryrun=True)
-        self.assertEqual(self.raw.stat().st_size, 0)
+    def test_unpack_needed_only_for_indexes_a_job_reads(self):
+        restore_indexes(self.cfg, dryrun=False)
+        unpack_needed(self.cfg, [SimpleNamespace(input=["Sp/other.txt"])])
+        self.assertEqual(self.raw.stat().st_size, 0)  # no job reads it
+        unpack_needed(self.cfg, [SimpleNamespace(input=["./" + str(self.raw)])])
+        self.assertEqual(self.raw.read_bytes(), b"x" * 1000)
         self.assertEqual(int(self.raw.stat().st_mtime), OLD)
-        restore_indexes(self.cfg, dryrun=False)  # a killed dry run left the placeholder
-        self.assertEqual(self.raw.stat().st_size, 1000)
+
+    def test_killed_run_placeholder_is_recreated_not_trusted(self):
+        restore_indexes(self.cfg, dryrun=True)
+        restore_indexes(self.cfg, dryrun=False)
+        self.assertEqual(self.raw.stat().st_size, 0)
 
     def test_existing_raw_index_is_left_alone(self):
         self.raw.write_text("real")
@@ -71,7 +79,7 @@ class IndexCompressionTest(unittest.TestCase):
             "import os; print(os.path.exists(%r))"
         ) % (str(Path(__file__).resolve().parents[2] / "workflow"), str(self.raw))
         out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
-        self.assertEqual(out.stdout.strip(), "True")  # unpacked while the process ran
+        self.assertEqual(out.stdout.strip(), "True")  # placeholder while the process ran
         self.assertFalse(self.raw.exists())  # gone after exit
         self.assertTrue(self.gz.exists())
 

@@ -1,7 +1,7 @@
 """Mapping indexes live as temp() files; the pack_index rule keeps a .gz of each.
 
-At workflow load the .gz is unpacked again (real run) or stood in for by an empty placeholder
-(dry run), both with the archive's mtime. The index then looks untouched, so Snakemake neither
+At workflow load an empty placeholder with the archive's mtime stands in for the .gz; a real run
+unpacks it in onstart: when a planned job reads it. The index then looks untouched, so Snakemake neither
 rebuilds it nor remaps finished individuals. A rule cannot do this: any job that produces the
 index in the plan flags every mapping job as "input updated by another job".
 """
@@ -72,27 +72,41 @@ def _remove(paths) -> None:
         p.unlink(missing_ok=True)
 
 
+def _unpack(gz: Path) -> None:
+    # -k keeps the .gz; gzip/pigz restore the mtime stored in the archive.
+    subprocess.run([shutil.which("pigz") or "gzip", "-d", "-k", "-f", str(gz)], check=True)
+
+
 def restore_indexes(config: dict, dryrun: bool) -> None:
-    """Bring back every index that only exists as .gz. Dry run: empty placeholders, removed at exit."""
+    """Stand in for every index that only exists as .gz with an empty placeholder (archive mtime).
+
+    Planning sees the same files as before, but nothing is unpacked: unpack_needed() does that
+    in onstart:, only when a planned job reads an index.
+    """
     placeholders = []
     for gz in _archives(config):
         raw = gz.with_suffix("")
-        # An empty raw file is a placeholder left by a killed dry run.
+        # An empty raw file is a placeholder left by a killed run.
         if raw.exists() and raw.stat().st_size > 0:
             continue
         mtime = gz.stat().st_mtime
-        if dryrun:
-            raw.touch()
-            os.utime(raw, (mtime, mtime))
-            placeholders.append(raw)
-        else:
-            # -k keeps the .gz; gzip/pigz restore the mtime stored in the archive.
-            subprocess.run([shutil.which("pigz") or "gzip", "-d", "-k", "-f", str(gz)], check=True)
-    if placeholders:
+        raw.touch()
+        os.utime(raw, (mtime, mtime))
+        placeholders.append(raw)
+    if dryrun:
         atexit.register(_remove, placeholders)
-    if not dryrun:
+    else:
         # onsuccess: does not fire for a run with nothing to do, process exit always does.
         atexit.register(remove_unpacked_indexes, config)
+
+
+def unpack_needed(config: dict, jobs) -> None:
+    """Replace placeholders by real indexes when a planned job lists them as input."""
+    needed = {os.path.normpath(f) for job in jobs for f in job.input}
+    for gz in _archives(config):
+        raw = gz.with_suffix("")
+        if os.path.normpath(raw) in needed and raw.stat().st_size == 0:
+            _unpack(gz)
 
 
 def remove_unpacked_indexes(config: dict) -> None:

@@ -15,7 +15,7 @@ include: "rules/initialize.smk"
 from scripts.species_paths import acquire_pastforward_locks, release_pastforward_locks
 
 # index_compression.py: mapping indexes are temp(), kept as .gz; unpacked again at load (initialize.smk).
-from scripts.index_compression import index_archives
+from scripts.index_compression import index_archives, unpack_needed
 from scripts.index_compression import mapper as index_mapper
 
 
@@ -66,6 +66,7 @@ rule all:
 # starts. A lock conflict raised here aborts the run before any job starts.
 onstart:
     acquire_pastforward_locks(config)
+    unpack_needed(config, workflow.dag.needrun_jobs())
 
 
 # Add logging for workflow completion
