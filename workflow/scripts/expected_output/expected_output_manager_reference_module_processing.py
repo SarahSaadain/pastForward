@@ -78,6 +78,9 @@ def get_expected_output_reference_module(species):
             dedup_cfg = reference_module_cfg.get("deduplication", {})
             if dedup_cfg.get("execute", True) and dedup_cfg.get("settings", {}).get("keep_bam", False):
                 expected_outputs += [f"{mapped_dir}_sorted_dedupped.bam", f"{mapped_dir}_sorted_dedupped.bam.bai"]
+            dr_cfg = reference_module_cfg.get("damage_rescaling", {})
+            if dr_cfg.get("execute", True) and dr_cfg.get("settings", {}).get("keep_bam", False):
+                expected_outputs += [f"{mapped_dir}_sorted_dedupped_rescaled.bam", f"{mapped_dir}_sorted_dedupped_rescaled.bam.bai"]
 
             if analysis_active:
                 if analysis_settings.get("individual_multiqc", True) == True:

@@ -154,6 +154,11 @@ properties:
             additionalProperties: false
             properties:
               execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  keep_bam: {type: boolean}
           filter_unmapped_reads:
             type: object
             additionalProperties: false

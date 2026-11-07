@@ -141,7 +141,7 @@ rule index_mapped_sorted_reads_bam:
         f"{WRAPPER_VERSION}/bio/samtools/index"
 
 
-# One rule for both kept BAMs. Hard link when results/ is on the same disk (no extra space), copy otherwise.
+# One rule for all kept BAMs (sorted, deduplicated, rescaled). Hard link when results/ is on the same disk (no extra space), copy otherwise.
 rule keep_bam:
     input:
         bam="{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_{stage}.bam",
@@ -152,7 +152,7 @@ rule keep_bam:
     log:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_keep_{stage}_bam.log",
     wildcard_constraints:
-        stage="sorted|sorted_dedupped",
+        stage="sorted|sorted_dedupped|sorted_dedupped_rescaled",
     conda:
         "../../../envs/python_and_r.yaml"
     message:

@@ -151,6 +151,7 @@ Optionally removes or extracts reads that did not map to the reference. Default:
 | Step | Default | Description |
 |---|---|---|
 | `damage_rescaling` | on | Profiles cytosine deamination and rescales base quality scores using mapDamage2. |
+| `damage_rescaling.settings.keep_bam` | `false` | Same as `mapping.settings.keep_bam`, for the rescaled BAM (`{individual}_{reference}_sorted_dedupped_rescaled.bam[.bai]`). Has no effect when damage rescaling is off. Without filtering of unmapped reads it holds the same data as `_final.bam`. |
 | `analysis` | on | Computes coverage breadth and mean depth; runs Qualimap and Preseq. Endogenous content data always generated. |
 | `analysis.settings.damage_analysis` | on | Visualises damage patterns (mapDamage2) and includes them in the MultiQC report. |
 | `analysis.settings.coverage_analysis` | on | Run `samtools depth` and compute per-individual mean depth, max depth and breadth. Feeds the coverage plots, the coverage sections of the MultiQC reports (reference and summary module) and the authenticity depth and breadth columns. It reads the whole final BAM once; no per-base file is written. `false` drops all of these and keeps every other output. |

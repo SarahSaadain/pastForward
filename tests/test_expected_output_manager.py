@@ -127,11 +127,18 @@ class TestCoreOutputsFromMinimalConfig(ExpectedOutputManagerTestCase):
         outputs = self.get_all_outputs(dict(self.config, pipeline={"reference_module": on}))
         self.assertTrue(any(o.endswith("_sorted.bam") and "/results/reference_module/" in o for o in outputs))
         self.assertTrue(any(o.endswith("_sorted_dedupped.bam.bai") and "/results/reference_module/" in o for o in outputs))
+        self.assertFalse(any(o.endswith("_sorted_dedupped_rescaled.bam") and "/mapped/" in o and "/analytics/" not in o for o in outputs))
+        on = {"damage_rescaling": {"settings": {"keep_bam": True}}}
+        outputs = self.get_all_outputs(dict(self.config, pipeline={"reference_module": on}))
+        self.assertTrue(any(o.endswith("_sorted_dedupped_rescaled.bam") and "/results/reference_module/" in o for o in outputs))
 
     def test_keep_bam_dedup_needs_dedup_step(self):
         off = {"deduplication": {"execute": False, "settings": {"keep_bam": True}}}
         outputs = self.get_all_outputs(dict(self.config, pipeline={"reference_module": off}))
         self.assertFalse(any("_sorted_dedupped" in o and "/results/reference_module/" in o for o in outputs))
+        off = {"damage_rescaling": {"execute": False, "settings": {"keep_bam": True}}}
+        outputs = self.get_all_outputs(dict(self.config, pipeline={"reference_module": off}))
+        self.assertFalse(any("_rescaled" in o and "/results/reference_module/" in o for o in outputs))
 
     def test_unmapped_reads_filtering_absent_by_default(self):
         # filter_unmapped_reads.execute defaults to False (unlike almost every other switch,

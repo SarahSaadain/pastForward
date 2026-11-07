@@ -705,10 +705,10 @@ if [ "$DRYRUN_EXIT" -eq 0 ] && ! grep -qE "^keep_bam[[:space:]]" "$S14/off.log";
 else
   fail "14a: keep_bam off schedules no keep_bam job" "exit $DRYRUN_EXIT, see $S14/off.log"
 fi
-printf 'pipeline:\n  reference_module:\n    mapping:\n      settings:\n        keep_bam: true\n    deduplication:\n      settings:\n        keep_bam: true\n' >> "$S14/config/config.yaml"
+printf 'pipeline:\n  reference_module:\n    mapping:\n      settings:\n        keep_bam: true\n    deduplication:\n      settings:\n        keep_bam: true\n    damage_rescaling:\n      settings:\n        keep_bam: true\n' >> "$S14/config/config.yaml"
 run_dryrun "$S14" "$S14/on.log"
-if [ "$DRYRUN_EXIT" -eq 0 ] && grep -qE "^keep_bam[[:space:]]+[2-9]" "$S14/on.log"; then
-  pass "14b: keep_bam on schedules a keep job for both the sorted and dedup BAM"
+if [ "$DRYRUN_EXIT" -eq 0 ] && grep -qE "^keep_bam[[:space:]]+[3-9]" "$S14/on.log"; then
+  pass "14b: keep_bam on schedules a keep job for the sorted, dedup and rescaled BAM"
 else
   fail "14b: keep_bam on schedules a keep job for both the sorted and dedup BAM" "exit $DRYRUN_EXIT, see $S14/on.log"
 fi

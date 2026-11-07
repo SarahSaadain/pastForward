@@ -104,18 +104,23 @@ rule index_rescaled_bam:
         f"{WRAPPER_VERSION}/bio/samtools/index"
 
 
+# keep_bam: the rescaled BAM and its index stay in processed/ (no temp) so a later step never
+# redoes rescaling, and the keep_bam rule (map_reads_to_reference.smk) adds a copy in results/.
+_KEEP_RESCALED_BAM = _setting(
+    "reference_module", "damage_rescaling", "settings", "keep_bam", default=False
+)
+_RESCALED_BAM = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_rescaled.bam"
+_RESCALED_BAM_BAI = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_rescaled.bam.bai"
+
+
 # Rule: Move rescaled BAM and index to processed directory
 rule move_rescaled_bam:
     input:
         sorted_bam="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}_sorted.bam",
         bam_index="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}_sorted.bam.bai",
     output:
-        sorted_bam=temp(
-            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_rescaled.bam"
-        ),
-        bam_index=temp(
-            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_rescaled.bam.bai"
-        ),
+        sorted_bam=_RESCALED_BAM if _KEEP_RESCALED_BAM else temp(_RESCALED_BAM),
+        bam_index=(_RESCALED_BAM_BAI if _KEEP_RESCALED_BAM else temp(_RESCALED_BAM_BAI)),
     log:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_rescaled_move.log",
     conda:

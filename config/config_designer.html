@@ -979,6 +979,10 @@
               The rescaled BAM is sorted and indexed; the unsorted rescaled BAM is discarded.
               <div class="when-hint"><span class="def-pill on">Default: ON</span>Recommended for any analysis involving variant calling or genotyping — rescaling reduces the influence of damage-induced errors. Turn off if you want to inspect raw damage patterns before deciding, or if your downstream tools model damage explicitly and do not benefit from rescaled base qualities.</div>
             </div>
+            <div class="field">
+              <label><input type="checkbox" id="dr_keep" onchange="render()"> Keep rescaled BAM (keep_bam)</label>
+              <p class="hint">Default: off. Keeps the rescaled BAM and links (same disk) or copies (other disk) it to results/reference_module/&lt;reference&gt;/mapped/.</p>
+            </div>
             </div><!-- /.adv-content -->
           </div>
 
@@ -1840,6 +1844,7 @@ function buildYAML() {
   p(0, '');
   p(4, 'damage_rescaling:');
   kv(6, 'execute', gb('dr_exec'));
+  if (gb('dr_keep')) { p(6, 'settings:'); kv(8, 'keep_bam', true); }
   p(0, '');
   p(4, 'filter_unmapped_reads:');
   kv(6, 'execute', gb('fur_exec'));
@@ -2144,6 +2149,7 @@ function populateForm(c) {
   sv('dedup_mem', (ded.settings||{}).mem_mb);
   sb('dedup_keep', (ded.settings||{}).keep_bam === true);
   sb('dr_exec',  (rp.damage_rescaling||{}).execute);              dot('dr_exec','d_dr');
+  sb('dr_keep', ((rp.damage_rescaling||{}).settings||{}).keep_bam === true);
   const fur = rp.filter_unmapped_reads||{};
   sb('fur_exec', fur.execute); dot('fur_exec','d_fur');
   sv('fur_action', (fur.settings||{}).action);

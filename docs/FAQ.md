@@ -334,8 +334,8 @@ Notes:
 - A hard link shares its data with the file in `processed/`. Editing one in place changes both. Copy a file out before modifying it.
 - Switching `keep_reads` on for a project that already has results means the reads must be rebuilt, since they were deleted earlier. That can pull mapping and everything after it back in, see the reprocessing section above. Run `./pastForward dryrun` first and check the job count. Starting a new project with it on avoids the problem.
 
-**Q: Can I keep the sorted or deduplicated BAM, not only the final one?**
-Yes. By default only `{individual}_{reference}_final.bam` is kept, a hard link to the last step that ran. The sorted and deduplicated BAMs are deleted once nothing needs them. Set either or both to `true`:
+**Q: Can I keep the sorted, deduplicated or rescaled BAM, not only the final one?**
+Yes. By default only `{individual}_{reference}_final.bam` is kept, a hard link to the last step that ran. The sorted, deduplicated and rescaled BAMs are deleted once nothing needs them. Set any of these to `true`:
 
 ```yaml
 pipeline:
@@ -346,13 +346,17 @@ pipeline:
     deduplication:
       settings:
         keep_bam: true      # -> {species}/results/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam
+    damage_rescaling:
+      settings:
+        keep_bam: true      # -> {species}/results/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_rescaled.bam
 ```
 
 The files in `processed/` are no longer deleted, and the copy in `results/` is a hard link to them when both folders are on the same disk (no extra space) or a real copy when they are not (double space). Because the `processed/` file stays, adding a later step such as damage rescaling does not remap or deduplicate again.
 
 Notes:
 
-- `deduplication.settings.keep_bam` does nothing when deduplication is off.
+- `deduplication.settings.keep_bam` does nothing when deduplication is off, and `damage_rescaling.settings.keep_bam` does nothing when damage rescaling is off.
+- The rescaled BAM holds the same data as `_final.bam` unless unmapped reads are filtered. It is a separate file name, so it stays even if you later turn rescaling off and rerun.
 - A hard link shares its data with the file in `processed/`. Editing one in place changes both. Copy a file out before modifying it.
 - The kept files stay for as long as the project does. Delete them yourself when you no longer need them.
 - Switching `keep_bam` on for a project that already has results means the BAM must be rebuilt, since it was deleted earlier. That can pull mapping and everything after it back in, see the reprocessing section above. Run `./pastForward dryrun` first and check the job count.

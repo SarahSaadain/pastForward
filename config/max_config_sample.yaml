@@ -251,6 +251,10 @@ pipeline:
     damage_rescaling:
       # When true, this sub-stage will be executed (Default: true)
       execute: true
+      # Optional: Keep the rescaled BAM (Default: false)
+      # Stays in processed/ and is also linked (same disk) or copied (other disk) to results/reference_module/{reference}/mapped/
+      #settings:
+        #keep_bam: false
 
     filter_unmapped_reads:
       # When true, unmapped reads will be processed according to action (Default: false)
