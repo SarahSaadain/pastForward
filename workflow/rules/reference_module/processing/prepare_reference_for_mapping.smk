@@ -60,8 +60,6 @@ elif _ref_mapper == "bwa-aln":
         log:
             "{species}/processed/reference_module/{reference}/index/{reference}_bwa_aln_index.log",
         cache: True
-        resources:
-            mem_mb=369000,
         message:
             "Indexing reference {wildcards.reference} with BWA (for BWA ALN)"
         wrapper:
@@ -86,8 +84,6 @@ else:
         log:
             "{species}/processed/reference_module/{reference}/index/{reference}_bwa_mem2_index.log",
         cache: True
-        resources:
-            mem_mb=369000,
         message:
             "Indexing reference {wildcards.reference} with BWA-MEM2"
         wrapper:
