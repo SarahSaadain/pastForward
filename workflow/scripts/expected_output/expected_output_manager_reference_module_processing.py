@@ -71,6 +71,14 @@ def get_expected_output_reference_module(species):
             expected_outputs.append(f"{species}/results/reference_module/{reference}/mapped/{individual}_{reference}_final.bam")
             expected_outputs.append(f"{species}/results/reference_module/{reference}/mapped/{individual}_{reference}_final.bam.bai")
 
+            # Sorted / deduplicated BAMs kept in results (opt-in). Dedup only when the step runs.
+            mapped_dir = f"{species}/results/reference_module/{reference}/mapped/{individual}_{reference}"
+            if reference_module_cfg.get("mapping", {}).get("settings", {}).get("keep_bam", False):
+                expected_outputs += [f"{mapped_dir}_sorted.bam", f"{mapped_dir}_sorted.bam.bai"]
+            dedup_cfg = reference_module_cfg.get("deduplication", {})
+            if dedup_cfg.get("execute", True) and dedup_cfg.get("settings", {}).get("keep_bam", False):
+                expected_outputs += [f"{mapped_dir}_sorted_dedupped.bam", f"{mapped_dir}_sorted_dedupped.bam.bai"]
+
             if analysis_active:
                 if analysis_settings.get("individual_multiqc", True) == True:
                     expected_outputs.append(f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}_{reference}_multiqc.html")

@@ -135,6 +135,7 @@ properties:
                 properties:
                   mapper: {$ref: "#/$defs/mapper"}
                   mapper_extra_params: {type: string}
+                  keep_bam: {type: boolean}
           deduplication:
             type: object
             additionalProperties: false
@@ -147,6 +148,7 @@ properties:
                   min_contigs_per_cluster: {type: integer}
                   max_contigs_per_cluster: {type: integer}
                   mem_mb: {type: integer}
+                  keep_bam: {type: boolean}
           damage_rescaling:
             type: object
             additionalProperties: false

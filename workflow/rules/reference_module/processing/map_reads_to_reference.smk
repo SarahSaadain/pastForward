@@ -98,15 +98,22 @@ else:
             f"{WRAPPER_VERSION}/bio/bwa-mem2/mem"
 
 
+# keep_bam: the sorted BAM and its index stay in processed/ (no temp) so a later step never
+# remaps, and the keep_bam rule below adds a copy in results/.
+_KEEP_SORTED_BAM = _setting(
+    "reference_module", "mapping", "settings", "keep_bam", default=False
+)
+_SORTED_BAM = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam"
+_SORTED_BAM_BAI = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam.bai"
+
+
 # Rule: Sort BAM file
 rule sort_mapped_reads_bam:
     # 3 Sort BAM
     input:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_unsorted.bam",
     output:
-        temp(
-            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam"
-        ),
+        _SORTED_BAM if _KEEP_SORTED_BAM else temp(_SORTED_BAM),
     log:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_bam.log",
     threads: 10
@@ -122,9 +129,7 @@ rule index_mapped_sorted_reads_bam:
     input:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam",
     output:
-        temp(
-            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam.bai"
-        ),
+        _SORTED_BAM_BAI if _KEEP_SORTED_BAM else temp(_SORTED_BAM_BAI),
     log:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam.bai.log",
     threads: 5
@@ -134,3 +139,26 @@ rule index_mapped_sorted_reads_bam:
         "Indexing BAM file for {input}"
     wrapper:
         f"{WRAPPER_VERSION}/bio/samtools/index"
+
+
+# One rule for both kept BAMs. Hard link when results/ is on the same disk (no extra space), copy otherwise.
+rule keep_bam:
+    input:
+        bam="{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_{stage}.bam",
+        bai="{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_{stage}.bam.bai",
+    output:
+        bam="{species}/results/reference_module/{reference}/mapped/{individual}_{reference}_{stage}.bam",
+        bai="{species}/results/reference_module/{reference}/mapped/{individual}_{reference}_{stage}.bam.bai",
+    log:
+        "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_keep_{stage}_bam.log",
+    wildcard_constraints:
+        stage="sorted|sorted_dedupped",
+    conda:
+        "../../../envs/python_and_r.yaml"
+    message:
+        "Keeping {wildcards.stage} BAM of {wildcards.individual} mapped to {wildcards.reference} in results"
+    shell:
+        """
+        ln -f "{input.bam}" "{output.bam}" >"{log}" 2>&1 || cp -p "{input.bam}" "{output.bam}" >>"{log}" 2>&1
+        ln -f "{input.bai}" "{output.bai}" >>"{log}" 2>&1 || cp -p "{input.bai}" "{output.bai}" >>"{log}" 2>&1
+        """

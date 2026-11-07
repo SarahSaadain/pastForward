@@ -251,6 +251,7 @@ Several other situations cause the same kind of cascade without an obvious setti
 
 - **A new step needs a file that was already cleaned up.** Enabling taxonomic screening after the first run (see the example above) is one case. Adding FastQC reports for trimmed/quality-filtered reads is another: if even one sample's report is missing, Snakemake has to regenerate the intermediate file behind it, which pulls mapping and everything after it back in for that sample.
 - **Switching `keep_reads` on after the first run.** The adapter-removed and quality-filtered reads are deleted by default. With `keep_reads: true` they become permanent outputs, so Snakemake has to rebuild them for every sample, and that can pull the downstream chain back in. Check with `./pastForward dryrun` first.
+- **Switching `keep_bam` on after the first run.** The sorted and deduplicated BAMs are deleted by default. With `keep_bam: true` they become permanent outputs, so Snakemake has to rebuild them for every individual, which means remapping. Check with `./pastForward dryrun` first.
 - **Adding samples changes a shared file every individual maps against.** With automatic SCG selection (`pipeline.reveal_module.scg_selector.execute: true`), ranking which single-copy genes to use is a species-wide decision, not a per-individual one. Add individuals, and the ranking can change, which rewrites the shared SCG file, the combined SCG/feature-library reference, and its index, so every individual gets re-mapped and re-analyzed against the updated version. Providing your own fixed SCG FASTA under `{species}/input/reveal_module/scg/` avoids this, at the cost of losing the automatic per-species ranking.
 
 **Before flipping one of these settings on a project that already has results, do a dry run first** (`./pastForward dryrun`) and check how many jobs it plans. If the count is much larger than the change seems to justify, one of these chains is usually the reason.
@@ -332,6 +333,29 @@ Notes:
 - The kept files stay in `processed/` for as long as the project does. Delete them yourself when you no longer need them.
 - A hard link shares its data with the file in `processed/`. Editing one in place changes both. Copy a file out before modifying it.
 - Switching `keep_reads` on for a project that already has results means the reads must be rebuilt, since they were deleted earlier. That can pull mapping and everything after it back in, see the reprocessing section above. Run `./pastForward dryrun` first and check the job count. Starting a new project with it on avoids the problem.
+
+**Q: Can I keep the sorted or deduplicated BAM, not only the final one?**
+Yes. By default only `{individual}_{reference}_final.bam` is kept, a hard link to the last step that ran. The sorted and deduplicated BAMs are deleted once nothing needs them. Set either or both to `true`:
+
+```yaml
+pipeline:
+  reference_module:
+    mapping:
+      settings:
+        keep_bam: true      # -> {species}/results/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam
+    deduplication:
+      settings:
+        keep_bam: true      # -> {species}/results/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam
+```
+
+The files in `processed/` are no longer deleted, and the copy in `results/` is a hard link to them when both folders are on the same disk (no extra space) or a real copy when they are not (double space). Because the `processed/` file stays, adding a later step such as damage rescaling does not remap or deduplicate again.
+
+Notes:
+
+- `deduplication.settings.keep_bam` does nothing when deduplication is off.
+- A hard link shares its data with the file in `processed/`. Editing one in place changes both. Copy a file out before modifying it.
+- The kept files stay for as long as the project does. Delete them yourself when you no longer need them.
+- Switching `keep_bam` on for a project that already has results means the BAM must be rebuilt, since it was deleted earlier. That can pull mapping and everything after it back in, see the reprocessing section above. Run `./pastForward dryrun` first and check the job count.
 
 **Q: Can I run multiple instances of pastForward simultaneously?**
 Yes, you can run multiple instances of pastForward simultaneously, provided that each instance has its own independent working directory and configuration. This allows you to process different datasets or run the same dataset with different parameters in parallel.

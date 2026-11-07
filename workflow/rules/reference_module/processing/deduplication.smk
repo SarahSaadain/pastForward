@@ -2,6 +2,14 @@
 # Snakemake rules
 ####################################################
 
+# keep_bam: the deduplicated BAM and its index stay in processed/ (no temp) so a later step
+# (e.g. damage rescaling) never redoes dedup, and the keep_bam rule (map_reads_to_reference.smk) adds a copy in results/.
+_KEEP_DEDUP_BAM = _setting(
+    "reference_module", "deduplication", "settings", "keep_bam", default=False
+)
+_DEDUP_BAM = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam"
+_DEDUP_BAM_BAI = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam.bai"
+
 
 # Rule: Extract contig names from reference FAI
 # Rule: Extract contigs as BED (full-length intervals) from reference FAI
@@ -179,9 +187,7 @@ rule sort_mapped_dedupped_reads_bam:
     input:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_unsorted_dedupped.bam",
     output:
-        temp(
-            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam"
-        ),
+        _DEDUP_BAM if _KEEP_DEDUP_BAM else temp(_DEDUP_BAM),
     log:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_bam.log",
     threads: 10
@@ -197,9 +203,7 @@ rule dedup_index_dedupped_bam:
     input:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam",
     output:
-        temp(
-            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam.bai"
-        ),
+        _DEDUP_BAM_BAI if _KEEP_DEDUP_BAM else temp(_DEDUP_BAM_BAI),
     log:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam.bai.log",
     threads: 5

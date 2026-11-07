@@ -123,6 +123,7 @@ Merged per-individual reads are mapped to the reference genome. Mapping always r
 |---|---|---|
 | `settings.mapper` | `bwa-mem2` | Mapper to use. Options: `bwa-aln` (classic seed-and-extend), `bwa-mem2` (default), `minimap2` (versatile, uses `-ax sr` preset for short reads). |
 | `settings.mapper_extra_params` | — | Optional extra parameters passed directly to the mapper. If not set or empty (`""`), the mapper defaults apply: bwa-aln `-n 0.01 -k 2 -l 1024 -o 2` (Oliva et al. 2021), minimap2 `-ax sr`, bwa-mem2 none. When you set flags for minimap2, include `-ax sr` (or another `-a` preset): without `-a` minimap2 writes PAF, not SAM. |
+| `settings.keep_bam` | `false` | When `true`, the sorted BAM and its index (`{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam[.bai]`) are no longer deleted, and are also written to `{species}/results/reference_module/{reference}/mapped/`. The results file is a hard link when both folders are on the same disk (no extra space) and a copy otherwise (double space). Because the processed file persists, adding a later step never remaps. Switching it on for a finished project remaps once, see the [FAQ](../docs/FAQ.md). |
 
 #### `deduplication`
 
@@ -135,6 +136,7 @@ Uses a [modified DeDup fork](https://github.com/SarahSaadain/DeDup) for performa
 | `settings.min_contigs_per_cluster` | `1` | Minimum number of contigs grouped into a cluster. Small contigs below this count are merged together before deduplication. |
 | `settings.max_contigs_per_cluster` | `500` | Maximum number of contigs grouped per deduplication cluster. Lower values use less memory but increase runtime. Reduce (e.g. to 100) only for large, highly fragmented reference genomes. |
 | `settings.mem_mb` | `20000` | Memory (MB) for DeDup's JVM heap (`-Xms`/`-Xmx`), also requested from the cluster scheduler as `resources.mem_mb`. Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources. |
+| `settings.keep_bam` | `false` | Same as `mapping.settings.keep_bam`, for the deduplicated BAM (`{individual}_{reference}_sorted_dedupped.bam[.bai]`). Has no effect when deduplication is off. |
 
 #### `filter_unmapped_reads`
 

@@ -225,6 +225,9 @@ pipeline:
         # Empty ("") also uses these defaults. Flags you set for minimap2 must include an -a preset,
         # or minimap2 writes PAF instead of SAM.
         #mapper_extra_params: ""
+        # Optional: Keep the sorted BAM (Default: false)
+        # Stays in processed/ and is also linked (same disk) or copied (other disk) to results/reference_module/{reference}/mapped/
+        #keep_bam: false
 
     # Deduplication settings
     deduplication:
@@ -240,6 +243,9 @@ pipeline:
         # Optional: Memory (MB) for DeDup's JVM heap, also requested from the cluster scheduler as mem_mb (Default: 20000)
         # Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources.
         #mem_mb: 20000
+        # Optional: Keep the deduplicated BAM (Default: false)
+        # Stays in processed/ and is also linked (same disk) or copied (other disk) to results/reference_module/{reference}/mapped/
+        #keep_bam: false
     
     # Damage rescaling settings for mapDamage2
     damage_rescaling:

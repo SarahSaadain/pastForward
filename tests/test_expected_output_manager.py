@@ -120,6 +120,19 @@ class TestCoreOutputsFromMinimalConfig(ExpectedOutputManagerTestCase):
         config = dict(self.config, pipeline={"read_module": off})
         self.assertFalse(any(marker in o for o in self.get_all_outputs(config)))
 
+    def test_keep_bam_requests_results_copy_only_when_on(self):
+        outputs = self.get_all_outputs(self.config)
+        self.assertFalse(any("_sorted" in o and "/results/reference_module/" in o and "/mapped/" in o for o in outputs))
+        on = {"mapping": {"settings": {"keep_bam": True}}, "deduplication": {"settings": {"keep_bam": True}}}
+        outputs = self.get_all_outputs(dict(self.config, pipeline={"reference_module": on}))
+        self.assertTrue(any(o.endswith("_sorted.bam") and "/results/reference_module/" in o for o in outputs))
+        self.assertTrue(any(o.endswith("_sorted_dedupped.bam.bai") and "/results/reference_module/" in o for o in outputs))
+
+    def test_keep_bam_dedup_needs_dedup_step(self):
+        off = {"deduplication": {"execute": False, "settings": {"keep_bam": True}}}
+        outputs = self.get_all_outputs(dict(self.config, pipeline={"reference_module": off}))
+        self.assertFalse(any("_sorted_dedupped" in o and "/results/reference_module/" in o for o in outputs))
+
     def test_unmapped_reads_filtering_absent_by_default(self):
         # filter_unmapped_reads.execute defaults to False (unlike almost every other switch,
         # which defaults True) - a regression here would silently start requesting BAM

@@ -689,6 +689,30 @@ else
   fail "13b: keep_reads on schedules one keep job per sample for both stages" "exit $DRYRUN_EXIT, see $S13/on.log"
 fi
 
+# -------------------------------------------------------------------------------------------
+# Scenario 14: keep_bam links or copies the sorted and deduplicated BAMs into results/
+# Off (default): no keep rule is scheduled. On: one job per individual and BAM.
+# -------------------------------------------------------------------------------------------
+S14="$WORKDIR/14_keep_bam"
+make_project "$S14"
+printf 'project_name: t\nspecies:\n  Dmel:\n    name: x\n' > "$S14/config/config.yaml"
+mkdir -p "$S14/Dmel"
+make_species_root "$S14/Dmel"
+make_fake_data "$S14/Dmel"
+run_dryrun "$S14" "$S14/off.log"
+if [ "$DRYRUN_EXIT" -eq 0 ] && ! grep -qE "^keep_bam[[:space:]]" "$S14/off.log"; then
+  pass "14a: keep_bam off schedules no keep_bam job"
+else
+  fail "14a: keep_bam off schedules no keep_bam job" "exit $DRYRUN_EXIT, see $S14/off.log"
+fi
+printf 'pipeline:\n  reference_module:\n    mapping:\n      settings:\n        keep_bam: true\n    deduplication:\n      settings:\n        keep_bam: true\n' >> "$S14/config/config.yaml"
+run_dryrun "$S14" "$S14/on.log"
+if [ "$DRYRUN_EXIT" -eq 0 ] && grep -qE "^keep_bam[[:space:]]+[2-9]" "$S14/on.log"; then
+  pass "14b: keep_bam on schedules a keep job for both the sorted and dedup BAM"
+else
+  fail "14b: keep_bam on schedules a keep job for both the sorted and dedup BAM" "exit $DRYRUN_EXIT, see $S14/on.log"
+fi
+
 # =============================================================================================
 echo ""
 echo "$PASS_COUNT passed, $FAIL_COUNT failed"

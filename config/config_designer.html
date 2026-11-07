@@ -902,6 +902,10 @@
                 </div>
               </div>
             </div>
+            <div class="field">
+              <label><input type="checkbox" id="rp_keep" onchange="render()"> Keep sorted BAM (keep_bam)</label>
+              <p class="hint">Default: off. Keeps the sorted BAM and links (same disk) or copies (other disk) it to results/reference_module/&lt;reference&gt;/mapped/.</p>
+            </div>
             </div><!-- /.adv-content -->
           </div>
 
@@ -944,6 +948,10 @@
                 <input type="number" id="dedup_mem" value="20000" min="1" oninput="render()">
                 <p class="hint">Default: 20000. DeDup's JVM heap (<code>-Xms</code>/<code>-Xmx</code>), also requested from the cluster scheduler as <code>resources.mem_mb</code>. Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources.</p>
               </div>
+            </div>
+            <div class="field">
+              <label><input type="checkbox" id="dedup_keep" onchange="render()"> Keep deduplicated BAM (keep_bam)</label>
+              <p class="hint">Default: off. Keeps the deduplicated BAM and links (same disk) or copies (other disk) it to results/reference_module/&lt;reference&gt;/mapped/.</p>
             </div>
             </div><!-- /.adv-content -->
           </div>
@@ -1820,6 +1828,7 @@ function buildYAML() {
   p(6, 'settings:');
   kv(8, 'mapper', gv('rp_mapper'));
   if (gb('rp_xp_en') && gv('rp_xp').trim()) kv(8, 'mapper_extra_params', gv('rp_xp'));
+  if (gb('rp_keep')) kv(8, 'keep_bam', true);
   p(0, '');
   p(4, 'deduplication:');
   kv(6, 'execute', gb('dedup_exec'));
@@ -1827,6 +1836,7 @@ function buildYAML() {
   kv(8, 'min_contigs_per_cluster', gn('dedup_min'));
   kv(8, 'max_contigs_per_cluster', gn('dedup_max'));
   kv(8, 'mem_mb', gn('dedup_mem'));
+  if (gb('dedup_keep')) kv(8, 'keep_bam', true);
   p(0, '');
   p(4, 'damage_rescaling:');
   kv(6, 'execute', gb('dr_exec'));
@@ -2126,11 +2136,13 @@ function populateForm(c) {
   sv('rp_mapper', rpm.mapper); mapperInfo('rp_mapper','rp_minfo');
   if (rpm.mapper_extra_params !== undefined) { setOpt('rp_xp_en','rp_xp_body','rp_xp_hdr',true); sv('rp_xp',rpm.mapper_extra_params); }
   else setOpt('rp_xp_en','rp_xp_body','rp_xp_hdr',false);
+  sb('rp_keep', rpm.keep_bam === true);
   const ded = rp.deduplication || {};
   sb('dedup_exec', ded.execute); dot('dedup_exec','d_dedup');
   sv('dedup_min', (ded.settings||{}).min_contigs_per_cluster);
   sv('dedup_max', (ded.settings||{}).max_contigs_per_cluster);
   sv('dedup_mem', (ded.settings||{}).mem_mb);
+  sb('dedup_keep', (ded.settings||{}).keep_bam === true);
   sb('dr_exec',  (rp.damage_rescaling||{}).execute);              dot('dr_exec','d_dr');
   const fur = rp.filter_unmapped_reads||{};
   sb('fur_exec', fur.execute); dot('fur_exec','d_fur');
