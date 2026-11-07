@@ -33,4 +33,4 @@ jobs:
         run: pip install "snakemake>=9.26.1" pyyaml jsonschema pandas
 
       - name: Unit tests
-        run: python -m unittest discover tests -v
+        run: python -m unittest discover tests/unit -v

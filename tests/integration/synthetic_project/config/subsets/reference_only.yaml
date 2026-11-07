@@ -1,0 +1,8 @@
+# Subset: reference module alone. Layered over config/config.yaml.
+pipeline:
+  read_module:
+    execute: false
+  reveal_module:
+    execute: false
+  summary_module:
+    execute: false

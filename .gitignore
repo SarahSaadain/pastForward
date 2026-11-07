@@ -11,20 +11,21 @@ __pycache__
 .pastforward/
 /logs/
 
-# Synthetic test library materialized by tests/build_test_library.py (rebuilt on every
+# Synthetic test library materialized by tests/unit/build_test_library.py (rebuilt on every
 # test run - see tests/README.md).
-tests/fixtures/
+tests/unit/fixtures/
 
 # A project's own config/config.yaml is the user's, never the repo's. The pattern has no
 # leading slash, so it matches at any depth. The shipped workflow profile is named profile.yaml
 # so this pattern does not swallow it.
 config.yaml
-# Tier-1 test project (.test/): its config is part of the repo, its run outputs are not.
-!.test/config/config.yaml
-.test/logs/
-.test/Dmel/processed/
-.test/Dmel/results/
-# Tier-2 test project (.test/full/): only its config is tracked, the downloaded data and outputs are not.
-.test/full/*
-!.test/full/config/
-!.test/full/config/config.yaml
+# Tier-1 test project (tests/integration/synthetic_project/): its config is part of the repo, its run outputs are not.
+!tests/integration/synthetic_project/config/config.yaml
+tests/integration/synthetic_project/logs/
+tests/integration/synthetic_project/Dmel/processed/
+tests/integration/synthetic_project/Dmel/results/
+# Tier-2 test project (tests/integration/real_data_project/): only its config is tracked, the downloaded data and outputs are not.
+tests/integration/real_data_project/*
+!tests/integration/real_data_project/download_full_test.sh
+!tests/integration/real_data_project/config/
+!tests/integration/real_data_project/config/config.yaml

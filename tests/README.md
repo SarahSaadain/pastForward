@@ -1,10 +1,22 @@
 # Tests
 
+```
+tests/
+  unit/          fast pure-Python tests, no Snakemake or conda. Plus their helpers
+                 (pf_test_library.py, build_test_library.py) and fixtures/
+  integration/   needs Snakemake: test_cli_snakemake.py, dryrun_scenarios.sh,
+                 module_subsets.sh (read only, read+ref, ref only, reveal only),
+                 and synthetic_project/ (a small project with known answers) with
+                 test_synthetic_run.py that checks its results,
+                 and real_data_project/ (tier 2: download_full_test.sh fetches real
+                 reads, config/ is tracked, the data is not)
+```
+
 All Python unit tests run with either:
 
 ```bash
-python3 tests/test_<name>.py                   # a single module
-python3 -m unittest discover tests -v           # everything, from the repo root
+python3 tests/unit/test_<name>.py                   # a single module
+python3 -m unittest discover tests/unit -v           # everything, from the repo root
 ```
 
 They need only pyyaml, jsonschema and pandas, not Snakemake or conda. That keeps them fast
@@ -17,12 +29,15 @@ exceptions:
   the Snakemake env on PATH:
 
   ```bash
-  PATH=<snakemake-env>/bin:$PATH python3 -m unittest tests/test_cli_snakemake.py -v
+  PATH=<snakemake-env>/bin:$PATH python3 -m unittest tests/integration/test_cli_snakemake.py -v
   ```
 
   CI installs Snakemake, so they always run there.
-- `test_synthetic_run.py` (below) checks the output of a finished pipeline run on `.test/`.
+- `test_synthetic_run.py` (below) checks the output of a finished pipeline run on `tests/integration/synthetic_project/`.
   It skips itself when that output is missing.
+- `integration/module_subsets.sh` dry-runs the synthetic project with only some modules on. The
+  subset configs are in `synthetic_project/config/subsets/` and are layered over `config.yaml`
+  with `--configfile`. It needs only Snakemake on PATH, no conda envs.
 - `dryrun_scenarios.sh` (below) is a slower, separate integration check.
 
 ## `test_file_manager.py` / `test_expected_output_manager.py` / `test_endogenous_reads_stats.py`
@@ -81,12 +96,12 @@ documented behavior in.
 ## `build_test_library.py`: materializing a library to poke at by hand
 
 ```bash
-python3 tests/build_test_library.py
-cd tests/fixtures/pf_test_library && snakemake --cores 2 --software-deployment-method conda --dryrun
+python3 tests/unit/build_test_library.py
+cd tests/unit/fixtures/pf_test_library && snakemake --cores 2 --software-deployment-method conda --dryrun
 ```
 
 Builds the same synthetic species library (via `pf_test_library.py`) as a persistent project
-directory under `tests/fixtures/` (gitignored, rebuilt from scratch every time). It holds a
+directory under `tests/unit/fixtures/` (gitignored, rebuilt from scratch every time). It holds a
 `config.yaml` and a `workflow/` symlink into this repo alongside the species data, so it's
 immediately usable for a manual dry-run sanity check. It's also rebuilt once as a side effect of
 running `test_expected_output_manager.py` (see that file's `setUpModule`), so running the test
@@ -102,9 +117,9 @@ skipping, the cross-project lock (fresh acquire, stale takeover, foreign-host re
 release, releasing already-taken locks when a later one conflicts), and that the load-time
 symlink setup takes no lock.
 
-## `test_synthetic_run.py`: known answers from the `.test/` run
+## `test_synthetic_run.py`: known answers from the `tests/integration/synthetic_project/` run
 
-`.test/` is a small synthetic project. Its reads were simulated with known answers. HistA is a
+`tests/integration/synthetic_project/` is a small synthetic project. Its reads were simulated with known answers. HistA is a
 historical sample and ModB a modern one. The tests check that a finished run reproduces them:
 
 - damage: HistA has C>T at the 5' end that drops inward, ModB has none (mapDamage)
@@ -116,14 +131,14 @@ historical sample and ModB a modern one. The tests check that a finished run rep
 
 Values are checked against ranges, not exact numbers, so tool updates do not break them.
 
-Run the pipeline on `.test/` first, with the Snakemake env active. Then run the tests:
+Run the pipeline on `tests/integration/synthetic_project/` first, with the Snakemake env active. Then run the tests:
 
 ```bash
-snakemake --directory .test --cores 4 --software-deployment-method conda
-python3 -m unittest tests/test_synthetic_run.py -v
+snakemake --directory tests/integration/synthetic_project --cores 4 --software-deployment-method conda
+python3 -m unittest tests/integration/test_synthetic_run.py -v
 ```
 
-Without `.test/Dmel/results/` the whole file is skipped. To check another project directory,
+Without `tests/integration/synthetic_project/Dmel/results/` the whole file is skipped. To check another project directory,
 set `PF_TEST_PROJECT=<path>`.
 
 ## `dryrun_scenarios.sh`: Snakemake integration checks
@@ -140,8 +155,8 @@ Requires a conda environment named `snakemake` (Snakemake >= 9.26.1, see
 later runs.
 
 ```bash
-tests/dryrun_scenarios.sh            # runs all scenarios, cleans up its temp workspace
-tests/dryrun_scenarios.sh --keep     # keeps the workspace and prints its path, for inspection
+tests/integration/dryrun_scenarios.sh            # runs all scenarios, cleans up its temp workspace
+tests/integration/dryrun_scenarios.sh --keep     # keeps the workspace and prints its path, for inspection
 ```
 
 Scenarios: default/fallback (zero symlinks, zero behavior change), fresh `species_dir` (symlinks

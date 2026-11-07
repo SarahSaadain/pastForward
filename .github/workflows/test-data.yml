@@ -1,7 +1,7 @@
 name: Test data run
 
-# Runs the whole pipeline on the synthetic test set in .test/ and checks its known answers
-# (tests/test_synthetic_run.py). Conda envs are cached, keyed on the env files.
+# Runs the whole pipeline on the synthetic test set in tests/integration/synthetic_project/ and checks its known answers
+# (tests/integration/test_synthetic_run.py). Conda envs are cached, keyed on the env files.
 
 on:
   push:
@@ -37,11 +37,11 @@ jobs:
           path: ~/.snakemake/pf_conda
           key: pf-conda-${{ runner.os }}-${{ hashFiles('workflow/envs/**') }}
 
-      - name: Run pipeline on .test/
+      - name: Run pipeline on tests/integration/synthetic_project/
         run: >
-          snakemake --directory .test --cores 4
+          snakemake --directory tests/integration/synthetic_project --cores 4
           --software-deployment-method conda --conda-prefix ~/.snakemake/pf_conda
 
       - name: Check known answers
         # The tests skip without results, so make a missing results folder fail here.
-        run: test -d .test/Dmel/results && python -m unittest tests/test_synthetic_run.py -v
+        run: test -d tests/integration/synthetic_project/Dmel/results && python -m unittest tests/integration/test_synthetic_run.py -v
