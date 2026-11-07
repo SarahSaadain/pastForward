@@ -35,6 +35,17 @@ rule filter_reads_by_quality:
         f"{WRAPPER_VERSION}/bio/fastp"
 
 
+# keep_reads: the final reads stay in processed/ (no temp) so later steps never rebuild them,
+# and keep_final_reads below adds a copy in results/. Pointless when both read steps are off,
+# where the file is only a copy of the raw reads.
+_KEEP_READS = _setting(
+    "read_module", "quality_filtering", "settings", "keep_reads", default=False
+) and (
+    _setting("read_module", "adapter_removal", "execute", default=True)
+    or _setting("read_module", "quality_filtering", "execute", default=True)
+)
+
+
 rule get_quality_filtered_final:
     input:
         # If quality filtering is enabled, use the quality filtered reads as input for the next steps in the pipeline.
@@ -45,8 +56,12 @@ rule get_quality_filtered_final:
             else f"{wildcards.species}/processed/read_module/reads_trimmed/{wildcards.sample}_trimmed_final.fastq.gz"
         ),
     output:
-        final=temp(
+        final=(
             "{species}/processed/read_module/reads_quality_filtered/{sample}_quality_filtered_final.fastq.gz"
+            if _KEEP_READS
+            else temp(
+                "{species}/processed/read_module/reads_quality_filtered/{sample}_quality_filtered_final.fastq.gz"
+            )
         ),
     log:
         "{species}/processed/read_module/reads_quality_filtered/{sample}_quality_filtered_final.log",
@@ -56,3 +71,19 @@ rule get_quality_filtered_final:
         "Selecting quality filtered reads for {wildcards.sample}"
     shell:
         'echo "Source: {input.source}" > "{log}" 2>&1; ln -fL "{input.source}" "{output.final}" 2>/dev/null || cp "{input.source}" "{output.final}" >> "{log}" 2>&1'
+
+
+# Hard link when results/ is on the same disk (no extra space), copy otherwise.
+rule keep_final_reads:
+    input:
+        "{species}/processed/read_module/reads_quality_filtered/{sample}_quality_filtered_final.fastq.gz",
+    output:
+        "{species}/results/read_module/reads_final/{sample}_final.fastq.gz",
+    log:
+        "{species}/processed/read_module/reads_quality_filtered/{sample}_keep_final_reads.log",
+    conda:
+        "../../../envs/python_and_r.yaml"
+    message:
+        "Keeping final reads of {wildcards.sample} in results"
+    shell:
+        'ln -f "{input}" "{output}" > "{log}" 2>&1 || cp -p "{input}" "{output}" >> "{log}" 2>&1'

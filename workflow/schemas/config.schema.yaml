@@ -67,6 +67,7 @@ properties:
                       r1: {type: string}
                       r2: {type: string}
                   extra_params: {type: string}
+                  keep_reads: {type: boolean}
           quality_filtering:
             type: object
             additionalProperties: false
@@ -80,6 +81,7 @@ properties:
                   min_length: {type: integer}
                   unqualified_percent_limit: {type: number}
                   n_base_limit: {type: integer}
+                  keep_reads: {type: boolean}
           taxonomic_screening:
             type: object
             additionalProperties: false

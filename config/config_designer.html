@@ -575,6 +575,10 @@
                   </div>
                 </div>
               </div>
+              <div class="field">
+                <label><input type="checkbox" id="qf_keep" onchange="render()"> Keep final reads (keep_reads)</label>
+                <p class="hint">Default: off. Keeps the adapter-removed, quality-filtered FASTQ and links (same disk) or copies (other disk) it to results/read_module/reads_final/.</p>
+              </div>
               <div class="opt-group">
                 <div class="opt-header" id="ar_adp_hdr">
                   <input type="checkbox" id="ar_adp_en" onchange="optToggle('ar_adp_en','ar_adp_body','ar_adp_hdr'); render()">
@@ -594,6 +598,10 @@
                     <input type="text" id="ar_r2" value="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT" oninput="render()">
                   </div>
                 </div>
+              </div>
+              <div class="field">
+                <label><input type="checkbox" id="ar_keep" onchange="render()"> Keep adapter-removed reads (keep_reads)</label>
+                <p class="hint">Default: off. Keeps the adapter-removed FASTQ and links (same disk) or copies (other disk) it to results/read_module/reads_trimmed_final/.</p>
               </div>
               <div class="opt-group">
                 <div class="opt-header" id="ar_xp_hdr">
@@ -1767,6 +1775,7 @@ function buildYAML() {
     kv(10, 'r1', gv('ar_r1'));
     kv(10, 'r2', gv('ar_r2'));
   }
+  if (gb('ar_keep')) kv(8, 'keep_reads', true);
   if (gb('ar_xp_en') && gv('ar_xp').trim()) kv(8, 'extra_params', gv('ar_xp'));
   p(0, '');
   p(4, 'quality_filtering:');
@@ -1778,6 +1787,7 @@ function buildYAML() {
     kv(8, 'unqualified_percent_limit', gn('qf_unqual'));
     kv(8, 'n_base_limit', gn('qf_nbase'));
   }
+  if (gb('qf_keep')) kv(8, 'keep_reads', true);
   p(0, '');
   p(4, 'taxonomic_screening:');
   kv(6, 'execute', gb('ca_exec'));
@@ -2072,6 +2082,7 @@ function populateForm(c) {
   } else setOpt('ar_adp_en','ar_adp_body','ar_adp_hdr', false);
   if (ars.extra_params !== undefined) { setOpt('ar_xp_en','ar_xp_body','ar_xp_hdr',true); sv('ar_xp',ars.extra_params); }
   else setOpt('ar_xp_en','ar_xp_body','ar_xp_hdr',false);
+  sb('ar_keep', ars.keep_reads === true);
   const qf = rrp.quality_filtering || {};
   const qfs = qf.settings || {};
   sb('qf_exec', qf.execute); dot('qf_exec','d_qf');
@@ -2080,6 +2091,7 @@ function populateForm(c) {
     setOpt('qf_adv_en','qf_adv_body','qf_adv_hdr', true);
     sv('qf_unqual', qfs.unqualified_percent_limit); sv('qf_nbase', qfs.n_base_limit);
   } else setOpt('qf_adv_en','qf_adv_body','qf_adv_hdr', false);
+  sb('qf_keep', qfs.keep_reads === true);
   // `contamination` is the pre-rename name of `taxonomic_screening`; still loadable here,
   // matching the pipeline's own config_compat fallback. Only the new name is ever written out.
   const ca = rrp.taxonomic_screening || rrp.contamination || {};

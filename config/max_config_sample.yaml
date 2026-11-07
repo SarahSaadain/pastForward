@@ -123,6 +123,9 @@ pipeline:
           #r1: "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA"
           # Adapter sequence for read 2
           #r2: "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT"
+        # Optional: Keep the adapter-removed reads (Default: false)
+        # Stays in processed/ and is also linked (same disk) or copied (other disk) to results/read_module/reads_trimmed_final/
+        #keep_reads: false
         # Optional: Extra parameters for adapter removal (Default: "")
         #extra_params: ""
     
@@ -139,6 +142,9 @@ pipeline:
         #unqualified_percent_limit: 40
         # Optional: Max number of N bases allowed in a read (Default: 5)
         #n_base_limit: 5
+        # Optional: Keep the final adapter-removed, quality-filtered reads (Default: false)
+        # Stays in processed/ and is also linked (same disk) or copied (other disk) to results/read_module/reads_final/
+        #keep_reads: false
 
     # Taxonomic screening
     taxonomic_screening:

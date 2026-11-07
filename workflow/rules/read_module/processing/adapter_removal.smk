@@ -87,12 +87,24 @@ rule remove_adapters_paired_with_fastp:
         f"{WRAPPER_VERSION}/bio/fastp"
 
 
+# keep_reads: the trimmed reads stay in processed/ (no temp) so later steps never rebuild them,
+# and keep_trimmed_reads below adds a copy in results/. Pointless without adapter removal, where
+# the file is only a copy of the raw reads.
+_KEEP_TRIMMED = _setting(
+    "read_module", "adapter_removal", "settings", "keep_reads", default=False
+) and _setting("read_module", "adapter_removal", "execute", default=True)
+
+
 rule get_adapter_removal_final:
     input:
         determine_reads_trimmed_final_input,
     output:
-        temp(
+        (
             "{species}/processed/read_module/reads_trimmed/{sample}_trimmed_final.fastq.gz"
+            if _KEEP_TRIMMED
+            else temp(
+                "{species}/processed/read_module/reads_trimmed/{sample}_trimmed_final.fastq.gz"
+            )
         ),
     log:
         "{species}/processed/read_module/reads_trimmed/{sample}_determine_trimmed_final.log",
@@ -117,6 +129,22 @@ rule get_adapter_removal_final:
         fi
         echo "Determination completed for {wildcards.sample}" >>"{log}" 2>&1
         """
+
+
+# Hard link when results/ is on the same disk (no extra space), copy otherwise.
+rule keep_trimmed_reads:
+    input:
+        "{species}/processed/read_module/reads_trimmed/{sample}_trimmed_final.fastq.gz",
+    output:
+        "{species}/results/read_module/reads_trimmed_final/{sample}_trimmed_final.fastq.gz",
+    log:
+        "{species}/processed/read_module/reads_trimmed/{sample}_keep_trimmed_reads.log",
+    conda:
+        "../../../envs/python_and_r.yaml"
+    message:
+        "Keeping trimmed reads of {wildcards.sample} in results"
+    shell:
+        'ln -f "{input}" "{output}" > "{log}" 2>&1 || cp -p "{input}" "{output}" >> "{log}" 2>&1'
 
 
 rule merge_reads_adapter_removal_pe:

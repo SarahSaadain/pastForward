@@ -68,6 +68,7 @@ Controls FastQC + MultiQC quality reports at each processing stage and read coun
 | `settings.poly_x_min_len` | `5` | Minimum length to trigger poly-X tail trimming. |
 | `settings.unqualified_percent_limit` | `40` | Max percentage of unqualified bases allowed in a read. |
 | `settings.n_base_limit` | `5` | Max number of N bases allowed in a read. |
+| `settings.keep_reads` | `false` | When `true`, the adapter-removed reads (`{species}/processed/read_module/reads_trimmed/{sample}_trimmed_final.fastq.gz`) are no longer deleted, and are also written to `{species}/results/read_module/reads_trimmed_final/{sample}_trimmed_final.fastq.gz`. Same link-or-copy rule as for `quality_filtering`. Only has an effect when adapter removal runs (without it that file is a copy of the raw reads). Switching it on for a finished project rebuilds the reads once. |
 | `settings.adapters_sequences.r1` | auto-detect | Adapter sequence for read 1. If omitted, fastp detects adapters automatically. |
 | `settings.adapters_sequences.r2` | auto-detect | Adapter sequence for read 2. If omitted, fastp detects adapters automatically. |
 | `settings.extra_params` | — | Optional extra parameters passed directly to fastp. |
@@ -80,6 +81,7 @@ Controls FastQC + MultiQC quality reports at each processing stage and read coun
 | `settings.min_length` | `30` | Minimum read length after quality filtering. |
 | `settings.unqualified_percent_limit` | `40` | Max percentage of unqualified bases allowed in a read. |
 | `settings.n_base_limit` | `5` | Max number of N bases allowed in a read. |
+| `settings.keep_reads` | `false` | When `true`, the final adapter-removed, quality-filtered reads (`{species}/processed/read_module/reads_quality_filtered/{sample}_quality_filtered_final.fastq.gz`) are no longer deleted, and are also written to `{species}/results/read_module/reads_final/{sample}_final.fastq.gz`. The results file is a hard link when both folders are on the same disk (no extra space) and a copy otherwise (double space). Because the processed file persists, later steps never rebuild the reads. Has no effect when both adapter removal and quality filtering are off (the file is then only a copy of the raw reads). Switching it on for a finished project rebuilds the reads once, see the [FAQ](../docs/FAQ.md). |
 
 #### `taxonomic_screening`
 

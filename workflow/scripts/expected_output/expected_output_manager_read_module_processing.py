@@ -194,6 +194,18 @@ def get_expected_output_read_module(species):
     # Add merged reads to expected outputs since they are a product of raw read processing
     expected_outputs += get_expected_output_read_merging(species)
 
+    # Adapter-removed reads kept in results (opt-in, only meaningful when adapter removal runs)
+    ar = config.get("pipeline", {}).get("read_module", {}).get("adapter_removal", {})
+    if ar.get("execute", True) and ar.get("settings", {}).get("keep_reads", False):
+        for sample in get_sample_ids_for_species(species):
+            expected_outputs.append(f"{species}/results/read_module/reads_trimmed_final/{sample}_trimmed_final.fastq.gz")
+
+    # Final adapter-removed, quality-filtered reads kept in results (opt-in)
+    qf = config.get("pipeline", {}).get("read_module", {}).get("quality_filtering", {})
+    if qf.get("settings", {}).get("keep_reads", False) and (ar.get("execute", True) or qf.get("execute", True)):
+        for sample in get_sample_ids_for_species(species):
+            expected_outputs.append(f"{species}/results/read_module/reads_final/{sample}_final.fastq.gz")
+
     # Add taxonomic screening outputs
     expected_outputs += get_expected_output_taxonomic_screening(species)
 

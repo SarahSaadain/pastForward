@@ -94,6 +94,32 @@ class TestCoreOutputsFromMinimalConfig(ExpectedOutputManagerTestCase):
         outputs = self.get_all_outputs(config)
         self.assertIn("Dmel/results/read_module/statistics/Dmel_read_composition_by_sample.csv", outputs)
 
+    def test_keep_reads_requests_results_copy_only_when_on(self):
+        marker = "/results/read_module/reads_final/"
+        self.assertFalse(any(marker in o for o in self.get_all_outputs(self.config)))
+        config = dict(self.config, pipeline={"read_module": {"quality_filtering": {"settings": {"keep_reads": True}}}})
+        self.assertTrue(any(marker in o for o in self.get_all_outputs(config)))
+
+    def test_keep_reads_final_needs_a_read_step(self):
+        marker = "/results/read_module/reads_final/"
+        both_off = {
+            "adapter_removal": {"execute": False},
+            "quality_filtering": {"execute": False, "settings": {"keep_reads": True}},
+        }
+        config = dict(self.config, pipeline={"read_module": both_off})
+        self.assertFalse(any(marker in o for o in self.get_all_outputs(config)))
+
+    def test_keep_reads_adapter_removal(self):
+        marker = "/results/read_module/reads_trimmed_final/"
+        self.assertFalse(any(marker in o for o in self.get_all_outputs(self.config)))
+        on = {"adapter_removal": {"settings": {"keep_reads": True}}}
+        config = dict(self.config, pipeline={"read_module": on})
+        self.assertTrue(any(marker in o for o in self.get_all_outputs(config)))
+        # Without adapter removal the file is only a copy of the raw reads: not requested.
+        off = {"adapter_removal": {"execute": False, "settings": {"keep_reads": True}}}
+        config = dict(self.config, pipeline={"read_module": off})
+        self.assertFalse(any(marker in o for o in self.get_all_outputs(config)))
+
     def test_unmapped_reads_filtering_absent_by_default(self):
         # filter_unmapped_reads.execute defaults to False (unlike almost every other switch,
         # which defaults True) - a regression here would silently start requesting BAM

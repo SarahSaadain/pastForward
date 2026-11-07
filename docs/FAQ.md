@@ -247,9 +247,10 @@ Most `execute: false` toggles only affect their own step's output. A handful of 
 | `pipeline.read_module.adapter_removal.execute` | adapter-trimmed reads vs. raw reads | adapter removal and everything downstream that reads the merged per-individual FASTQ: quality filtering, merging, mapping, deduplication, damage analysis, REVEAL, taxonomic screening, for every sample |
 | `pipeline.read_module.quality_filtering.execute` | quality-filtered reads vs. adapter-trimmed reads | quality filtering and the same downstream chain as above, for every sample |
 
-Three other situations cause the same kind of cascade without an obvious setting to blame:
+Several other situations cause the same kind of cascade without an obvious setting to blame:
 
 - **A new step needs a file that was already cleaned up.** Enabling taxonomic screening after the first run (see the example above) is one case. Adding FastQC reports for trimmed/quality-filtered reads is another: if even one sample's report is missing, Snakemake has to regenerate the intermediate file behind it, which pulls mapping and everything after it back in for that sample.
+- **Switching `keep_reads` on after the first run.** The adapter-removed and quality-filtered reads are deleted by default. With `keep_reads: true` they become permanent outputs, so Snakemake has to rebuild them for every sample, and that can pull the downstream chain back in. Check with `./pastForward dryrun` first.
 - **Adding samples changes a shared file every individual maps against.** With automatic SCG selection (`pipeline.reveal_module.scg_selector.execute: true`), ranking which single-copy genes to use is a species-wide decision, not a per-individual one. Add individuals, and the ranking can change, which rewrites the shared SCG file, the combined SCG/feature-library reference, and its index, so every individual gets re-mapped and re-analyzed against the updated version. Providing your own fixed SCG FASTA under `{species}/input/reveal_module/scg/` avoids this, at the cost of losing the automatic per-species ranking.
 
 **Before flipping one of these settings on a project that already has results, do a dry run first** (`./pastForward dryrun`) and check how many jobs it plans. If the count is much larger than the change seems to justify, one of these chains is usually the reason.
@@ -308,6 +309,29 @@ Delete the output file and re-run, or pass `--forcerun <rule_name>` to `./pastFo
 pastForward deletes intermediate files as soon as they are no longer needed. The final outputs (e.g. `_final.bam`, summary reports) are kept, while temporary files (e.g. raw mappings, rescaled BAMs) are removed once they have been processed. Where possible, outputs are also compressed.
 
 Still, watch disk usage during the first run to make sure you have enough space for the intermediate files, especially with large datasets.
+
+**Q: Can I keep the adapter-removed or quality-filtered reads as FASTQ files?**
+Yes. By default both are deleted once nothing needs them. Set either or both of these to `true`:
+
+```yaml
+pipeline:
+  read_module:
+    adapter_removal:
+      settings:
+        keep_reads: true      # -> {species}/results/read_module/reads_trimmed_final/{sample}_trimmed_final.fastq.gz
+    quality_filtering:
+      settings:
+        keep_reads: true      # -> {species}/results/read_module/reads_final/{sample}_final.fastq.gz
+```
+
+The `quality_filtering` file is the final reads, the ones used for mapping and screening. When quality filtering is off, it holds the adapter-removed reads. The file in `processed/` is no longer deleted, and the copy in `results/` is a hard link to it when both folders are on the same disk (no extra space) or a real copy when they are not (double space). Because the file in `processed/` stays, adding a later step such as taxonomic screening does not rebuild the reads.
+
+Notes:
+
+- With adapter removal and quality filtering both off, the file is only a copy of the raw reads, so `keep_reads` does nothing. The same is true for `adapter_removal.settings.keep_reads` when adapter removal is off.
+- The kept files stay in `processed/` for as long as the project does. Delete them yourself when you no longer need them.
+- A hard link shares its data with the file in `processed/`. Editing one in place changes both. Copy a file out before modifying it.
+- Switching `keep_reads` on for a project that already has results means the reads must be rebuilt, since they were deleted earlier. That can pull mapping and everything after it back in, see the reprocessing section above. Run `./pastForward dryrun` first and check the job count. Starting a new project with it on avoids the problem.
 
 **Q: Can I run multiple instances of pastForward simultaneously?**
 Yes, you can run multiple instances of pastForward simultaneously, provided that each instance has its own independent working directory and configuration. This allows you to process different datasets or run the same dataset with different parameters in parallel.

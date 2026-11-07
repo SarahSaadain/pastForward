@@ -664,6 +664,31 @@ else
        "exit $DRYRUN_EXIT, see $S12/custom_path.log"
 fi
 
+# -------------------------------------------------------------------------------------------
+# Scenario 13: keep_reads links or copies the final reads into results/
+# Off (default): no keep rule is scheduled. On: one keep_final_reads job per sample.
+# -------------------------------------------------------------------------------------------
+S13="$WORKDIR/13_keep_reads"
+make_project "$S13"
+printf 'project_name: t\nspecies:\n  Dmel:\n    name: x\n' > "$S13/config/config.yaml"
+mkdir -p "$S13/Dmel"
+make_species_root "$S13/Dmel"
+make_fake_data "$S13/Dmel"
+run_dryrun "$S13" "$S13/off.log"
+if [ "$DRYRUN_EXIT" -eq 0 ] && ! grep -qE "^keep_final_reads[[:space:]]" "$S13/off.log"; then
+  pass "13a: keep_reads off schedules no keep_final_reads job"
+else
+  fail "13a: keep_reads off schedules no keep_final_reads job" "exit $DRYRUN_EXIT, see $S13/off.log"
+fi
+printf 'pipeline:\n  read_module:\n    adapter_removal:\n      settings:\n        keep_reads: true\n    quality_filtering:\n      settings:\n        keep_reads: true\n' >> "$S13/config/config.yaml"
+run_dryrun "$S13" "$S13/on.log"
+if [ "$DRYRUN_EXIT" -eq 0 ] && grep -qE "^keep_final_reads[[:space:]]+1" "$S13/on.log" \
+   && grep -qE "^keep_trimmed_reads[[:space:]]+1" "$S13/on.log"; then
+  pass "13b: keep_reads on schedules one keep job per sample for both stages"
+else
+  fail "13b: keep_reads on schedules one keep job per sample for both stages" "exit $DRYRUN_EXIT, see $S13/on.log"
+fi
+
 # =============================================================================================
 echo ""
 echo "$PASS_COUNT passed, $FAIL_COUNT failed"
