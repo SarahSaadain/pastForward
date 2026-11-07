@@ -1028,6 +1028,13 @@
               </div>
               <div class="toggle-wrap" style="margin-top:6px">
                 <label class="toggle">
+                  <input type="checkbox" id="rp_coverage_analysis" checked onchange="render()">
+                  <span class="slider"></span>
+                </label>
+                <label class="lbl" for="rp_coverage_analysis">Coverage analysis <span style="font-size:.7rem;color:var(--text-muted)">(samtools depth: depth/breadth plots, MultiQC coverage sections, authenticity depth columns; large temp file for big genomes)</span></label>
+              </div>
+              <div class="toggle-wrap" style="margin-top:6px">
+                <label class="toggle">
                   <input type="checkbox" id="rp_create_plots" checked onchange="render()">
                   <span class="slider"></span>
                 </label>
@@ -1823,6 +1830,7 @@ function buildYAML() {
   kv(6, 'execute', gb('cov_exec'));
   p(6, 'settings:');
   kv(8, 'damage_analysis', gb('da_exec'));
+  kv(8, 'coverage_analysis', gb('rp_coverage_analysis'));
   kv(8, 'create_plots', gb('rp_create_plots'));
   kv(8, 'individual_multiqc', gb('cov_individual'));
   kv(8, 'species_multiqc', gb('cov_species'));
@@ -2117,6 +2125,7 @@ function populateForm(c) {
   sv('fur_action', (fur.settings||{}).action);
   const rpas = (rp.analysis||{}).settings||{};
   sb('da_exec',        rpas.damage_analysis);
+  sb('rp_coverage_analysis', rpas.coverage_analysis);
   sb('rp_create_plots',rpas.create_plots);
   sb('cov_exec',      (rp.analysis||{}).execute);                  dot('cov_exec','d_cov');
   sb('cov_individual',    rpas.individual_multiqc);
@@ -2243,7 +2252,7 @@ function resetDefaults() {
         deduplication: { execute: true, settings: { min_contigs_per_cluster: 1, max_contigs_per_cluster: 500 } },
         damage_rescaling: { execute: true },
         filter_unmapped_reads: { execute: false, settings: { action: 'keep' } },
-        analysis: { execute: true, settings: { damage_analysis: true, create_plots: true, individual_multiqc: true, species_multiqc: true, preseq_complexitiy_curve: true, qualimap: true, samtools_stats: true, authenticity_summary: true, snp_divergence_check: false } }
+        analysis: { execute: true, settings: { damage_analysis: true, coverage_analysis: true, create_plots: true, individual_multiqc: true, species_multiqc: true, preseq_complexitiy_curve: true, qualimap: true, samtools_stats: true, authenticity_summary: true, snp_divergence_check: false } }
       },
       reveal_module: {
         execute: true,

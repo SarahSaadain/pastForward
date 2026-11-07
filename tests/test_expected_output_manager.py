@@ -311,6 +311,15 @@ class TestReferenceModuleToggles(ExpectedOutputManagerTestCase):
         self.assertFalse(any("reference_module/genome/plots" in o for o in outputs))
         self.assertTrue(any("genome/mapped" in o for o in outputs))
 
+    def test_coverage_analysis_disabled(self):
+        config = dict(self.base_config, pipeline={
+            "reference_module": {"analysis": {"settings": {"coverage_analysis": False}}}
+        })
+        outputs = self.get_all_outputs(config)
+        self.assertFalse(any("/plots/coverage/" in o for o in outputs))
+        self.assertTrue(any("/plots/endogenous_reads/" in o for o in outputs))
+        self.assertTrue(any(o.endswith("_multiqc.html") for o in outputs))
+
     def test_damage_analysis_disabled(self):
         config = dict(self.base_config, pipeline={
             "reference_module": {"analysis": {"settings": {"damage_analysis": False}}}

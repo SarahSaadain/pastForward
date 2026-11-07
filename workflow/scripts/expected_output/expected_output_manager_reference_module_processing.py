@@ -39,10 +39,11 @@ def get_expected_output_reference_module(species):
             if analysis_settings.get("create_plots", True) == True:
                 expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/endogenous_reads/{species}_{reference}_endogenous_reads_bar_chart.png")
                 expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/endogenous_reads/{species}_{reference}_raw_and_endogenous_reads_bar_chart.png")
-                expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_depth_coverage_violin.png")
-                expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_depth_coverage_bar.png")
-                expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_coverage_breadth_bar.png")
-                expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_coverage_breadth_violin.png")
+                if analysis_settings.get("coverage_analysis", True) == True:
+                    expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_depth_coverage_violin.png")
+                    expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_depth_coverage_bar.png")
+                    expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_coverage_breadth_bar.png")
+                    expected_outputs.append(f"{species}/results/reference_module/{reference}/plots/coverage/{species}_{reference}_individual_coverage_breadth_violin.png")
             else:
                 logging.info(f"Skipping plots for species {species} and reference {reference}. Disabled in config.")
 

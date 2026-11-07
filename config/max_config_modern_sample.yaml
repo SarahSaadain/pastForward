@@ -249,6 +249,10 @@ pipeline:
       settings:
         # Run mapDamage2 damage visualisation and statistics (Default: true)
         damage_analysis: false
+        # Run samtools depth and compute per-individual depth and breadth: coverage
+        # plots, the coverage sections of MultiQC and the authenticity depth/breadth
+        # columns. Writes a per-base table that is large for big genomes. (Default: true)
+        coverage_analysis: true
         # When true, generate coverage and endogenous reads plots (Default: true)
         create_plots: true
         # When true, generate a per-individual MultiQC BAM report (Default: true)
@@ -272,7 +276,8 @@ pipeline:
         # verdict: ok, check (a threshold below fired, the reason column says which) or
         # no_data (a file was missing). There is no "fail": check means look, not delete.
         # It only reads files other steps already keep, so it never reruns anything.
-        # Columns of switched-off steps are NA. (Default: true)
+        # Columns of switched-off steps are NA. Without coverage_analysis, depth and
+        # breadth come from Qualimap if it runs for a MultiQC report. (Default: true)
         authenticity_summary: true
 
         # Optional: thresholds for the verdict. Crossing any of them gives "check".

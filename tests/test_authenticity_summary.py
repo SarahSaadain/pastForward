@@ -48,6 +48,16 @@ chr1,10.0,50,900,1000,90.0
 chr2,2.0,10,100,1000,10.0
 """
 
+# Excerpt of Qualimap 2.3 genome_results.txt, with its thousands separators.
+QUALIMAP = """>>>>>>> Coverage
+
+     mean coverageData = 1,234.5678X
+     std coverageData = 2.1X
+
+     There is a 87.65% of reference with a coverageData >= 1X
+     There is a 50.1% of reference with a coverageData >= 2X
+"""
+
 
 class AuthenticitySummaryTestCase(unittest.TestCase):
     def setUp(self):
@@ -100,6 +110,22 @@ class TestCompleteIndividual(AuthenticitySummaryTestCase):
 
 
 class TestStepsSwitchedOff(AuthenticitySummaryTestCase):
+    def test_qualimap_fills_depth_and_breadth_when_coverage_is_off(self):
+        folder = os.path.join(self.tmp_dir, "IND1_qualimap")
+        os.makedirs(folder)
+        self.write("IND1_qualimap/genome_results.txt", QUALIMAP)
+        inputs = dict(self.full_inputs(), coverage=[], qualimap=[folder])
+        row = self.run_table(inputs)[0]
+        self.assertEqual((row["mean_depth"], row["breadth_percent"]), ("1234.5678", "87.6500"))
+        self.assertEqual(row["verdict"], "ok")
+
+    def test_qualimap_without_coverage_lines_is_no_data(self):
+        folder = os.path.join(self.tmp_dir, "IND1_qualimap")
+        os.makedirs(folder)
+        self.write("IND1_qualimap/genome_results.txt", ">>>>>>> Globals\n")
+        row = self.run_table(dict(self.full_inputs(), coverage=[], qualimap=[folder]))[0]
+        self.assertEqual((row["verdict"], row["verdict_reason"]), ("no_data", "missing_qualimap"))
+
     def test_empty_groups_give_na_but_stay_ok(self):
         # Dedup, mapDamage and coverage off: their groups arrive as empty lists.
         inputs = self.full_inputs()

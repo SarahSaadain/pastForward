@@ -14,6 +14,8 @@ never the rescaled one. Rescaling removes the damage signal this table measures,
 """
 import csv
 import json
+import os
+import re
 import sys
 
 VERDICT_OK = "ok"
@@ -146,6 +148,18 @@ def parse_coverage(path):
     return {"mean_depth": depth_sum / total, "breadth_percent": covered / total * 100}
 
 
+def parse_qualimap(path):
+    """Fallback for mean depth and breadth when the coverage table is off: Qualimap's
+    genome_results.txt in the bamqc output folder. Qualimap prints thousands separators."""
+    with open(os.path.join(path, "genome_results.txt")) as f:
+        text = f.read().replace(",", "")
+    depth = re.search(r"mean coverageData = ([\d.]+)X", text)
+    breadth = re.search(r"There is a ([\d.]+)% of reference with a coverageData >= 1X", text)
+    if not depth or not breadth:
+        raise ValueError("no coverage lines")
+    return {"mean_depth": float(depth.group(1)), "breadth_percent": float(breadth.group(1))}
+
+
 PARSERS = {
     "stats": parse_mean_mapq,
     "endogenous": parse_endogenous,
@@ -154,6 +168,7 @@ PARSERS = {
     "ga3p": parse_ga3p,
     "lengths": parse_lengths,
     "coverage": parse_coverage,
+    "qualimap": parse_qualimap,
 }
 
 

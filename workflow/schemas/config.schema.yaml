@@ -170,6 +170,7 @@ properties:
                 additionalProperties: false
                 properties:
                   damage_analysis: {type: boolean}
+                  coverage_analysis: {type: boolean}
                   create_plots: {type: boolean}
                   individual_multiqc: {type: boolean}
                   species_multiqc: {type: boolean}

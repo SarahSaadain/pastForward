@@ -227,12 +227,13 @@ def _multiqc_individual_input(species, individual, references, bcftools_stats=Fa
             file_list.append(
                 f"{custom_content}/{individual}_{reference}_reads_processing_summary_stacked.tsv"
             )
-            file_list.append(
-                f"{custom_content}/{individual}_{reference}_coverage_analysis.tsv"
-            )
-            file_list.append(
-                f"{custom_content}/{individual}_{reference}_coverage_summary.tsv"
-            )
+            if analysis_settings.get("coverage_analysis", True) == True:
+                file_list.append(
+                    f"{custom_content}/{individual}_{reference}_coverage_analysis.tsv"
+                )
+                file_list.append(
+                    f"{custom_content}/{individual}_{reference}_coverage_summary.tsv"
+                )
 
         if reference_module.get("damage_rescaling", {}).get("execute", True) == True:
             mapdamage = f"{custom_content}/mapdamage/{individual}_{reference}"
@@ -326,15 +327,38 @@ def create_authenticity_summary_input(wildcards):
     mapdamage_on = reference_module.get("damage_rescaling", {}).get(
         "execute", True
     ) == True or (analysis_on and settings.get("damage_analysis", True) == True)
-    coverage_on = analysis_on and (
-        settings.get("create_plots", True) == True
-        or settings.get("individual_multiqc", True) == True
-        or settings.get("species_multiqc", True) == True
-        or (
-            summary_module.get("execute", True) == True
-            and (
-                summary_settings.get("species_multiqc", True) == True
-                or summary_settings.get("individual_multiqc", True) == True
+    coverage_on = (
+        analysis_on
+        and settings.get("coverage_analysis", True) == True
+        and (
+            settings.get("create_plots", True) == True
+            or settings.get("individual_multiqc", True) == True
+            or settings.get("species_multiqc", True) == True
+            or (
+                summary_module.get("execute", True) == True
+                and (
+                    summary_settings.get("species_multiqc", True) == True
+                    or summary_settings.get("individual_multiqc", True) == True
+                )
+            )
+        )
+    )
+
+    # Qualimap runs only for the MultiQC reports. It is the depth and breadth fallback when
+    # the coverage table is off, so the table never starts Qualimap on its own.
+    qualimap_on = (
+        not coverage_on
+        and analysis_on
+        and settings.get("qualimap", True) == True
+        and (
+            settings.get("individual_multiqc", True) == True
+            or settings.get("species_multiqc", True) == True
+            or (
+                summary_module.get("execute", True) == True
+                and (
+                    summary_settings.get("species_multiqc", True) == True
+                    or summary_settings.get("individual_multiqc", True) == True
+                )
             )
         )
     )
@@ -355,6 +379,7 @@ def create_authenticity_summary_input(wildcards):
             coverage_on,
             f"{individual_dir}/coverage/{stem}_coverage_analysis.csv",
         ),
+        "qualimap": (qualimap_on, f"{individual_dir}/qualimap"),
     }
     individuals = get_individuals_for_species(wildcards.species)
     return {
