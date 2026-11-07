@@ -88,6 +88,27 @@ Snakemake keeps track of what's already been done and only re-runs steps that ar
 
 Want to call `snakemake` directly, tune its flags, run without the CLI wrapper, or run on an HPC cluster? See [Running with Snakemake](docs/snakemake.md).
 
+## Test Data
+
+Two test sets show that your setup works before you run your own data.
+
+**Tier 1: small synthetic set, in the repo.** `.test/` holds simulated reads of two *D. melanogaster* individuals (a damaged "historical" one and a modern one) on a 400 kb reference made of real sequence. It also holds a small ECMSD database and Centrifuge index, and a set of single-copy genes, so every step runs without network once the conda envs exist. Run it from the repo root with the `snakemake` env activated:
+
+```bash
+conda activate snakemake
+snakemake --directory .test --cores 4 --software-deployment-method conda --conda-prefix ~/.snakemake/pf_conda
+python3 -m unittest tests/test_synthetic_run.py -v   # checks the known answers
+```
+
+The first run needs network. It builds about 17 conda envs (about 10 minutes) and downloads the Snakemake wrappers the rules use. After that a run takes about 10 minutes on 4 cores. The data has known answers: damage in the historical sample only, 20% simulated PCR duplicates in it (DeDup reports about 26%, since some reads also start at the same place by chance), human mitochondrial reads for ECMSD and *E. coli* reads for Centrifuge in the historical sample only, and TE copy numbers that differ between the two individuals. BUSCO is not run here, because the single-copy genes are given. `.test/resources/build_test_data.sh` rebuilds all files from pinned NCBI accessions. GitHub Actions runs this test set on every push.
+
+**Tier 2: real data, downloaded.** `.test/download_full_test.sh` builds a project from two 1800s museum specimens of *D. melanogaster* (Shpak et al. 2023, SRR23876564 and SRR23876562). It streams the first 1,000,000 read pairs of each (set `N` to change this), plus the Dmel reference genome and TE library, about 330 MB in total. Here BUSCO picks the single-copy genes, and ECMSD and Centrifuge download their full databases (plan for about 25 GB of free disk). See the comments at the top of the script.
+
+```bash
+.test/download_full_test.sh            # into .test/full
+cd .test/full && ./pastForward check && ./pastForward run --cores 8
+```
+
 ## Reports
 
 pastForward generates a MultiQC report for:

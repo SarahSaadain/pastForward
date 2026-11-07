@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### New Features
 
+- **Test data**: `.test/` is a small synthetic test project (4.7 MB) with known answers. It has two simulated *D. melanogaster* individuals, one with aDNA damage, on a reference made of real Dmel and *Wolbachia* sequence. A mini ECMSD database and Centrifuge index let every step run offline once the conda envs exist. Run it with `snakemake --directory .test --cores 4 --software-deployment-method conda`, about 10 minutes on 4 cores. `tests/test_synthetic_run.py` checks the known answers afterwards. `.test/download_full_test.sh` builds a second, real test project from two 1800s museum specimens (Shpak et al. 2023). See the README's Test Data section.
 - **Config validation**: `config.yaml` is checked against [workflow/schemas/config.schema.yaml](workflow/schemas/config.schema.yaml) at startup, and by `./pastForward check` and `preview` before they create any symlink. Unknown keys, wrong types (e.g. `execute: "false"`) and invalid values (e.g. an unknown `mapper`) stop the run. All problems are listed at once, with a "did you mean" hint for misspelled keys. Before, a misspelled key was silently ignored. `execute` on `mapping`, `sequence_overview` or `normalization` is now an error, since those steps always run. An empty section (e.g. `settings:` with every line commented out) is reported instead of crashing later. Without `jsonschema` installed, `check`/`preview` warn and skip validation.
 - **Read composition after adapter removal**: `{species}_read_composition_by_sample.csv` and `{species}_read_composition_by_individual.csv` in `results/read_module/statistics/` split adapter-removed reads into merged, unmerged and unpaired (or single-end), with counts and percent. They are built from the fastp JSON and the existing read count, so nothing reruns. With adapter removal off, paired-end reads count as unmerged. A mismatch between the fastp report and the read count stops the step.
 - **Authenticity triage table**: `{reference}_authenticity.tsv` in `results/reference_module/{reference}/analytics/species_level/{species}/authenticity/` has one row per individual: endogenous %, duplicate rate, mapped read length, 5' C-to-T and 3' G-to-A at position 1, mean depth, breadth and mean MAPQ. The `verdict` column is `ok`, `check` (`verdict_reason` names the threshold) or `no_data` (a file was missing). Thresholds are `pipeline.reference_module.analysis.settings.authenticity_*`. `authenticity_summary: false` turns it off. It only reads files other steps already keep, so nothing reruns. Columns of switched-off steps are `NA`.
@@ -30,6 +31,8 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **MultiQC logo missing outside the project root**: the logo path is now found from the workflow folder, so runs with `snakemake --directory` show the logo too. Before, MultiQC logged "custom_logo path not found".
+- **Centrifuge taxon counts**: `{sample}_taxon_counts.tsv` no longer has a bogus `1 taxID` line from the Centrifuge header.
 - **Ctrl-C in a foreground run printed a Python traceback**: `run --fg`, `resume --fg`, `dryrun` and `touch` now keep logging Snakemake's shutdown, then print "Interrupted." (plus the resume command for `run`/`resume`).
 - **Two runs could take the cross-project lock at once**: runs starting at the same moment could both take `.pastforward.lock` on a shared `processed_dir`/`results_dir`. The lock file is now created atomically. An empty or broken lock file blocks a new run for up to 30 s, then is taken over.
 - **The CLI trusted a reused PID**: `status`, `abort`, `run`, `doctor` and `print-log` now check that the saved PID still belongs to snakemake. Before, `abort -f` could kill an unrelated program, and a stale PID could block a new run.
@@ -59,6 +62,8 @@ All notable changes to this project will be documented in this file.
 
 ### CI / Maintenance
 
+- **Test data run in CI**: a new GitHub Actions job (`test-data.yml`) runs the whole pipeline on `.test/` and then `tests/test_synthetic_run.py`. Conda envs are cached.
+- **Unit tests that need Snakemake moved**: the 8 CLI tests that call `snakemake` are now in `tests/test_cli_snakemake.py` and skip when `snakemake` is not on PATH. The rest run with only pyyaml, jsonschema and pandas.
 - **SCG ranking has a unit test**: the ranking logic moved into a function. Output is unchanged.
 - **Rules read settings through one helper**: `_setting()` in `common.smk` replaces about 60 copied `config.get(...)` chains. Defaults are unchanged.
 - **Unit tests run in CI**: a second job runs `python -m unittest discover tests` on every push and pull request.

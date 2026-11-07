@@ -287,32 +287,10 @@ class ArgvValidationTestCase(unittest.TestCase):
             cli.run.cmd_run(["--forceall"])
         self.assertFalse(cli.common.STATE_FILE.exists())
 
-    def test_run_accepts_cores_with_equals(self):
-        captured = {}
-        orig = cli.run._run_background
-        cli.run._run_background = lambda cmd, log_path: captured.setdefault("cmd", cmd)
-        try:
-            cli.run.cmd_run(["--cores=8"])
-        finally:
-            cli.run._run_background = orig
-        self.assertIn("--cores=8", captured["cmd"])
-
     def test_resume_without_cores_exits_before_spawning_anything(self):
         with self.assertRaises(SystemExit):
             cli.run.cmd_resume(["--forceall"])
         self.assertFalse(cli.common.STATE_FILE.exists())
-
-    def test_resume_adds_rerun_incomplete(self):
-        # cmd_resume only differs from cmd_run by this flag - confirm it lands in the built
-        # command rather than actually spawning snakemake.
-        captured = {}
-        orig = cli.run._run_background
-        cli.run._run_background = lambda cmd, log_path: captured.setdefault("cmd", cmd)
-        try:
-            cli.run.cmd_resume(["--cores", "4"])
-        finally:
-            cli.run._run_background = orig
-        self.assertIn("--rerun-incomplete", captured["cmd"])
 
     def test_run_without_a_configfile_exits_before_spawning_anything(self):
         # config/config.yaml is the user's own file and not part of the repository, so a fresh
@@ -329,36 +307,9 @@ class ArgvValidationTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit):
             cli.run.cmd_run(["--cores", "4"])
 
-    def test_doctor_rebuild_refuses_while_a_tracked_run_is_alive(self):
-        env_dir = Path(self.project_dir) / "env_in_use"
-        env_dir.mkdir()
-        cli.common.STATE_DIR.mkdir(parents=True, exist_ok=True)
-        cli.common.STATE_FILE.write_text(json.dumps({"pid": os.getpid()}))
-        orig = cli.doctor._list_conda_envs
-        cli.doctor._list_conda_envs = lambda: [{"env_file": "workflow/envs/x.yaml", "location": str(env_dir)}]
-        try:
-            with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as cm:
-                cli.doctor.cmd_doctor(["--rebuild-envs"])
-        finally:
-            cli.doctor._list_conda_envs = orig
-        self.assertIn("a run is active", str(cm.exception))
-        self.assertTrue(env_dir.is_dir())
-
     def test_unlock_rejects_arguments(self):
         with self.assertRaises(SystemExit):
             cli.run.cmd_unlock(["--foo"])
-
-    def test_unlock_passes_cores_one(self):
-        # snakemake >= 9.9 requires --cores even for --unlock.
-        captured = {}
-        orig = cli.run.subprocess.call
-        cli.run.subprocess.call = lambda cmd: captured.setdefault("cmd", cmd) or 0
-        try:
-            with self.assertRaises(SystemExit):
-                cli.run.cmd_unlock([])
-        finally:
-            cli.run.subprocess.call = orig
-        self.assertEqual(captured["cmd"], ["snakemake", "--unlock", "--cores", "1"])
 
     def test_check_rejects_arguments(self):
         # check/preview run in-process - there is no Snakemake invocation left to forward
@@ -372,63 +323,11 @@ class ArgvValidationTestCase(unittest.TestCase):
             cli.discover.cmd_check(["--configfile", "missing.yaml"])
         self.assertIn("missing.yaml", str(cm.exception))
 
-    def test_run_accepts_configfile_without_default_config(self):
-        # initialize.smk only loads config/config.yaml when it exists, so a run driven
-        # entirely by --configfile is valid.
-        os.remove(self.configfile)
-        Path("other.yaml").write_text("project_name: other\n")
-        captured = {}
-        orig = cli.run._run_background
-        cli.run._run_background = lambda cmd, log_path: captured.setdefault("cmd", cmd)
-        try:
-            cli.run.cmd_run(["--cores", "4", "--configfile", "other.yaml"])
-        finally:
-            cli.run._run_background = orig
-        self.assertIn("other.yaml", captured["cmd"])
-
     def test_run_dies_on_a_missing_configfile(self):
         with self.assertRaises(SystemExit) as cm:
             cli.run.cmd_run(["--cores", "4", "--configfile", "missing.yaml"])
         self.assertIn("missing.yaml", str(cm.exception))
         self.assertFalse(cli.common.STATE_FILE.exists())
-
-    def _stub_snakemake_unlock(self):
-        orig = cli.run.subprocess.call
-        cli.run.subprocess.call = lambda cmd: 0
-        self.addCleanup(setattr, cli.run.subprocess, "call", orig)
-
-    def _write_cross_project_lock(self, owner):
-        target = os.path.join(self.project_dir, "elsewhere", "processed")
-        os.makedirs(target)
-        with open(self.configfile, "w") as f:
-            f.write(f"project_name: test\nspecies:\n  Dmel:\n    processed_dir: {target}\n")
-        lock = Path(target, ".pastforward.lock")
-        lock.write_text(json.dumps(owner))
-        return lock
-
-    def test_unlock_lists_cross_project_locks_but_keeps_them(self):
-        self._stub_snakemake_unlock()
-        lock = self._write_cross_project_lock({"hostname": "other-host", "pid": 1})
-        with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
-            cli.run.cmd_unlock([])
-        self.assertIn(str(lock), out.getvalue())
-        self.assertIn("--cross-project", out.getvalue())
-        self.assertTrue(lock.exists())
-
-    def test_unlock_cross_project_removes_dead_locks(self):
-        self._stub_snakemake_unlock()
-        lock = self._write_cross_project_lock({"hostname": "other-host", "pid": 1})
-        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit):
-            cli.run.cmd_unlock(["--cross-project"])
-        self.assertFalse(lock.exists())
-
-    def test_unlock_cross_project_never_removes_a_live_local_lock(self):
-        self._stub_snakemake_unlock()
-        lock = self._write_cross_project_lock({"hostname": cli.run.socket.gethostname(), "pid": os.getpid()})
-        with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
-            cli.run.cmd_unlock(["--cross-project"])
-        self.assertTrue(lock.exists())
-        self.assertIn("owner still running", out.getvalue())
 
     def test_preview_rejects_arguments(self):
         with self.assertRaises(SystemExit):

@@ -7,9 +7,23 @@ python3 tests/test_<name>.py                   # a single module
 python3 -m unittest discover tests -v           # everything, from the repo root
 ```
 
-None of them need Snakemake or conda, which is what makes them fast enough to run before
-every commit to catch obviously-broken new development. `dryrun_scenarios.sh` (below) is the
-one exception, and is a slower, separate integration check.
+They need only pyyaml, jsonschema and pandas, not Snakemake or conda. That keeps them fast
+enough to run before every commit to catch obviously-broken new development. There are three
+exceptions:
+
+- `test_cli_snakemake.py` holds the CLI tests for `run`, `resume`, `unlock` and
+  `doctor --rebuild-envs`. These commands stop early when no `snakemake` is on PATH. So the
+  tests skip themselves without it, and `discover` reports them as skipped. To run them, put
+  the Snakemake env on PATH:
+
+  ```bash
+  PATH=<snakemake-env>/bin:$PATH python3 -m unittest tests/test_cli_snakemake.py -v
+  ```
+
+  CI installs Snakemake, so they always run there.
+- `test_synthetic_run.py` (below) checks the output of a finished pipeline run on `.test/`.
+  It skips itself when that output is missing.
+- `dryrun_scenarios.sh` (below) is a slower, separate integration check.
 
 ## `test_file_manager.py` / `test_expected_output_manager.py` / `test_endogenous_reads_stats.py`
 
@@ -87,6 +101,30 @@ its cross-project lock: symlink creation, idempotency, both conflict cases, `exe
 skipping, the cross-project lock (fresh acquire, stale takeover, foreign-host refusal, scoped
 release, releasing already-taken locks when a later one conflicts), and that the load-time
 symlink setup takes no lock.
+
+## `test_synthetic_run.py`: known answers from the `.test/` run
+
+`.test/` is a small synthetic project. Its reads were simulated with known answers. HistA is a
+historical sample and ModB a modern one. The tests check that a finished run reproduces them:
+
+- damage: HistA has C>T at the 5' end that drops inward, ModB has none (mapDamage)
+- authenticity table: HistA `ok`, ModB `check` for missing damage, HistA reads shorter
+- duplicates: HistA 15 to 35 % (20 % simulated, DeDup measures about 26 %), ModB under 8 %
+- screening: human reads in HistA only (ECMSD and Centrifuge), E. coli in HistA only
+- REVEAL: copy numbers of opus, roo, jockey and the SCGs within 25 % of the designed values,
+  and opus flagged as gained or lost
+
+Values are checked against ranges, not exact numbers, so tool updates do not break them.
+
+Run the pipeline on `.test/` first, with the Snakemake env active. Then run the tests:
+
+```bash
+snakemake --directory .test --cores 4 --software-deployment-method conda
+python3 -m unittest tests/test_synthetic_run.py -v
+```
+
+Without `.test/Dmel/results/` the whole file is skipped. To check another project directory,
+set `PF_TEST_PROJECT=<path>`.
 
 ## `dryrun_scenarios.sh`: Snakemake integration checks
 

@@ -1,0 +1,103 @@
+1	|	root	|		|	scientific name	|
+2	|	Bacteria	|	Bacteria <bacteria>	|	scientific name	|
+543	|	Enterobacteriaceae	|		|	scientific name	|
+561	|	Escherichia	|		|	scientific name	|
+562	|	Escherichia coli	|		|	scientific name	|
+766	|	Rickettsiales	|		|	scientific name	|
+942	|	Anaplasmataceae	|		|	scientific name	|
+952	|	Wolbachieae	|		|	scientific name	|
+953	|	Wolbachia	|		|	scientific name	|
+1224	|	Pseudomonadota	|		|	scientific name	|
+1236	|	Gammaproteobacteria	|		|	scientific name	|
+2759	|	Eukaryota	|		|	scientific name	|
+6072	|	Eumetazoa	|		|	scientific name	|
+6656	|	Arthropoda	|		|	scientific name	|
+6960	|	Hexapoda	|		|	scientific name	|
+7147	|	Diptera	|		|	scientific name	|
+7203	|	Brachycera	|		|	scientific name	|
+7214	|	Drosophilidae	|		|	scientific name	|
+7215	|	Drosophila	|	Drosophila <flies,genus>	|	scientific name	|
+7227	|	Drosophila melanogaster	|		|	scientific name	|
+7240	|	Drosophila simulans	|		|	scientific name	|
+7245	|	Drosophila yakuba	|		|	scientific name	|
+7496	|	Pterygota	|	Pterygota <insects>	|	scientific name	|
+7711	|	Chordata	|		|	scientific name	|
+7742	|	Vertebrata	|	Vertebrata <vertebrates>	|	scientific name	|
+7776	|	Gnathostomata	|	Gnathostomata <vertebrates>	|	scientific name	|
+8287	|	Sarcopterygii	|		|	scientific name	|
+9347	|	Eutheria	|		|	scientific name	|
+9443	|	Primates	|		|	scientific name	|
+9526	|	Catarrhini	|		|	scientific name	|
+9604	|	Hominidae	|		|	scientific name	|
+9605	|	Homo	|		|	scientific name	|
+9606	|	Homo sapiens	|		|	scientific name	|
+9821	|	Suidae	|		|	scientific name	|
+9822	|	Sus	|		|	scientific name	|
+9823	|	Sus scrofa	|		|	scientific name	|
+9845	|	Ruminantia	|		|	scientific name	|
+9895	|	Bovidae	|		|	scientific name	|
+9903	|	Bos	|		|	scientific name	|
+9913	|	Bos taurus	|		|	scientific name	|
+9989	|	Rodentia	|		|	scientific name	|
+10066	|	Muridae	|		|	scientific name	|
+10088	|	Mus	|	Mus <genus>	|	scientific name	|
+10090	|	Mus musculus	|		|	scientific name	|
+27592	|	Bovinae	|		|	scientific name	|
+28211	|	Alphaproteobacteria	|		|	scientific name	|
+32341	|	Sophophora	|		|	scientific name	|
+32346	|	melanogaster group	|		|	scientific name	|
+32351	|	melanogaster subgroup	|		|	scientific name	|
+32523	|	Tetrapoda	|		|	scientific name	|
+32524	|	Amniota	|		|	scientific name	|
+32525	|	Theria	|	Theria <mammals>	|	scientific name	|
+33154	|	Opisthokonta	|		|	scientific name	|
+33208	|	Metazoa	|		|	scientific name	|
+33213	|	Bilateria	|		|	scientific name	|
+33317	|	Protostomia	|		|	scientific name	|
+33340	|	Neoptera	|		|	scientific name	|
+33392	|	Endopterygota	|		|	scientific name	|
+33511	|	Deuterostomia	|		|	scientific name	|
+35497	|	Suina	|		|	scientific name	|
+35500	|	Pecora	|		|	scientific name	|
+39107	|	Murinae	|		|	scientific name	|
+40674	|	Mammalia	|		|	scientific name	|
+43733	|	Muscomorpha	|		|	scientific name	|
+43738	|	Schizophora	|		|	scientific name	|
+43741	|	Acalyptratae	|		|	scientific name	|
+43746	|	Ephydroidea	|		|	scientific name	|
+43845	|	Drosophilinae	|		|	scientific name	|
+46877	|	Drosophilini	|		|	scientific name	|
+50557	|	Insecta	|		|	scientific name	|
+85512	|	Dicondylia	|		|	scientific name	|
+88770	|	Panarthropoda	|		|	scientific name	|
+89593	|	Craniata	|	Craniata <chordates>	|	scientific name	|
+91347	|	Enterobacterales	|		|	scientific name	|
+91561	|	Artiodactyla	|		|	scientific name	|
+117570	|	Teleostomi	|		|	scientific name	|
+117571	|	Euteleostomi	|		|	scientific name	|
+131567	|	cellular organisms	|		|	scientific name	|
+163164	|	Wolbachia endosymbiont of Drosophila melanogaster	|		|	scientific name	|
+197562	|	Pancrustacea	|		|	scientific name	|
+197563	|	Mandibulata	|		|	scientific name	|
+207598	|	Homininae	|		|	scientific name	|
+314145	|	Laurasiatheria	|		|	scientific name	|
+314146	|	Euarchontoglires	|		|	scientific name	|
+314147	|	Glires	|		|	scientific name	|
+314293	|	Simiiformes	|		|	scientific name	|
+314295	|	Hominoidea	|		|	scientific name	|
+337687	|	Muroidea	|		|	scientific name	|
+376913	|	Haplorrhini	|		|	scientific name	|
+480117	|	Cyclorrhapha	|		|	scientific name	|
+480118	|	Eremoneura	|		|	scientific name	|
+862507	|	Mus	|	Mus <subgenus>	|	scientific name	|
+1206794	|	Ecdysozoa	|		|	scientific name	|
+1338369	|	Dipnotetrapodomorpha	|		|	scientific name	|
+1437010	|	Boreoeutheria	|		|	scientific name	|
+1963758	|	Myomorpha	|		|	scientific name	|
+2640676	|	unclassified Wolbachia	|		|	scientific name	|
+3379134	|	Pseudomonadati	|		|	scientific name	|
+3701028	|	Altocrustacea	|		|	scientific name	|
+3701030	|	Allotriocarida	|		|	scientific name	|
+3701061	|	Eumetabola	|		|	scientific name	|
+3701062	|	Aparaglossata	|		|	scientific name	|
+3701063	|	Panorpida	|		|	scientific name	|

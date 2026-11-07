@@ -1,3 +1,5 @@
+import os
+
 def generate_multiqc_config_for_species_and_individual(species, individual, logo_path):
 
     is_species_level = (individual == "overall")
@@ -303,7 +305,8 @@ def generate_multiqc_config_for_species_and_individual(species, individual, logo
 
 species = snakemake.wildcards.species
 individual = snakemake.wildcards.get("individual", "overall")
-logo_path = 'workflow/resources/pastforward_logo.png'  # Adjust the path to your logo as needed
+# Resolved from the script, not the working directory, so `snakemake --directory` runs find it too.
+logo_path = os.path.normpath(os.path.join(snakemake.scriptdir, "..", "..", "resources", "pastforward_logo.png"))
 
 # Generate the MultiQC config content
 config_content = generate_multiqc_config_for_species_and_individual(species, individual, logo_path)

@@ -97,7 +97,7 @@ rule analyze_centrifuge_report_taxon_counts:
         "Counting taxon occurrences in {input.centrifuge_out}"
     shell:
         r"""
-        awk '$3 != 0 {{print $3}}' "{input.centrifuge_out}" \
+        awk 'NR > 1 && $3 != 0 {{print $3}}' "{input.centrifuge_out}" \
             | sort \
             | uniq -c \
             | sort -nr \

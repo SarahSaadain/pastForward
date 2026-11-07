@@ -1,0 +1,77 @@
+# Tier-1 test configuration: a small synthetic D. melanogaster data set with known answers.
+# Every module and step is switched on. Both screening tools use the mini databases in
+# resources/, and the SCGs are shipped in Dmel/input/reveal_module/scg/, so BUSCO never runs
+# and a run needs no network once the conda envs exist.
+# How the data was built: resources/build_test_data.sh.
+project_name: "pastForward_test"
+
+species:
+  Dmel:
+    execute: true
+    name: "Drosophila melanogaster (synthetic test set)"
+
+pipeline:
+  global:
+    skip_existing_files: false
+
+  read_module:
+    execute: true
+    adapter_removal:
+      execute: true
+    quality_filtering:
+      execute: true
+      settings:
+        min_quality: 15
+        min_length: 30
+    taxonomic_screening:
+      execute: true
+      tools:
+        ecmsd:
+          execute: true
+          settings:
+            database: "resources/ecmsd_mini"
+        centrifuge:
+          execute: true
+          settings:
+            index: "resources/centrifuge_mini/mini"
+    analysis:
+      execute: true
+
+  reference_module:
+    execute: true
+    deduplication:
+      execute: true
+    damage_rescaling:
+      execute: true
+    analysis:
+      execute: true
+      settings:
+        damage_analysis: true
+        coverage_analysis: true
+        create_plots: true
+        individual_multiqc: true
+        species_multiqc: true
+        preseq_complexitiy_curve: true
+        qualimap: true
+        samtools_stats: true
+        authenticity_summary: true
+        snp_divergence_check: true
+
+  reveal_module:
+    execute: true
+    scg_selector:
+      execute: true
+    visualization:
+      execute: true
+    analysis:
+      execute: true
+      settings:
+        coverage_analysis: true
+        snp_analysis: true
+        indel_analysis: true
+
+  summary_module:
+    execute: true
+    settings:
+      individual_multiqc: true
+      species_multiqc: true

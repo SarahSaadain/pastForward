@@ -1,0 +1,47 @@
+name: Test data run
+
+# Runs the whole pipeline on the synthetic test set in .test/ and checks its known answers
+# (tests/test_synthetic_run.py). Conda envs are cached, keyed on the env files.
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tier1:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Login shell so the conda env is activated, not only put on PATH.
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          activate-environment: snakemake
+          channels: conda-forge,bioconda
+          channel-priority: strict
+
+      - name: Install Snakemake
+        run: conda install -y "snakemake>=9.26.1"
+
+      - name: Cache pipeline conda envs
+        uses: actions/cache@v4
+        with:
+          path: ~/.snakemake/pf_conda
+          key: pf-conda-${{ runner.os }}-${{ hashFiles('workflow/envs/**') }}
+
+      - name: Run pipeline on .test/
+        run: >
+          snakemake --directory .test --cores 4
+          --software-deployment-method conda --conda-prefix ~/.snakemake/pf_conda
+
+      - name: Check known answers
+        # The tests skip without results, so make a missing results folder fail here.
+        run: test -d .test/Dmel/results && python -m unittest tests/test_synthetic_run.py -v

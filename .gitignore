@@ -19,3 +19,12 @@ tests/fixtures/
 # leading slash, so it matches at any depth. The shipped workflow profile is named profile.yaml
 # so this pattern does not swallow it.
 config.yaml
+# Tier-1 test project (.test/): its config is part of the repo, its run outputs are not.
+!.test/config/config.yaml
+.test/logs/
+.test/Dmel/processed/
+.test/Dmel/results/
+# Tier-2 test project (.test/full/): only its config is tracked, the downloaded data and outputs are not.
+.test/full/*
+!.test/full/config/
+!.test/full/config/config.yaml
