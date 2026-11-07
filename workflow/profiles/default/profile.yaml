@@ -73,5 +73,141 @@ rerun-triggers: mtime
 # that run, ready to paste in below. Unlike `default-resources`, a `set-resources` entry also
 # overrides a value written into a rule.
 default-resources:
-  mem_mb: 8000
+  mem_mb: 2000
   runtime: 240
+
+# Measured memory per rule (Bger run, max RSS x 1.2, rounded up to 100 MB). Rules not listed keep
+# the default above. Only mem_mb is set here, so runtime still comes from default-resources.
+# Left out on purpose: deduplication and Qualimap (memory comes from config settings), and
+# index_library_for_mapping_bwa_mem2 (measured only on a 0.04 MB test reference).
+# Sources: map_reads_to_scg_* (peak 14-15 GB), centrifuge (11.9 GB, depends on the index).
+set-resources:
+  # --- read_module: read prep (adapter removal, quality filter, merge, read counts) ---
+  remove_adapters_paired_with_fastp:
+    mem_mb: 2000
+  filter_reads_by_quality:
+    mem_mb: 1500
+  merge_reads_adapter_removal_pe:
+    mem_mb: 200
+  merge_reads_by_individual:
+    mem_mb: 200
+  get_adapter_removal_final:
+    mem_mb: 200
+  get_quality_filtered_final:
+    mem_mb: 200
+  count_reads_raw:
+    mem_mb: 200
+  count_reads_trimmed:
+    mem_mb: 200
+  count_reads_quality_filtered:
+    mem_mb: 200
+  combine_counts_per_sample:
+    mem_mb: 200
+  combine_counts_per_species:
+    mem_mb: 400
+
+  # --- read_module: FastQC and MultiQC reports ---
+  run_fastqc_raw:
+    mem_mb: 1300
+  run_fastqc_adapter_removed:
+    mem_mb: 1300
+  run_fastqc_quality_filtered:
+    mem_mb: 1300
+  run_fastqc_merged:
+    mem_mb: 1300
+  run_multiqc_raw:
+    mem_mb: 800
+  run_multiqc_trimmed:
+    mem_mb: 500
+  run_multiqc_quality_filtered:
+    mem_mb: 300
+  run_multiqc_merged:
+    mem_mb: 300
+
+  # --- read_module: taxonomic screening (Centrifuge, ECMSD) ---
+  centrifuge_taxonomic_screening:
+    mem_mb: 14000
+  compress_centrifuge_output:
+    mem_mb: 200
+  analyze_centrifuge_report_taxon_counts:
+    mem_mb: 200
+  download_centrifuge_index:
+    mem_mb: 200
+  ecmsd_taxonomic_screening:
+    mem_mb: 5500
+  ecmsd_database_setup:
+    mem_mb: 800
+
+  # --- reveal_module: SCG and feature library preparation ---
+  clean_feature_library_name:
+    mem_mb: 200
+  prepare_feature_library:
+    mem_mb: 200
+  clean_scg_library_name:
+    mem_mb: 200
+  prepare_scg_library:
+    mem_mb: 200
+  combine_scg_and_ref_library:
+    mem_mb: 200
+
+  # --- reveal_module: SCG ranking ---
+  compute_scg_stats_for_bam:
+    mem_mb: 200
+  determine_scg_ranking:
+    mem_mb: 200
+  filter_top_scgs:
+    mem_mb: 200
+  filter_scg_fasta:
+    mem_mb: 200
+
+  # --- reveal_module: mapping reads to SCG and feature libraries (bwa-mem2) ---
+  map_reads_to_scg_feature_library_bwa_mem2:
+    mem_mb: 16000
+  map_reads_to_scg_library_bwa_mem2:
+    mem_mb: 16000
+  remove_unmapped_reads_to_scg_feature_library:
+    mem_mb: 200
+  remove_unmapped_reads_and_filter_by_mapq_from_scg_bam:
+    mem_mb: 200
+  index_scg_bam_reads:
+    mem_mb: 200
+
+  # --- reveal_module: visualisation and normalisation of coverage and read counts ---
+  determine_visualization_of_individual_bam_to_so:
+    mem_mb: 800
+  normalize_visualization_of_individual:
+    mem_mb: 200
+  calculate_visualization_normalized_stats_of_individual:
+    mem_mb: 200
+  compress_visualization_coverage_of_individual:
+    mem_mb: 200
+  compress_visualization_coverage_normalized_of_individual:
+    mem_mb: 200
+  combine_visualization_stats_across_feature_libraries:
+    mem_mb: 200
+  compare_visualization_stats_accross_individuals_of_species:
+    mem_mb: 300
+  compress_visualization_coverage_comparison_of_species:
+    mem_mb: 200
+  plot_read_counts:
+    mem_mb: 200
+  plot_read_counts_comparison_by_individual:
+    mem_mb: 200
+
+  # --- reference_module: mapping to a reference, sorting, damage analysis ---
+  map_reads_to_reference_bwa_mem2:
+    mem_mb: 16000
+  sort_mapped_reads_bam:
+    mem_mb: 9000
+  sort_mapped_dedupped_reads_bam:
+    mem_mb: 9000
+  sort_rescaled_bam:
+    mem_mb: 9000
+  analyze_mapdamage_and_rescale_bam:
+    mem_mb: 1000
+
+  # --- reveal_module: feature library index and species-level plots ---
+  index_library_for_mapping_bwa_mem2:
+    mem_mb: 4000
+  run_visualization_plots_of_species:
+    mem_mb: 1000
