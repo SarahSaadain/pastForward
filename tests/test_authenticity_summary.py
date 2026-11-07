@@ -119,6 +119,21 @@ class TestStepsSwitchedOff(AuthenticitySummaryTestCase):
         self.assertEqual((row["mean_depth"], row["breadth_percent"]), ("1234.5678", "87.6500"))
         self.assertEqual(row["verdict"], "ok")
 
+    def test_qualimap_numbers_in_any_locale(self):
+        cases = (
+            ("9.9856", "87.2", "9.9856", "87.2000"),          # en, no separators
+            ("1,234.5678", "87.65", "1234.5678", "87.6500"),  # en thousands
+            ("9,9856", "87,2", "9.9856", "87.2000"),          # de decimal comma
+            ("1.234,5678", "93,69", "1234.5678", "93.6900"),  # de thousands and decimal
+        )
+        for depth, breadth, want_depth, want_breadth in cases:
+            with self.subTest(depth=depth):
+                folder = tempfile.mkdtemp(dir=self.tmp_dir)
+                with open(os.path.join(folder, "genome_results.txt"), "w") as f:
+                    f.write(f"     mean coverageData = {depth}X\n     There is a {breadth}% of reference with a coverageData >= 1X\n")
+                row = self.run_table(dict(self.full_inputs(), coverage=[], qualimap=[folder]))[0]
+                self.assertEqual((row["mean_depth"], row["breadth_percent"]), (want_depth, want_breadth))
+
     def test_qualimap_without_coverage_lines_is_no_data(self):
         folder = os.path.join(self.tmp_dir, "IND1_qualimap")
         os.makedirs(folder)

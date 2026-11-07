@@ -148,16 +148,30 @@ def parse_coverage(path):
     return {"mean_depth": depth_sum / total, "breadth_percent": covered / total * 100}
 
 
+def _locale_number(text):
+    """Qualimap formats numbers in the Java locale: '1,234.5678' (en) or '1.234,5678' (de).
+    The last separator is the decimal point when both appear. A lone comma is a thousands
+    separator only when every group after it has 3 digits, as Qualimap prints depth with 4 decimals."""
+    if "," in text and "." in text:
+        thousands = "," if text.rfind(".") > text.rfind(",") else "."
+        text = text.replace(thousands, "").replace(",", ".")
+    elif "," in text:
+        groups = text.split(",")
+        thousands = all(len(group) == 3 for group in groups[1:])
+        text = "".join(groups) if thousands else text.replace(",", ".")
+    return float(text)
+
+
 def parse_qualimap(path):
     """Fallback for mean depth and breadth when the coverage table is off: Qualimap's
-    genome_results.txt in the bamqc output folder. Qualimap prints thousands separators."""
+    genome_results.txt in the bamqc output folder."""
     with open(os.path.join(path, "genome_results.txt")) as f:
-        text = f.read().replace(",", "")
-    depth = re.search(r"mean coverageData = ([\d.]+)X", text)
-    breadth = re.search(r"There is a ([\d.]+)% of reference with a coverageData >= 1X", text)
+        text = f.read()
+    depth = re.search(r"mean coverageData = ([\d.,]+)X", text)
+    breadth = re.search(r"There is a ([\d.,]+)% of reference with a coverageData >= 1X", text)
     if not depth or not breadth:
         raise ValueError("no coverage lines")
-    return {"mean_depth": float(depth.group(1)), "breadth_percent": float(breadth.group(1))}
+    return {"mean_depth": _locale_number(depth.group(1)), "breadth_percent": _locale_number(breadth.group(1))}
 
 
 PARSERS = {
