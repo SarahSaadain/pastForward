@@ -6,7 +6,6 @@ zero-depth positions never need to be printed. The CSV matches the old
 """
 
 import subprocess
-import sys
 
 import numpy as np
 import pandas as pd
@@ -91,7 +90,7 @@ def write_summary(rows, out):
     summary[["avg_depth", "max_depth", "covered_bases", "total_bases", "percent_covered"]].to_csv(out)
 
 
-def coverage_rows(bam, log=sys.stderr):
+def coverage_rows(bam, log):
     import pysam  # here, not at the top: the unit tests run without pysam
 
     with pysam.AlignmentFile(bam) as f:
@@ -106,8 +105,5 @@ def coverage_rows(bam, log=sys.stderr):
 
 
 if __name__ == "__main__":
-    if "snakemake" in globals():
-        with open(snakemake.log[0], "w") as log:
-            write_summary(coverage_rows(snakemake.input.bam, log), snakemake.output.analysis)
-    else:
-        write_summary(coverage_rows(sys.argv[1]), sys.argv[2])
+    with open(snakemake.log[0], "w") as log:
+        write_summary(coverage_rows(snakemake.input.bam, log), snakemake.output.analysis)

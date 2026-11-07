@@ -19,6 +19,7 @@ import sys
 import tempfile
 import unittest
 from types import SimpleNamespace
+from unittest import mock
 
 try:
     import pandas as pd
@@ -81,6 +82,24 @@ class AnalyzeDepthTestCase(unittest.TestCase):
     def test_scaffold_missing_from_header_fails(self):
         with self.assertRaises(RuntimeError):
             depth_mod.summarize_depth_stream(depth_text([("chrX", 1, 1)]), ["2L"], [5])
+
+    def test_samtools_failure_fails_the_step(self):
+        # A crashed samtools gives cut-short output that parses fine, so only the exit code shows it
+        class FakeBam:
+            references, lengths = ("2L",), (5,)
+            __enter__ = lambda self: self
+            __exit__ = lambda self, *a: None
+
+        proc = mock.Mock(stdout=depth_text([("2L", 1, 3)]), returncode=1)
+        proc.wait.return_value = 1
+        fake_pysam = SimpleNamespace(AlignmentFile=lambda bam: FakeBam())
+        with mock.patch.dict(sys.modules, {"pysam": fake_pysam}), \
+                mock.patch.object(depth_mod.subprocess, "Popen", return_value=proc):
+            with self.assertRaisesRegex(RuntimeError, "samtools depth failed"):
+                depth_mod.coverage_rows("x.bam", log=None)
+            proc.wait.return_value = proc.returncode = 0
+            proc.stdout = depth_text([("2L", 1, 3)])
+            self.assertEqual(depth_mod.coverage_rows("x.bam", log=None), [("2L", 3, 3, 1, 5)])
 
     def test_legacy_order_small_chunks(self):
         # Bases z z z | b b | a a a in chunks of 4: chunk 1 holds z, b (sorted: b, z), chunk 2 adds a
