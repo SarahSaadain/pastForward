@@ -10,7 +10,7 @@ DAG build or conda resolution, so they return in well under a second.
 Entry point: ./pastForward (project root) — a tiny shim that imports main() from here.
 
 One module per command area: run.py (snakemake invocations), monitor.py (status/abort/logs),
-discover.py (check/preview), benchmark.py, doctor.py, tools.py, and common.py for what they
+discover.py (check/preview), benchmark.py, doctor.py, install.py, tools.py, and common.py for what they
 share. This file holds only the command table, the help text built from it, and dispatch.
 
 Dispatch below is a hand-rolled `sys.argv` split rather than argparse subparsers: argparse's
@@ -28,6 +28,7 @@ from .benchmark import cmd_benchmark
 from .common import BOLD_GREEN, CYAN, _color, _die, _ensure_project_root
 from .discover import cmd_check, cmd_preview
 from .doctor import cmd_doctor
+from .install import cmd_install
 from .monitor import cmd_abort, cmd_print_log, cmd_status
 from .run import cmd_dryrun, cmd_resume, cmd_run, cmd_touch, cmd_unlock
 from .tools import cmd_tools
@@ -46,6 +47,15 @@ def cmd_version(argv):
 # Each command: name -> (function, arguments, description). Descriptions are wrapped on print.
 SECTIONS = {
     "Set up a project": {
+        "install": (
+            cmd_install,
+            "[snakemake-args...]",
+            "Check that conda is there. Use the `pastforward` conda env, or a `snakemake` env "
+            "with a new enough Snakemake, or create `pastforward`. Then "
+            "build the conda envs of every tool the current config needs. Envs already built "
+            "are skipped. Without config/config.yaml (or --configfile) it stops after the "
+            "Snakemake step. Extra arguments (e.g. --conda-prefix) go to Snakemake.",
+        ),
         "tools": (
             cmd_tools,
             "<tool> [args...]",

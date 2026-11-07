@@ -24,6 +24,8 @@ conda activate snakemake                                                      # 
 snakemake --help                                                              # sanity check, should print the help page
 ```
 
+Shortcut: you can skip this step. After Step 3, run `./pastForward install` from your project folder. It reuses a `snakemake` env that is new enough, or else creates a `pastforward` conda env with Snakemake (then use `conda activate pastforward` instead), and once you have a `config/config.yaml` it also installs every tool the pipeline needs, so the first run does not stop to do it.
+
 For more installation options, see the [Snakemake documentation](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html).
 
 ## Step 3: Get pastForward

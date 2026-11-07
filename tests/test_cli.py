@@ -1184,6 +1184,132 @@ class ToolsTestCase(unittest.TestCase):
             cli.main(["tools", "nonsense"])
 
 
+class InstallTestCase(unittest.TestCase):
+    def setUp(self):
+        self._orig_cwd = os.getcwd()
+        self.project_dir = tempfile.mkdtemp(prefix="pf_test_cli_install_")
+        os.makedirs(os.path.join(self.project_dir, "workflow"))
+        os.makedirs(os.path.join(self.project_dir, "config"))
+        os.chdir(self.project_dir)
+
+    def tearDown(self):
+        os.chdir(self._orig_cwd)
+        shutil.rmtree(self.project_dir, ignore_errors=True)
+
+    def test_parse_version(self):
+        self.assertEqual(cli.install._parse_version("conda 24.7.1\n"), (24, 7, 1))
+        self.assertEqual(cli.install._parse_version("9.26"), (9, 26, 0))
+        self.assertIsNone(cli.install._parse_version(""))
+
+    def test_env_prefix_matches_folder_name_only(self):
+        listing = json.dumps({"envs": ["/opt/miniforge3", "/opt/miniforge3/envs/snakemake_old", "/opt/miniforge3/envs/snakemake"]})
+        with unittest.mock.patch.object(cli.install.subprocess, "run", return_value=unittest.mock.Mock(stdout=listing)):
+            self.assertEqual(cli.install._env_prefix("conda", "snakemake"), "/opt/miniforge3/envs/snakemake")
+            self.assertIsNone(cli.install._env_prefix("conda", "reveal"))
+
+    def test_no_conda_points_to_miniforge(self):
+        with unittest.mock.patch.object(cli.install, "_conda_exe", return_value=None), self.assertRaises(SystemExit) as cm:
+            cli.main(["install"])
+        self.assertIn("Miniforge", str(cm.exception.code))
+
+    def test_missing_env_is_created(self):
+        prefix = os.path.join(self.project_dir, "envs", "pastforward")
+        os.makedirs(os.path.join(prefix, "bin"))
+        Path(prefix, "bin", "snakemake").touch()
+        lookups = {"snakemake": [None], "pastforward": [None, prefix]}
+        with unittest.mock.patch.object(
+            cli.install, "_env_prefix", side_effect=lambda conda, name: lookups[name].pop(0)
+        ), unittest.mock.patch.object(cli.install, "_tool_version", return_value=(9, 26, 1)), unittest.mock.patch.object(
+            cli.install.subprocess, "call", return_value=0
+        ) as call, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.install._snakemake_exe("conda"), os.path.join(prefix, "bin", "snakemake"))
+        self.assertEqual(call.call_args[0][0][:5], ["conda", "create", "-y", "-n", "pastforward"])
+        self.assertEqual(call.call_args[0][0][-1], "snakemake>=9.26.1")
+
+    def test_new_enough_snakemake_env_is_reused(self):
+        prefix = os.path.join(self.project_dir, "envs", "snakemake")
+        os.makedirs(os.path.join(prefix, "bin"))
+        Path(prefix, "bin", "snakemake").touch()
+        with unittest.mock.patch.object(
+            cli.install, "_env_prefix", side_effect=lambda conda, name: prefix if name == "snakemake" else None
+        ), unittest.mock.patch.object(cli.install, "_tool_version", return_value=(9, 26, 1)), unittest.mock.patch.object(
+            cli.install.subprocess, "call"
+        ) as call:
+            self.assertEqual(cli.install._snakemake_exe("conda"), os.path.join(prefix, "bin", "snakemake"))
+        call.assert_not_called()
+
+    def test_too_old_snakemake_env_is_left_alone(self):
+        old_prefix = os.path.join(self.project_dir, "envs", "snakemake")
+        new_prefix = os.path.join(self.project_dir, "envs", "pastforward")
+        for prefix in (old_prefix, new_prefix):
+            os.makedirs(os.path.join(prefix, "bin"))
+            Path(prefix, "bin", "snakemake").touch()
+        lookups = {"snakemake": [old_prefix], "pastforward": [None, new_prefix]}
+        versions = iter([(9, 9, 0), (9, 26, 1)])
+        with unittest.mock.patch.object(
+            cli.install, "_env_prefix", side_effect=lambda conda, name: lookups[name].pop(0)
+        ), unittest.mock.patch.object(cli.install, "_tool_version", side_effect=lambda *a: next(versions)), unittest.mock.patch.object(
+            cli.install.subprocess, "call", return_value=0
+        ) as call, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.install._snakemake_exe("conda"), os.path.join(new_prefix, "bin", "snakemake"))
+        self.assertEqual(call.call_count, 1)
+        self.assertEqual(call.call_args[0][0][:5], ["conda", "create", "-y", "-n", "pastforward"])
+
+    def test_too_old_env_is_upgraded(self):
+        prefix = os.path.join(self.project_dir, "envs", "pastforward")
+        os.makedirs(os.path.join(prefix, "bin"))
+        Path(prefix, "bin", "snakemake").touch()
+        versions = iter([(9, 9, 0), (9, 26, 1)])
+        with unittest.mock.patch.object(cli.install, "_env_prefix", return_value=prefix), unittest.mock.patch.object(
+            cli.install, "_tool_version", side_effect=lambda *a: next(versions)
+        ), unittest.mock.patch.object(cli.install.subprocess, "call", return_value=0) as call, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.install._snakemake_exe("conda"), os.path.join(prefix, "bin", "snakemake"))
+        self.assertEqual(call.call_args[0][0][:5], ["conda", "install", "-y", "-n", "pastforward"])
+
+    def test_failed_upgrade_stops(self):
+        prefix = os.path.join(self.project_dir, "envs", "pastforward")
+        os.makedirs(os.path.join(prefix, "bin"))
+        Path(prefix, "bin", "snakemake").touch()
+        with unittest.mock.patch.object(cli.install, "_env_prefix", return_value=prefix), unittest.mock.patch.object(
+            cli.install, "_tool_version", return_value=(9, 9, 0)
+        ), unittest.mock.patch.object(cli.install.subprocess, "call", return_value=1), contextlib.redirect_stdout(
+            io.StringIO()
+        ), self.assertRaises(SystemExit) as cm:
+            cli.install._snakemake_exe("conda")
+        self.assertIn("could not get snakemake>=9.26.1", str(cm.exception.code))
+
+    def test_without_config_stops_before_building_tools(self):
+        with unittest.mock.patch.object(cli.install, "_conda_exe", return_value="/opt/conda/bin/conda"), unittest.mock.patch.object(
+            cli.install, "_tool_version", return_value=(25, 1, 0)
+        ), unittest.mock.patch.object(cli.install, "_snakemake_exe", return_value="/opt/conda/envs/pastforward/bin/snakemake"), unittest.mock.patch.object(
+            cli.install.subprocess, "call"
+        ) as call, contextlib.redirect_stdout(io.StringIO()) as out:
+            cli.main(["install"])
+        call.assert_not_called()
+        self.assertIn("No config/config.yaml yet", out.getvalue())
+        self.assertIn("cp config/min_config_sample.yaml config/config.yaml", out.getvalue())
+        self.assertIn("tools create-species", out.getvalue())
+
+    def test_with_config_builds_envs_with_snakemake_on_path(self):
+        Path("config/config.yaml").touch()
+        sm = "/opt/conda/envs/pastforward/bin/snakemake"
+        with unittest.mock.patch.object(cli.install, "_conda_exe", return_value="/opt/conda/bin/conda"), unittest.mock.patch.object(
+            cli.install, "_tool_version", return_value=(25, 1, 0)
+        ), unittest.mock.patch.object(cli.install, "_snakemake_exe", return_value=sm), unittest.mock.patch.object(
+            cli.install.subprocess, "call", return_value=0
+        ) as call, contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit) as cm:
+            cli.main(["install", "--conda-prefix", "/x"])
+        self.assertEqual(cm.exception.code, 0)
+        self.assertIn("Next steps:", out.getvalue())
+        self.assertIn("conda activate pastforward", out.getvalue())
+        self.assertIn("./pastForward run --cores <N>", out.getvalue())
+        cmd = call.call_args[0][0]
+        self.assertEqual(cmd[0], sm)
+        self.assertIn("--conda-create-envs-only", cmd)
+        self.assertEqual(cmd[-2:], ["--conda-prefix", "/x"])
+        self.assertTrue(call.call_args[1]["env"]["PATH"].startswith("/opt/conda/envs/pastforward/bin" + os.pathsep))
+
+
 class MainDispatchTestCase(unittest.TestCase):
     def test_unknown_command_suggests_the_closest_one(self):
         with contextlib.redirect_stderr(io.StringIO()) as err, self.assertRaises(SystemExit):

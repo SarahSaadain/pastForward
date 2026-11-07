@@ -56,6 +56,7 @@ For a new project, run these in order:
 ./pastForward abort --force    # (or -f) or kill it and everything it started, immediately
 ./pastForward unlock           # clear a stale lock left by a crashed run
 ./pastForward touch            # mark existing output files as up to date, so the next run skips the steps that made them
+./pastForward install                       # check conda, create the pastforward env if missing, build every tool env the config needs
 ./pastForward doctor                        # list conda envs and whether each is built
 ./pastForward doctor --rebuild-envs ecmsd   # force one (or, with no names, all) to be recreated
 ./pastForward print-log        # print the most recently written log from logs/
