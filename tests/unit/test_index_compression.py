@@ -1,5 +1,6 @@
 import gzip
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -61,6 +62,18 @@ class IndexCompressionTest(unittest.TestCase):
         self.assertFalse(self.raw.exists())
         self.assertTrue(lone.exists())
         self.assertTrue((self.ref / "R.fa").exists())
+
+    def test_real_run_removes_unpacked_index_at_exit(self):
+        code = (
+            "import sys; sys.path.insert(0, %r);"
+            "from scripts.index_compression import restore_indexes;"
+            "restore_indexes({'species': {'Sp': {}}}, dryrun=False);"
+            "import os; print(os.path.exists(%r))"
+        ) % (str(Path(__file__).resolve().parents[2] / "workflow"), str(self.raw))
+        out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+        self.assertEqual(out.stdout.strip(), "True")  # unpacked while the process ran
+        self.assertFalse(self.raw.exists())  # gone after exit
+        self.assertTrue(self.gz.exists())
 
     def test_archives_per_mapper(self):
         self.assertEqual(index_archives("a.fa", "minimap2"), ["a.fa.mmi.gz"])

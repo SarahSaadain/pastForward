@@ -15,7 +15,7 @@ include: "rules/initialize.smk"
 from scripts.species_paths import acquire_pastforward_locks, release_pastforward_locks
 
 # index_compression.py: mapping indexes are temp(), kept as .gz; unpacked again at load (initialize.smk).
-from scripts.index_compression import index_archives, remove_unpacked_indexes
+from scripts.index_compression import index_archives
 from scripts.index_compression import mapper as index_mapper
 
 
@@ -71,16 +71,10 @@ onstart:
 # Add logging for workflow completion
 onsuccess:
     logger.info("Workflow finished, no error")
-    try:
-        remove_unpacked_indexes(config)
-    finally:
-        release_pastforward_locks()
+    release_pastforward_locks()
 
 
 # Add logging for workflow errors
 onerror:
     logger.error("An error occurred")
-    try:
-        remove_unpacked_indexes(config)
-    finally:
-        release_pastforward_locks()
+    release_pastforward_locks()

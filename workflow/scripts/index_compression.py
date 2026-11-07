@@ -90,9 +90,12 @@ def restore_indexes(config: dict, dryrun: bool) -> None:
             subprocess.run([shutil.which("pigz") or "gzip", "-d", "-k", "-f", str(gz)], check=True)
     if placeholders:
         atexit.register(_remove, placeholders)
+    if not dryrun:
+        # onsuccess: does not fire for a run with nothing to do, process exit always does.
+        atexit.register(remove_unpacked_indexes, config)
 
 
 def remove_unpacked_indexes(config: dict) -> None:
-    """End of a run: drop raw indexes that have an archive (unpacked but never consumed)."""
+    """At exit of a run: drop raw indexes that have an archive (jobs that needed them are done)."""
     for gz in _archives(config):
         gz.with_suffix("").unlink(missing_ok=True)
