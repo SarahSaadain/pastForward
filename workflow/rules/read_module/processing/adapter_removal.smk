@@ -79,6 +79,7 @@ rule remove_adapters_paired_with_fastp:
             f"--unqualified_percent_limit {_setting('read_module', 'adapter_removal', 'settings', 'unqualified_percent_limit', default=40)} "
             f"--n_base_limit {_setting('read_module', 'adapter_removal', 'settings', 'n_base_limit', default=5)} "
             f"--merge "
+            f"{_merge_overlap_flag()}"
             f"{_setting('read_module', 'adapter_removal', 'settings', 'extra_params', default= '')}"
         ),
     message:

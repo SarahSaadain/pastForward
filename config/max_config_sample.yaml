@@ -112,6 +112,8 @@ pipeline:
         min_length: 0
         # Optional: Minimum length to trigger poly-X tail trimming (Default: 5)
         #poly_x_min_len: 5
+        # Optional: Minimum overlap (bp) to merge a read pair, paired-end only (Default: 10; fastp's own default is 30, EAGER/paleomix use 11)
+        #merge_min_overlap: 10
         # Optional: Max percentage of unqualified bases allowed in a read (Default: 40)
         #unqualified_percent_limit: 40
         # Optional: Max number of N bases allowed in a read (Default: 5)

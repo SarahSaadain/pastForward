@@ -63,6 +63,13 @@ def _dedup_enabled():
     return _setting("reference_module", "deduplication", "execute", default=True)
 
 
+def _merge_overlap_flag():
+    n = _setting(
+        "read_module", "adapter_removal", "settings", "merge_min_overlap", default=10
+    )
+    return f"--overlap_len_require {n} "
+
+
 def _fastp_adapter_flags(paired):
     # Only set adapters get a flag. `adapters_sequences:` left empty in YAML is None, not {}.
     seqs = (

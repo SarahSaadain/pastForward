@@ -57,6 +57,7 @@ properties:
                   min_quality: {type: integer}
                   min_length: {type: integer}
                   poly_x_min_len: {type: integer}
+                  merge_min_overlap: {type: integer, minimum: 1}
                   unqualified_percent_limit: {type: number}
                   n_base_limit: {type: integer}
                   # Left empty in YAML (null) means auto-detect, see _fastp_adapter_flags.

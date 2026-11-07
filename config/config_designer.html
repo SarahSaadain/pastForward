@@ -556,7 +556,7 @@
                   <span class="opt-tag">optional</span>
                 </div>
                 <div class="opt-body" id="ar_adv_body">
-                  <div class="field-row" style="grid-template-columns: 1fr 1fr 1fr">
+                  <div class="field-row" style="grid-template-columns: 1fr 1fr 1fr 1fr">
                     <div class="field">
                       <label>Poly-X Min Len</label>
                       <input type="number" id="ar_polyx" value="5" min="0" oninput="render()">
@@ -571,6 +571,11 @@
                       <label>N Base Limit</label>
                       <input type="number" id="ar_nbase" value="5" min="0" oninput="render()">
                       <p class="hint">Default: 5. Max number of N bases allowed in a read.</p>
+                    </div>
+                    <div class="field">
+                      <label>Merge Min Overlap</label>
+                      <input type="number" id="ar_overlap" value="" placeholder="10" min="1" oninput="render()">
+                      <p class="hint">Default: 10 (leave empty). Min overlap (bp) to merge a read pair. fastp's own default is 30, EAGER/paleomix use 11.</p>
                     </div>
                   </div>
                 </div>
@@ -1781,6 +1786,7 @@ function buildYAML() {
     kv(8, 'poly_x_min_len', gn('ar_polyx'));
     kv(8, 'unqualified_percent_limit', gn('ar_unqual'));
     kv(8, 'n_base_limit', gn('ar_nbase'));
+    if (gv('ar_overlap') !== '') kv(8, 'merge_min_overlap', gn('ar_overlap'));
   }
   if (gb('ar_adp_en')) {
     p(8, 'adapters_sequences:');
@@ -2087,9 +2093,9 @@ function populateForm(c) {
   const ars = ar.settings || {};
   sb('ar_exec', ar.execute); dot('ar_exec','d_ar');
   sv('ar_minq', ars.min_quality); sv('ar_minl', ars.min_length);
-  if (ars.poly_x_min_len !== undefined || ars.unqualified_percent_limit !== undefined || ars.n_base_limit !== undefined) {
+  if (ars.poly_x_min_len !== undefined || ars.unqualified_percent_limit !== undefined || ars.n_base_limit !== undefined || ars.merge_min_overlap !== undefined) {
     setOpt('ar_adv_en','ar_adv_body','ar_adv_hdr', true);
-    sv('ar_polyx', ars.poly_x_min_len); sv('ar_unqual', ars.unqualified_percent_limit); sv('ar_nbase', ars.n_base_limit);
+    sv('ar_polyx', ars.poly_x_min_len); sv('ar_unqual', ars.unqualified_percent_limit); sv('ar_nbase', ars.n_base_limit); sv('ar_overlap', ars.merge_min_overlap);
   } else setOpt('ar_adv_en','ar_adv_body','ar_adv_hdr', false);
   if (ars.adapters_sequences) {
     setOpt('ar_adp_en','ar_adp_body','ar_adp_hdr', true);
