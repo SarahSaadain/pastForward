@@ -19,7 +19,9 @@ if _scg_sel_mapper == "minimap2":
         input:
             target="{species}/processed/reveal_module/scg/{species}_scg_library.fasta",
         output:
-            "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.mmi",
+            temp(
+                "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.mmi"
+            ),
         log:
             "{species}/processed/reveal_module/scg/{species}_scg_library_minimap2_index.log",
         message:
@@ -52,13 +54,15 @@ elif _scg_sel_mapper == "bwa-aln":
         input:
             "{species}/processed/reveal_module/scg/{species}_scg_library.fasta",
         output:
-            multiext(
-                "{species}/processed/reveal_module/scg/{species}_scg_library.fasta",
-                ".amb",
-                ".ann",
-                ".bwt",
-                ".pac",
-                ".sa",
+            temp(
+                multiext(
+                    "{species}/processed/reveal_module/scg/{species}_scg_library.fasta",
+                    ".amb",
+                    ".ann",
+                    ".bwt",
+                    ".pac",
+                    ".sa",
+                )
             ),
         log:
             "{species}/processed/reveal_module/scg/{species}_scg_library_bwa_aln_index.log",
@@ -134,11 +138,21 @@ else:
         input:
             "{species}/processed/reveal_module/scg/{species}_scg_library.fasta",
         output:
-            "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.0123",
-            "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.amb",
-            "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.ann",
-            "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.bwt.2bit.64",
-            "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.pac",
+            temp(
+                "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.0123"
+            ),
+            temp(
+                "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.amb"
+            ),
+            temp(
+                "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.ann"
+            ),
+            temp(
+                "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.bwt.2bit.64"
+            ),
+            temp(
+                "{species}/processed/reveal_module/scg/{species}_scg_library.fasta.pac"
+            ),
         log:
             "{species}/processed/reveal_module/scg/{species}_scg_library_bwa_index.log",
         message:

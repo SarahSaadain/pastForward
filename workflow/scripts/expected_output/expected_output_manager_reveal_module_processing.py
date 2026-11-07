@@ -21,6 +21,14 @@ def get_expected_output_reveal_module_processing(species):
         all_inputs.append(f"{species}/results/reveal_module/scg/{species}_scg_ranked.tsv")
         all_inputs.append(f"{species}/results/reveal_module/scg/{species}_scg_ranked.json")
 
+    # gzip copy of the SCG library mapping index (the index itself is temp(), see pack_index.smk).
+    # Only the SCG selector maps to it, and only when it has to rank SCGs itself.
+    if scg_sel_active and should_auto_determine_scg(species):
+        all_inputs += index_archives(
+            f"{species}/processed/reveal_module/scg/{species}_scg_library.fasta",
+            index_mapper(config, "reveal_module", "scg_selector"),
+        )
+
     # ── Feature-library / visualization outputs ───────────────────────────────
     try:
         feature_libraries = get_feature_library_ids_for_species(species)
@@ -79,7 +87,14 @@ def get_expected_output_reveal_module_processing(species):
 
     keep_mapped_bam = reveal_cfg.get("mapping", {}).get("settings", {}).get("keep_mapped_bam", False)
 
+    dyn_mapper = index_mapper(config, "reveal_module")
+
     for feature_library in feature_libraries:
+
+        all_inputs += index_archives(
+            f"{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta",
+            dyn_mapper,
+        )
 
         if keep_mapped_bam:
             for individual in individuals:

@@ -27,7 +27,9 @@ if _ref_mapper == "minimap2":
         input:
             target="{species}/processed/reference_module/{reference}/reference/{reference}.fa",
         output:
-            "{species}/processed/reference_module/{reference}/reference/{reference}.mmi",
+            temp(
+                "{species}/processed/reference_module/{reference}/reference/{reference}.mmi"
+            ),
         log:
             "{species}/processed/reference_module/{reference}/index/{reference}_minimap2_index.log",
         cache: True
@@ -45,13 +47,15 @@ elif _ref_mapper == "bwa-aln":
         input:
             "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
         output:
-            multiext(
-                "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-                ".amb",
-                ".ann",
-                ".bwt",
-                ".pac",
-                ".sa",
+            temp(
+                multiext(
+                    "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
+                    ".amb",
+                    ".ann",
+                    ".bwt",
+                    ".pac",
+                    ".sa",
+                )
             ),
         log:
             "{species}/processed/reference_module/{reference}/index/{reference}_bwa_aln_index.log",
@@ -69,13 +73,15 @@ else:
         input:
             "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
         output:
-            multiext(
-                "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-                ".0123",
-                ".amb",
-                ".ann",
-                ".bwt.2bit.64",
-                ".pac",
+            temp(
+                multiext(
+                    "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
+                    ".0123",
+                    ".amb",
+                    ".ann",
+                    ".bwt.2bit.64",
+                    ".pac",
+                )
             ),
         log:
             "{species}/processed/reference_module/{reference}/index/{reference}_bwa_mem2_index.log",

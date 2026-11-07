@@ -20,6 +20,9 @@ from scripts.version import __version__
 # import species data-location symlink/lock setup from workflow/scripts/species_paths.py
 from scripts.species_paths import setup_species_data_locations
 
+# import index compression (unpack at load, compress at end of run) from workflow/scripts/index_compression.py
+from scripts.index_compression import is_dryrun, restore_indexes
+
 # import deprecated-config-key handling from workflow/scripts/config_compat.py
 from scripts.config_compat import apply_config_key_aliases
 
@@ -124,6 +127,11 @@ if workflow.exec_mode != ExecMode.SUBPROCESS:
     # process shares the parent's already-set-up filesystem state, so it must not redo this.
     # The cross-project lock is taken later, in onstart: (see workflow/Snakefile).
     setup_species_data_locations(config)
+
+    # Bring back mapping indexes that only exist as .gz (unpacked, or placeholders on a dry run),
+    # with the archive's mtime, so finished individuals are not remapped. Not on --lint.
+    if "--lint" not in sys.argv:
+        restore_indexes(config, is_dryrun(sys.argv))
 
     pastForward_version = __version__
 

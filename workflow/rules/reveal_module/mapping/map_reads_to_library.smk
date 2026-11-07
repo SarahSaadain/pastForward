@@ -22,7 +22,9 @@ if _dyn_mapper == "minimap2":
         input:
             target="{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta",
         output:
-            "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.mmi",
+            temp(
+                "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.mmi"
+            ),
         log:
             "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg_minimap2_index.log",
         message:
@@ -55,13 +57,15 @@ elif _dyn_mapper == "bwa-aln":
         input:
             "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta",
         output:
-            multiext(
-                "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta",
-                ".amb",
-                ".ann",
-                ".bwt",
-                ".pac",
-                ".sa",
+            temp(
+                multiext(
+                    "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta",
+                    ".amb",
+                    ".ann",
+                    ".bwt",
+                    ".pac",
+                    ".sa",
+                )
             ),
         log:
             "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg_bwa_aln_index.log",
@@ -137,11 +141,21 @@ else:
         input:
             "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta",
         output:
-            "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.0123",
-            "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.amb",
-            "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.ann",
-            "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.bwt.2bit.64",
-            "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.pac",
+            temp(
+                "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.0123"
+            ),
+            temp(
+                "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.amb"
+            ),
+            temp(
+                "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.ann"
+            ),
+            temp(
+                "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.bwt.2bit.64"
+            ),
+            temp(
+                "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta.pac"
+            ),
         log:
             "{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg_bwa_index.log",
         message:

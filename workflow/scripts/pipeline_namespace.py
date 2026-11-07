@@ -25,6 +25,7 @@ from types import SimpleNamespace
 
 from scripts.config_compat import apply_config_key_aliases
 from scripts.config_schema import validate_config
+from scripts.index_compression import index_archives, mapper as index_mapper
 
 _SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -50,7 +51,7 @@ def load_pipeline_namespace(config, include_check=False):
     """
     apply_config_key_aliases(config)
     validate_config(config)
-    namespace = {"config": config}
+    namespace = {"config": config, "index_archives": index_archives, "index_mapper": index_mapper}
     sources = list(_SOURCE_FILES)
     if include_check:
         # check.py skips its scan when Snakemake runs it in a spawned subprocess. Outside

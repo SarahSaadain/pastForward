@@ -30,7 +30,14 @@ def get_expected_output_reference_module(species):
 
     filter_unmapped_reads_cfg = reference_module_cfg.get("filter_unmapped_reads", {})
 
+    ref_mapper = index_mapper(config, "reference_module")
+
     for reference in references_list:
+
+        # gzip copy of the mapping index (the index itself is temp(), see pack_index.smk)
+        if individuals:
+            ref_base = f"{species}/processed/reference_module/{reference}/reference/{reference}"
+            expected_outputs += index_archives(f"{ref_base}.fa", ref_mapper, mmi=f"{ref_base}.mmi")
 
         # Endogenous reads data always generated
         expected_outputs.append(f"{species}/results/reference_module/{reference}/analytics/species_level/{species}/endogenous/{reference}_endogenous.csv")

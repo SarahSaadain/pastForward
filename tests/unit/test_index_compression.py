@@ -1,0 +1,85 @@
+import gzip
+import os
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "workflow"))
+from scripts.index_compression import (
+    index_archives,
+    is_dryrun,
+    mapper,
+    remove_unpacked_indexes,
+    restore_indexes,
+)
+
+OLD = 1_000_000_000
+
+
+class IndexCompressionTest(unittest.TestCase):
+    def setUp(self):
+        self.old_cwd = os.getcwd()
+        self.tmp = tempfile.TemporaryDirectory()
+        os.chdir(self.tmp.name)
+        self.ref = Path("Sp/processed/reference_module/R/reference")
+        self.ref.mkdir(parents=True)
+        self.raw = self.ref / "R.fa.0123"
+        self.gz = self.ref / "R.fa.0123.gz"
+        self.gz.write_bytes(gzip.compress(b"x" * 1000))
+        os.utime(self.gz, (OLD, OLD))
+        (self.ref / "R.fa").write_text(">a\nAC\n")
+        self.cfg = {"species": {"Sp": {}, "Off": {"execute": False}}}
+
+    def tearDown(self):
+        os.chdir(self.old_cwd)
+        self.tmp.cleanup()
+
+    def test_restore_unpacks_with_archive_mtime_and_keeps_archive(self):
+        restore_indexes(self.cfg, dryrun=False)
+        self.assertEqual(self.raw.read_bytes(), b"x" * 1000)
+        self.assertEqual(int(self.raw.stat().st_mtime), OLD)
+        self.assertTrue(self.gz.exists())
+
+    def test_dryrun_placeholder_is_empty_and_replaced_by_real_unpack(self):
+        restore_indexes(self.cfg, dryrun=True)
+        self.assertEqual(self.raw.stat().st_size, 0)
+        self.assertEqual(int(self.raw.stat().st_mtime), OLD)
+        restore_indexes(self.cfg, dryrun=False)  # a killed dry run left the placeholder
+        self.assertEqual(self.raw.stat().st_size, 1000)
+
+    def test_existing_raw_index_is_left_alone(self):
+        self.raw.write_text("real")
+        restore_indexes(self.cfg, dryrun=False)
+        self.assertEqual(self.raw.read_text(), "real")
+
+    def test_remove_only_drops_indexes_that_have_an_archive(self):
+        self.raw.write_text("x")
+        lone = self.ref / "R.fa.amb"
+        lone.write_text("x")
+        remove_unpacked_indexes(self.cfg)
+        self.assertFalse(self.raw.exists())
+        self.assertTrue(lone.exists())
+        self.assertTrue((self.ref / "R.fa").exists())
+
+    def test_archives_per_mapper(self):
+        self.assertEqual(index_archives("a.fa", "minimap2"), ["a.fa.mmi.gz"])
+        self.assertEqual(index_archives("a.fa", "minimap2", mmi="a.mmi"), ["a.mmi.gz"])
+        self.assertIn("a.fa.sa.gz", index_archives("a.fa", "bwa-aln"))
+        self.assertIn("a.fa.0123.gz", index_archives("a.fa", "bwa-mem2"))
+
+    def test_dryrun_detection(self):
+        for argv in (["--dryrun"], ["--dry-run"], ["-n"], ["-np"], ["-nq"], ["-pn"]):
+            self.assertTrue(is_dryrun(["snakemake", "--cores", "4"] + argv), argv)
+        for argv in (["--cores", "4"], ["-p"], ["--rerun-incomplete"], ["-c4"], ["--notemp"]):
+            self.assertFalse(is_dryrun(["snakemake"] + argv), argv)
+
+    def test_mapper_lookup_and_fallback(self):
+        cfg = {"pipeline": {"reveal_module": {"mapping": {"settings": {"mapper": "minimap2"}}}}}
+        self.assertEqual(mapper({}, "reference_module"), "bwa-mem2")
+        self.assertEqual(mapper(cfg, "reveal_module"), "minimap2")
+        self.assertEqual(mapper(cfg, "reveal_module", "scg_selector"), "minimap2")
+
+
+if __name__ == "__main__":
+    unittest.main()

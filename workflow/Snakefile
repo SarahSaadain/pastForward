@@ -14,6 +14,10 @@ include: "rules/initialize.smk"
 # processed_dir/results_dir override, and onsuccess:/onerror: release it.
 from scripts.species_paths import acquire_pastforward_locks, release_pastforward_locks
 
+# index_compression.py: mapping indexes are temp(), kept as .gz; unpacked again at load (initialize.smk).
+from scripts.index_compression import index_archives, remove_unpacked_indexes
+from scripts.index_compression import mapper as index_mapper
+
 
 # file_manager.py: Manages file paths and directories.
 include: "scripts/file_manager.py"
@@ -33,6 +37,7 @@ include: "scripts/expected_output_manager.py"
 # functions are in scope wherever they're referenced.
 include: "rules/common.smk"
 # rules/read_module_processing.smk: Contains rules for processing raw aDNA/hDNA reads.
+include: "rules/pack_index.smk"
 include: "rules/read_module_processing.smk"
 # rules/reference_module_processing.smk: Contains rules for mapping reads to reference.
 include: "rules/reference_module_processing.smk"
@@ -66,10 +71,16 @@ onstart:
 # Add logging for workflow completion
 onsuccess:
     logger.info("Workflow finished, no error")
-    release_pastforward_locks()
+    try:
+        remove_unpacked_indexes(config)
+    finally:
+        release_pastforward_locks()
 
 
 # Add logging for workflow errors
 onerror:
     logger.error("An error occurred")
-    release_pastforward_locks()
+    try:
+        remove_unpacked_indexes(config)
+    finally:
+        release_pastforward_locks()
