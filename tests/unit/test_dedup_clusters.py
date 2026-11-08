@@ -53,7 +53,7 @@ class DedupClusterTestCase(unittest.TestCase):
                         for name in os.listdir(folder):
                             start, end = map(int, name[len("cluster_"):-len(".bed")].split("_"))
                             with open(os.path.join(folder, name)) as f:
-                                lines = [l for l in f.read().splitlines() if l]
+                                lines = [ln for ln in f.read().splitlines() if ln]
                             # the 1-based range in the filename matches the contigs inside
                             self.assertEqual(lines, contigs[start - 1:end])
                             self.assertLessEqual(len(lines), max(max_per, 1))

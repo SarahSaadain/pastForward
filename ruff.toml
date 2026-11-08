@@ -1,0 +1,7 @@
+# Lint only. E712 is ignored on purpose: config flags are compared with == True/False.
+# F821 is ignored because scripts are included into the Snakefile namespace or get `snakemake` injected.
+extend-exclude = ["tests/synthetic_project"]
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+ignore = ["F821", "E712"]

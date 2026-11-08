@@ -11,7 +11,7 @@ def combine_endogenous_files(individual_files, combined_file_path):
     """
     if not individual_files:
         # Using sys.stderr for error messages, as recommended for Snakemake scripts
-        print(f"Error: No individual endogenous read files found to combine.", file=sys.stderr)
+        print("Error: No individual endogenous read files found to combine.", file=sys.stderr)
         # Exiting with a non-zero status is often preferred in Snakemake if inputs are missing
         sys.exit(1) 
 

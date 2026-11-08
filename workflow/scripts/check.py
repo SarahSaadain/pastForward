@@ -66,9 +66,9 @@ if not _is_snakemake_subprocess:
                         except ValueError as e:
                             lines.append(f"            Reads: (ERROR — {e})")
                         except Exception:
-                            lines.append(f"            Reads: (reads not found)")
+                            lines.append("            Reads: (reads not found)")
                 except Exception:
-                    lines.append(f"        Samples: (samples not found)")
+                    lines.append("        Samples: (samples not found)")
             if ignored_individuals:
                 lines.append(f"    Individuals ignored ({len(ignored_individuals)}) [not selected in config]:")
                 for ind in ignored_individuals:
@@ -96,7 +96,7 @@ if not _is_snakemake_subprocess:
         try:
             all_feat_libs = _discover_all_feature_library_file_list_for_species(sname)
             feat_libs = get_feature_library_file_list_for_species(sname)
-            ignored_feat_libs = [(lid, lp) for lid, lp in all_feat_libs if lid not in {l[0] for l in feat_libs}]
+            ignored_feat_libs = [(lid, lp) for lid, lp in all_feat_libs if lid not in {lib[0] for lib in feat_libs}]
             lines.append(f"    Feature Libraries ({len(feat_libs)}):")
             for lib_id, lib_path in feat_libs:
                 lines.append(f"      - {lib_id}: {lib_path}")

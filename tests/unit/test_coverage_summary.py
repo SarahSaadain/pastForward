@@ -87,8 +87,11 @@ class AnalyzeDepthTestCase(unittest.TestCase):
         # A crashed samtools gives cut-short output that parses fine, so only the exit code shows it
         class FakeBam:
             references, lengths = ("2L",), (5,)
-            __enter__ = lambda self: self
-            __exit__ = lambda self, *a: None
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return None
 
         proc = mock.Mock(stdout=depth_text([("2L", 1, 3)]), returncode=1)
         proc.wait.return_value = 1
