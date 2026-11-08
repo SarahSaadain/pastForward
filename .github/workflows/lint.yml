@@ -34,3 +34,22 @@ jobs:
 
       - name: Unit tests
         run: python -m unittest discover tests/unit -v
+
+  snakefmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # snakefmt formats shell: blocks with shfmt, so it must be on PATH.
+      - name: Install snakefmt and shfmt
+        run: |
+          pip install snakefmt==2.0.3
+          sudo curl -fsSL -o /usr/local/bin/shfmt https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_linux_amd64
+          sudo chmod +x /usr/local/bin/shfmt
+
+      - name: snakefmt check
+        run: snakefmt --check workflow

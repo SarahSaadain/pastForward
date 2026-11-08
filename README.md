@@ -5,6 +5,9 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-≥9.26.1-brightgreen.svg)](https://snakemake.github.io)
 [![GitHub release](https://img.shields.io/github/v/release/SarahSaadain/aDNA_Pipeline_Snakemake)](https://github.com/SarahSaadain/aDNA_Pipeline_Snakemake/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Lint](https://github.com/SarahSaadain/pastForward/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/SarahSaadain/pastForward/actions/workflows/lint.yml)
+[![Code style: snakefmt](https://img.shields.io/badge/code%20style-snakefmt-000000.svg)](https://github.com/snakemake/snakefmt)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22132682.svg)](https://doi.org/10.5281/zenodo.22132682)
 
 pastForward analyzes raw ancient and historical DNA from a sequencing facility. It checks read quality and screens for contamination, with methods suited to the short, damaged reads such samples usually give. It maps reads to a reference genome and corrects them for DNA damage, so they are ready for downstream analysis. Optionally, it can also compare genomic features across time points or between specimens, such as transposon insertions, gene copy number changes, or endosymbiont strain replacements.
 
