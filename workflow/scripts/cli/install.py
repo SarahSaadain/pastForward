@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from . import user_settings
 from .common import (
     CYAN,
     CONFIGFILE_FLAGS,
@@ -29,9 +30,7 @@ MIN_SNAKEMAKE = (
 )  # keep in sync with min_version() in workflow/rules/initialize.smk
 MIN_CONDA = (24, 7, 1)  # recommended in docs/FAQ.md, not enforced
 ENV_NAME = "pastforward"  # pastForward's own env: install may create and upgrade it
-USER_ENV_NAME = (
-    "snakemake"  # the env the setup guide has users make: reused, never changed
-)
+USER_ENV_NAME = "snakemake"  # the env the setup guide has users make: reused, only jsonschema is added
 CHANNELS = ["-c", "conda-forge", "-c", "bioconda", "-c", "nodefaults"]
 MINIFORGE_URL = "https://github.com/conda-forge/miniforge"
 
@@ -80,6 +79,7 @@ def _snakemake_exe(conda):
             user_exe = Path(user_prefix) / "bin" / "snakemake"
             found = _tool_version(str(user_exe)) if user_exe.exists() else None
             if found is not None and found >= MIN_SNAKEMAKE:
+                _ensure_jsonschema(conda, user_prefix, USER_ENV_NAME)
                 return str(user_exe)
             have = f"snakemake {_dotted(found)}" if found else "no snakemake"
             print(
@@ -94,7 +94,9 @@ def _snakemake_exe(conda):
             ),
             flush=True,
         )
-        rc = subprocess.call([conda, "create", "-y", "-n", ENV_NAME, *CHANNELS, spec])
+        rc = subprocess.call(
+            [conda, "create", "-y", "-n", ENV_NAME, *CHANNELS, "jsonschema", spec]
+        )
         if rc != 0:
             _die(
                 f"pastForward install: `conda create -n {ENV_NAME}` failed (exit {rc})."
@@ -115,16 +117,43 @@ def _snakemake_exe(conda):
             _die(
                 f"pastForward install: could not get {spec} into {prefix} (conda exit {rc})."
             )
+    _ensure_jsonschema(conda, prefix, ENV_NAME)
     return str(exe)
+
+
+def _ensure_jsonschema(conda, prefix, env_name):
+    """The config check needs jsonschema in the same env as snakemake. Add it when missing."""
+    py = str(Path(prefix) / "bin" / "python")
+    try:
+        if (
+            subprocess.run(
+                [py, "-c", "import jsonschema"], capture_output=True
+            ).returncode
+            == 0
+        ):
+            return
+    except OSError:
+        pass  # no python in the env yet: install into it below
+    print(_color(DIM, f"`{env_name}` has no jsonschema. Installing it..."), flush=True)
+    rc = subprocess.call(
+        [conda, "install", "-y", "-n", env_name, *CHANNELS, "jsonschema"]
+    )
+    if rc != 0:
+        _die(
+            f"pastForward install: could not install jsonschema into {prefix} (conda exit {rc})."
+        )
 
 
 def _print_next_steps(snakemake, steps):
     """Numbered (command, comment) steps, led by `conda activate` when snakemake is not on PATH."""
     if shutil.which("snakemake") != snakemake:
+        auto = user_settings.auto_activate_enabled()
         steps = [
             (
                 f"conda activate {Path(snakemake).parent.parent.name}",
-                "every new terminal, before other ./pastForward commands",
+                "optional, ./pastForward finds the env itself"
+                if auto
+                else "every new terminal, before other ./pastForward commands",
             )
         ] + steps
     print()
@@ -159,6 +188,8 @@ def cmd_install(argv):
     print(
         f"{_color(GREEN, 'snakemake:')} {snakemake} ({_dotted(_tool_version(snakemake))})"
     )
+    # Remembered so later ./pastForward commands find this env without `conda activate`.
+    user_settings.update(snakemake_env=str(Path(snakemake).parent.parent))
 
     # Which tool envs are needed depends on the config, so they can only be built once one exists.
     if not Path(DEFAULT_CONFIGFILE).is_file() and not any(

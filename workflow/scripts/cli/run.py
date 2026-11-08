@@ -28,6 +28,7 @@ from .common import (
     _load_config,
     _strip_configfile_args,
     _cores_from_args,
+    _validate_config_or_die,
 )
 
 
@@ -160,7 +161,9 @@ def _run_background(cmd, log_path):
 
 
 def cmd_run(argv, extra_flags=(), name="run"):
-    _ensure_project_root(require_config=True, configfiles=_configfiles_from_args(argv))
+    configfiles = _configfiles_from_args(argv)
+    _ensure_project_root(require_config=True, configfiles=configfiles)
+    _validate_config_or_die(configfiles)
     # --fg/--foreground is pastForward's own flag, not snakemake's - pulled out here rather
     # than by argparse so it can sit anywhere among the passed-through snakemake args.
     extra = [a for a in argv if a not in ("--fg", "--foreground")]
@@ -191,7 +194,9 @@ def cmd_resume(argv):
 
 
 def cmd_dryrun(argv):
-    _ensure_project_root(require_config=True, configfiles=_configfiles_from_args(argv))
+    configfiles = _configfiles_from_args(argv)
+    _ensure_project_root(require_config=True, configfiles=configfiles)
+    _validate_config_or_die(configfiles)
     cmd = _build_dryrun_cmd(argv)
     log_path = LOG_DIR / f"dryrun_{_timestamp()}.log"
     code = _run_foreground(cmd, log_path)
@@ -201,7 +206,9 @@ def cmd_dryrun(argv):
 
 
 def cmd_touch(argv):
-    _ensure_project_root(require_config=True, configfiles=_configfiles_from_args(argv))
+    configfiles = _configfiles_from_args(argv)
+    _ensure_project_root(require_config=True, configfiles=configfiles)
+    _validate_config_or_die(configfiles)
     cmd = _build_touch_cmd(argv)
     log_path = LOG_DIR / f"touch_{_timestamp()}.log"
     sys.exit(_run_foreground(cmd, log_path))

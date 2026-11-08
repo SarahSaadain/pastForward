@@ -287,6 +287,32 @@ class StatusHelpersTestCase(unittest.TestCase):
             },
         )
 
+    def test_user_settings_corrupt_file_is_not_overwritten(self):
+        us = cli.user_settings
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "cli.json"
+            f.write_text('{"auto_activate": false,')  # a half-edited file
+            with (
+                unittest.mock.patch.object(us, "SETTINGS_FILE", f),
+                contextlib.redirect_stderr(io.StringIO()) as err,
+            ):
+                us.update(snakemake_env="/envs/a")
+            self.assertEqual(f.read_text(), '{"auto_activate": false,')
+            self.assertIn("not a valid JSON object", err.getvalue())
+
+    def test_user_settings_remember_env_and_auto_activate(self):
+        us = cli.user_settings
+        with tempfile.TemporaryDirectory() as d:
+            with unittest.mock.patch.object(us, "SETTINGS_FILE", Path(d) / "cli.json"):
+                self.assertEqual(us.read(), {})
+                self.assertTrue(us.auto_activate_enabled())
+                us.update(snakemake_env="/envs/a")
+                us.update(auto_activate=False)
+                self.assertEqual(
+                    us.read(), {"snakemake_env": "/envs/a", "auto_activate": False}
+                )
+                self.assertFalse(us.auto_activate_enabled())
+
     def test_read_project_name(self):
         with tempfile.TemporaryDirectory() as d:
             cfg = os.path.join(d, "config.yaml")
@@ -1475,8 +1501,90 @@ class ToolsTestCase(unittest.TestCase):
             cli.main(["tools", "nonsense"])
 
 
-class InstallTestCase(unittest.TestCase):
+class SnakemakeEnvTestCase(unittest.TestCase):
+    """_use_snakemake_env and _validate_config_or_die: the paths a user hits before any run."""
+
     def setUp(self):
+        self._orig_cwd = os.getcwd()
+        self.dir = tempfile.mkdtemp(prefix="pf_test_env_")
+        self.env = os.path.join(self.dir, "envs", "snakemake")
+        os.makedirs(os.path.join(self.env, "bin"))
+        Path(self.env, "bin", "snakemake").touch()
+        self.settings = Path(self.dir, "cli.json")
+        for patcher in (
+            unittest.mock.patch.object(
+                cli.user_settings, "SETTINGS_FILE", self.settings
+            ),
+            unittest.mock.patch.dict(os.environ, {}),
+            unittest.mock.patch.object(cli.common.shutil, "which", return_value=None),
+        ):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        os.chdir(self._orig_cwd)
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def record(self, **extra):
+        self.settings.write_text(json.dumps({"snakemake_env": self.env, **extra}))
+
+    def die_message(self):
+        with self.assertRaises(SystemExit) as cm:
+            cli.common._use_snakemake_env()
+        return str(cm.exception.code)
+
+    def test_snakemake_on_path_is_remembered(self):
+        with unittest.mock.patch.object(
+            cli.common.shutil,
+            "which",
+            return_value=os.path.join(self.env, "bin", "snakemake"),
+        ):
+            cli.common._use_snakemake_env()
+        self.assertEqual(
+            json.loads(self.settings.read_text())["snakemake_env"], self.env
+        )
+
+    def test_recorded_env_is_used_without_activate(self):
+        self.record()
+        with contextlib.redirect_stderr(io.StringIO()):
+            cli.common._use_snakemake_env()
+        self.assertTrue(os.environ["PATH"].startswith(os.path.join(self.env, "bin")))
+        self.assertEqual(os.environ["CONDA_PREFIX"], self.env)
+        self.assertEqual(os.environ["CONDA_DEFAULT_ENV"], "snakemake")
+
+    def test_auto_activate_off_stops_with_hint(self):
+        self.record(auto_activate=False)
+        self.assertIn("conda activate snakemake", self.die_message())
+
+    def test_no_record_stops(self):
+        self.assertIn("no env is recorded", self.die_message())
+
+    def test_deleted_env_is_named_in_message(self):
+        self.record()
+        shutil.rmtree(self.env)
+        self.assertIn(f"recorded env {self.env} has no snakemake", self.die_message())
+
+    def test_validate_config_or_die_reports_check_failure(self):
+        os.makedirs(os.path.join(self.dir, "config"))
+        os.chdir(self.dir)
+        with (
+            unittest.mock.patch.object(
+                cli.common, "check_config", side_effect=ValueError("boom")
+            ),
+            self.assertRaises(SystemExit) as cm,
+        ):
+            cli.common._validate_config_or_die([])
+        self.assertIn("ValueError: boom", str(cm.exception.code))
+
+
+class InstallTestCase(unittest.TestCase):
+    real_ensure_jsonschema = staticmethod(cli.install._ensure_jsonschema)
+
+    def setUp(self):
+        # Stubbed here: the env folders in these tests have no python to ask for jsonschema.
+        patcher = unittest.mock.patch.object(cli.install, "_ensure_jsonschema")
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self._orig_cwd = os.getcwd()
         self.project_dir = tempfile.mkdtemp(prefix="pf_test_cli_install_")
         os.makedirs(os.path.join(self.project_dir, "workflow"))
@@ -1486,6 +1594,36 @@ class InstallTestCase(unittest.TestCase):
     def tearDown(self):
         os.chdir(self._orig_cwd)
         shutil.rmtree(self.project_dir, ignore_errors=True)
+
+    def test_ensure_jsonschema_installs_only_when_missing(self):
+        prefix = os.path.join(self.project_dir, "envs", "pastforward")
+        os.makedirs(os.path.join(prefix, "bin"))
+        real = self.real_ensure_jsonschema  # the setUp stub hides the real one
+        with (
+            unittest.mock.patch.object(
+                cli.install.subprocess,
+                "run",
+                return_value=unittest.mock.Mock(returncode=0),
+            ) as check,
+            unittest.mock.patch.object(cli.install.subprocess, "call") as call,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            real("conda", prefix, "pastforward")
+        call.assert_not_called()
+        self.assertIn("import jsonschema", check.call_args[0][0])
+        with (
+            unittest.mock.patch.object(
+                cli.install.subprocess,
+                "run",
+                return_value=unittest.mock.Mock(returncode=1),
+            ),
+            unittest.mock.patch.object(
+                cli.install.subprocess, "call", return_value=0
+            ) as call,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            real("conda", prefix, "pastforward")
+        self.assertEqual(call.call_args[0][0][-1], "jsonschema")
 
     def test_parse_version(self):
         self.assertEqual(cli.install._parse_version("conda 24.7.1\n"), (24, 7, 1))

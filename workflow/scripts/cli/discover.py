@@ -18,6 +18,7 @@ from .common import (
     _ensure_project_root,
     _load_config,
     _strip_configfile_args,
+    check_config,
 )
 
 
@@ -69,8 +70,6 @@ def _capture_pipeline_log(include_check, configfiles=()):
     )
     sys.path.insert(0, "workflow")
     try:
-        from scripts.config_compat import apply_config_key_aliases
-        from scripts.config_schema import validate_config
         from scripts.pipeline_namespace import load_pipeline_namespace
         from scripts.species_paths import setup_species_data_locations
 
@@ -87,8 +86,7 @@ def _capture_pipeline_log(include_check, configfiles=()):
     try:
         # Validate before making any symlink, so an invalid config changes nothing on disk.
         # load_pipeline_namespace() runs both again; they are idempotent.
-        apply_config_key_aliases(config)
-        validate_config(config)
+        check_config(config)
         # Resolve the per-species data-location symlinks (discovery reads through them). This
         # takes no cross-project lock, so check/preview never block, or are blocked by, a run.
         setup_species_data_locations(config)

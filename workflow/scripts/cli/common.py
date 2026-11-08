@@ -271,6 +271,32 @@ def _load_config(configfiles):
     return config
 
 
+def check_config(config):
+    """The schema check initialize.smk runs: key aliases, then validate_config. Raises on a bad
+    config. Shared by the CLI's run commands and check/preview."""
+    workflow = str(Path("workflow").resolve())
+    if workflow not in sys.path:
+        sys.path.insert(0, workflow)
+    from scripts.config_compat import apply_config_key_aliases
+    from scripts.config_schema import validate_config
+
+    apply_config_key_aliases(config)
+    validate_config(config)
+
+
+def _validate_config_or_die(configfiles):
+    """Run check_config before any Snakemake start. A bad config then fails at the prompt, not
+    after Snakemake has loaded (or in a background log)."""
+    try:
+        config = _load_config(configfiles)  # needs PyYAML
+    except ImportError as e:
+        _die(f"pastForward: {e}. Activate the pipeline's conda env first.")
+    try:
+        check_config(config)
+    except Exception as e:
+        _die(f"pastForward: {type(e).__name__}: {e}")
+
+
 def _ensure_project_root(require_snakemake=True, require_config=False, configfiles=()):
     if not Path("workflow").is_dir() or not Path("config").is_dir():
         _die(
@@ -294,10 +320,60 @@ def _ensure_project_root(require_snakemake=True, require_config=False, configfil
     # check/preview/version/print-log never spawn snakemake. check/preview still need PyYAML to
     # read config.yaml, so they fail later on ImportError instead; version and print-log need
     # neither (print-log only reads files back out of logs/).
-    if require_snakemake and shutil.which("snakemake") is None:
+    if require_snakemake:
+        _use_snakemake_env()
+
+
+def _use_snakemake_env():
+    """Make snakemake findable: it is on PATH (remember its env), or the env recorded by install
+    is used without `conda activate` (unless auto_activate is false in cli.json)."""
+    from . import user_settings
+
+    found = shutil.which("snakemake")
+    if found:
+        user_settings.update(snakemake_env=str(Path(found).parent.parent))
+        return
+    env = user_settings.read().get("snakemake_env")
+    if not env:
         _die(
-            "pastForward: `snakemake` not found on PATH. Activate its conda env first."
+            "pastForward: `snakemake` not found on PATH and no env is recorded. "
+            "Run `./pastForward install`, or activate the conda env that has snakemake."
         )
+    exe = Path(env) / "bin" / "snakemake"
+    if not exe.exists():
+        _die(
+            f"pastForward: `snakemake` not found on PATH, and the recorded env {env} has "
+            "no snakemake. Run `./pastForward install`, or activate the env that has it."
+        )
+    name = Path(env).name
+    if not user_settings.auto_activate_enabled():
+        _die(
+            f"pastForward: `snakemake` not found on PATH. Activate its env first: "
+            f"conda activate {name}  (auto_activate is off in {user_settings.SETTINGS_FILE})"
+        )
+    print(
+        _color(
+            DIM,
+            f"Using snakemake from conda env {name}. Turn off with auto_activate: false "
+            f"in {user_settings.SETTINGS_FILE}",
+        ),
+        file=sys.stderr,
+        flush=True,
+    )
+    os.environ["PATH"] = os.pathsep.join([str(exe.parent), os.environ.get("PATH", "")])
+    # The workflow reads these two, which `conda activate` would otherwise set.
+    os.environ["CONDA_PREFIX"] = env
+    os.environ["CONDA_DEFAULT_ENV"] = name
+    # Run the CLI with the env's own python, so the config checks see its PyYAML and jsonschema.
+    py = exe.parent / "python"
+    if (
+        py.exists()
+        and not os.environ.get("PASTFORWARD_REEXEC")
+        and Path(sys.executable).resolve() != py.resolve()
+    ):
+        os.environ["PASTFORWARD_REEXEC"] = "1"
+        shim = os.path.abspath(sys.argv[0])
+        os.execv(str(py), [str(py), shim, *sys.argv[1:]])
 
 
 def _command_line(pid):

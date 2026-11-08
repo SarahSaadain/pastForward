@@ -28,6 +28,30 @@ It works out the expected output files from your config and whatever input data 
 
 From that, it prints a list of every file it plans to create during this run. Use a dry run to check this list before running the pipeline for real, so you can confirm your input files are being detected and will be processed the way you expect.
 
+**Q: Do I need `conda activate` before I run `./pastForward`?**
+No, once `./pastForward install` has run. Install records the conda env that has Snakemake in `~/.config/pastforward/cli.json`. When `snakemake` is not on your PATH, pastForward uses that env by itself and prints `Using snakemake from conda env <name>`. Plain `snakemake` typed in your shell still needs `conda activate`.
+
+**Q: How do I turn off this automatic env use?**
+Set `auto_activate` to `false` in `cli.json`. The file is `$XDG_CONFIG_HOME/pastforward/cli.json`, or `~/.config/pastforward/cli.json` when `XDG_CONFIG_HOME` is not set. Create it if it does not exist:
+
+```json
+{
+  "auto_activate": false
+}
+```
+
+With this set, pastForward stops and tells you to run `conda activate <name>` first. The file has no command yet, so edit it by hand. Other commands keep the key when they rewrite the file.
+
+**Q: Which env does pastForward remember?**
+The env that `./pastForward install` used. After that, every pastForward command that finds `snakemake` on your PATH saves that env, so the last env you activated is the one used next time. Install looks for envs in this order: the `pastforward` env if it exists, then a `snakemake` env with Snakemake 9.26.1 or newer, and otherwise it creates `pastforward`.
+
+**Q: Why does install add `jsonschema`?**
+The config check uses the `jsonschema` Python package. Without it, `./pastForward check` and `preview` only print a warning and skip the check. `install` adds `jsonschema` to the `pastforward` env, and to a `snakemake` env it reuses. Only that package is added, the Snakemake version is not changed. If you added the env yourself and install did not run, add it by hand:
+
+```bash
+conda install -n snakemake -c conda-forge jsonschema
+```
+
 ---
 
 ## Input Data
@@ -218,7 +242,7 @@ Two cases surprise people:
 - `execute` on `mapping`, `sequence_overview` or `normalization` is rejected. These steps always run with their module, so the setting never had an effect.
 - A section whose lines are all commented out, such as `settings:` with every key under it behind `#`, is reported as empty. Delete the line, or leave at least one key under it.
 
-Every valid key is listed in [config/parameters.md](../config/parameters.md). Keys renamed in v2.0 are listed in the [CHANGELOG](../CHANGELOG.md). The check needs the `jsonschema` Python package, which comes with Snakemake. If `./pastForward check` runs in a Python without it, it prints a warning and skips the check. A real run always validates.
+Every valid key is listed in [config/parameters.md](../config/parameters.md). Keys renamed in v2.0 are listed in the [CHANGELOG](../CHANGELOG.md). The check needs the `jsonschema` Python package. `./pastForward install` adds it to the `pastforward` env. If a command runs in a Python without it, it prints a warning and skips the check. `run`, `resume`, `dryrun` and `touch` run the check in the terminal before they start Snakemake, so a bad key is reported at once. Snakemake checks the config again when it loads, so direct `snakemake` calls are covered too.
 
 **Q: How do I disable a pastForward stage I don't need?**
 Set its `execute` flag to `false` in `config/config.yaml`. For example, to skip taxonomic screening:
@@ -596,6 +620,9 @@ Do not confuse this with `insufficient_data`, which means one individual fell be
 A lock file is left behind when a previous run was forcefully terminated. Run `./pastForward unlock` to remove it, then re-run normally. Do not delete the lock file manually.
 
 This is Snakemake's own lock, scoped to this project's working directory (its `.snakemake/` folder). It's unrelated to the separate cross-project `.pastforward.lock` file described in "Can I store a species' data outside the project directory?" above. Plain `./pastForward unlock` only lists that one, and `--cross-project` removes it. If pastForward instead reports a `.pastforward.lock` conflict, see that Q&A for how to resolve it.
+
+**Q: pastForward says `snakemake` is not found on PATH and no env is recorded. What do I do?**
+Run `./pastForward install`. It finds or creates the env with Snakemake and records it. You can also activate that env once with `conda activate <name>` and run any `./pastForward` command. That command saves the env, so later runs do not need the activate step.
 
 **Q: I accidentally deleted some intermediate files. Can I regenerate them?**
 Yes. Delete the corresponding output files (or use `--forcerun`) and re-run pastForward. Snakemake will re-execute only the rules needed to regenerate the missing files.
