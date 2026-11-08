@@ -1,11 +1,12 @@
 # Optional: `pip install pre-commit && pre-commit install` formats and lints on every commit.
+# The two formatters re-stage the files they rewrite, so formatting never fails a commit.
 # Uses the tools already on PATH (snakefmt needs shfmt too), same versions as CI.
 repos:
   - repo: local
     hooks:
       - id: ruff-format
         name: ruff format
-        entry: ruff format
+        entry: bash -c 'ruff format "$@" && git add -- "$@"' --
         language: system
         types: [python]
       - id: ruff-check
@@ -15,7 +16,7 @@ repos:
         types: [python]
       - id: snakefmt
         name: snakefmt
-        entry: snakefmt
+        entry: bash -c 'snakefmt "$@" && git add -- "$@"' --
         language: system
         files: (\.smk|^workflow/Snakefile)$
       - id: snakemake-lint
