@@ -24,3 +24,9 @@ repos:
         language: system
         pass_filenames: false
         files: (\.smk|^workflow/Snakefile|^workflow/envs/)
+      - id: unit-tests
+        name: unit tests
+        entry: python3 -m unittest discover tests/unit
+        language: system
+        pass_filenames: false
+        files: \.(py|smk|yaml)$
