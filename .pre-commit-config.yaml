@@ -18,3 +18,9 @@ repos:
         entry: snakefmt
         language: system
         files: (\.smk|^workflow/Snakefile)$
+      - id: snakemake-lint
+        name: snakemake lint
+        entry: snakemake --lint --snakefile workflow/Snakefile
+        language: system
+        pass_filenames: false
+        files: (\.smk|^workflow/Snakefile|^workflow/envs/)
