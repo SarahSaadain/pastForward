@@ -29,24 +29,24 @@ logger = logging.getLogger(__name__)
 # Category -> conventional path, relative to a species root (either "<project_root>/<species>"
 # or a configured "species_dir").
 CATEGORY_RELPATHS = {
-    "reads":           "input/read_module",
-    "reference":       "input/reference_module",
-    "scg":             "input/reveal_module/scg",
+    "reads": "input/read_module",
+    "reference": "input/reference_module",
+    "scg": "input/reveal_module/scg",
     "feature_library": "input/reveal_module/feature_library",
-    "competition":     "input/reveal_module/competition",
-    "processed":       "processed",
-    "results":         "results",
+    "competition": "input/reveal_module/competition",
+    "processed": "processed",
+    "results": "results",
 }
 
 # Category -> the species.<key>.<...> config key that can override it explicitly.
 CATEGORY_CONFIG_KEYS = {
-    "reads":           "reads_dir",
-    "reference":       "reference_dir",
-    "scg":             "scg_dir",
+    "reads": "reads_dir",
+    "reference": "reference_dir",
+    "scg": "scg_dir",
     "feature_library": "feature_library_dir",
-    "competition":     "competition_dir",
-    "processed":       "processed_dir",
-    "results":         "results_dir",
+    "competition": "competition_dir",
+    "processed": "processed_dir",
+    "results": "results_dir",
 }
 
 # The two categories that are written to during a run, and therefore need the cross-project
@@ -92,7 +92,9 @@ def _resolve_category_target(config: dict, species: str, category: str) -> str |
 # os.unlink() — never a recursive delete (rm -rf on a symlink-with-trailing-slash can wipe out
 # the *target's* contents on some systems). No teardown logic exists yet; this function itself
 # never removes anything (see step 1/2 below) — this note is for future code that might.
-def _ensure_symlink(link_path: Path, target_abspath: str, *, species: str, category: str) -> None:
+def _ensure_symlink(
+    link_path: Path, target_abspath: str, *, species: str, category: str
+) -> None:
     # 1. Idempotency / conflict check for an existing symlink.
     if link_path.is_symlink():
         current_target = os.readlink(link_path)
@@ -241,7 +243,9 @@ def _acquire_project_lock(target_dir: str, species: str, category: str) -> None:
             except FileNotFoundError:
                 continue  # removed between our create and our read: try the create again
             if age < _PARTIAL_LOCK_GRACE_SECONDS:
-                raise held_elsewhere({})  # probably a racing run between create and write
+                raise held_elsewhere(
+                    {}
+                )  # probably a racing run between create and write
 
         if existing is not None and existing.get("hostname") != my_identity["hostname"]:
             raise CrossProjectLockError(
@@ -300,7 +304,10 @@ def release_pastforward_locks() -> None:
 def setup_species_data_locations(config: dict) -> None:
     for species, category, target in _configured_targets(config):
         _ensure_symlink(
-            Path(species) / CATEGORY_RELPATHS[category], target, species=species, category=category
+            Path(species) / CATEGORY_RELPATHS[category],
+            target,
+            species=species,
+            category=category,
         )
 
 

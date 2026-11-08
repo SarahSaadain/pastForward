@@ -1,4 +1,3 @@
-
 # Validates cross-cutting config settings that aren't owned by a single module's own
 # expected-output/rule logic, and resolves them to concrete values callers can use directly.
 

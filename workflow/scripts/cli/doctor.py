@@ -1,10 +1,23 @@
 """doctor: list the pipeline's conda environments and rebuild them."""
+
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from .common import CYAN, DIM, GREEN, RED, SDM_FLAG, YELLOW, _color, _die, _ensure_project_root, _live_tracked_pid, _quip
+from .common import (
+    CYAN,
+    DIM,
+    GREEN,
+    RED,
+    SDM_FLAG,
+    YELLOW,
+    _color,
+    _die,
+    _ensure_project_root,
+    _live_tracked_pid,
+    _quip,
+)
 
 
 def _known_env_names():
@@ -15,7 +28,15 @@ def _known_env_names():
 def _list_conda_envs():
     # --nolock: read-only, like check/preview - must not be blocked by, or block, a real run.
     proc = subprocess.run(
-        ["snakemake", SDM_FLAG, "conda", "--list-conda-envs", "--cores", "1", "--nolock"],
+        [
+            "snakemake",
+            SDM_FLAG,
+            "conda",
+            "--list-conda-envs",
+            "--cores",
+            "1",
+            "--nolock",
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -42,11 +63,15 @@ def cmd_doctor(argv):
     rebuild = "--rebuild-envs" in argv
     names = [a for a in argv if a != "--rebuild-envs"]
     if not rebuild and names:
-        _die(f"pastForward doctor: unknown argument(s): {' '.join(names)} (did you mean --rebuild-envs?)")
+        _die(
+            f"pastForward doctor: unknown argument(s): {' '.join(names)} (did you mean --rebuild-envs?)"
+        )
     known = _known_env_names()
     unknown = [n for n in names if n not in known]
     if unknown:
-        _die(f"pastForward doctor: unknown env name(s): {', '.join(unknown)}\nKnown envs: {', '.join(known)}")
+        _die(
+            f"pastForward doctor: unknown env name(s): {', '.join(unknown)}\nKnown envs: {', '.join(known)}"
+        )
 
     print(_color(DIM, "Resolving conda environments (snakemake --list-conda-envs)..."))
     envs = _list_conda_envs()
@@ -60,13 +85,20 @@ def cmd_doctor(argv):
         built = Path(e["location"]).is_dir()
         # Pad the plain text first, then colorize - _color()'s ANSI codes would otherwise count
         # toward the width and throw off alignment.
-        status = _color(GREEN if built else YELLOW, f"{'built' if built else 'missing':<10}")
+        status = _color(
+            GREEN if built else YELLOW, f"{'built' if built else 'missing':<10}"
+        )
         marker = _color(CYAN, " (rebuilding)") if rebuild and e in targets else ""
         print(f"{Path(e['env_file']).name:<28}{status}{e['location']}{marker}")
 
     if not rebuild:
         print()
-        print(_color(DIM, "Add --rebuild-envs [name ...] to force one or more of these to be recreated."))
+        print(
+            _color(
+                DIM,
+                "Add --rebuild-envs [name ...] to force one or more of these to be recreated.",
+            )
+        )
         if all(Path(e["location"]).is_dir() for e in envs):
             _quip("doctor_ok")
         return
@@ -87,5 +119,14 @@ def cmd_doctor(argv):
         print(_color(DIM, "Nothing to remove - target environment(s) not yet built."))
 
     print()
-    print(_color(DIM, f"Recreating via snakemake {SDM_FLAG} conda --conda-create-envs-only..."))
-    sys.exit(subprocess.call(["snakemake", SDM_FLAG, "conda", "--conda-create-envs-only", "--cores", "1"]))
+    print(
+        _color(
+            DIM,
+            f"Recreating via snakemake {SDM_FLAG} conda --conda-create-envs-only...",
+        )
+    )
+    sys.exit(
+        subprocess.call(
+            ["snakemake", SDM_FLAG, "conda", "--conda-create-envs-only", "--cores", "1"]
+        )
+    )

@@ -1,4 +1,3 @@
-
 import os
 import glob
 from collections import Counter
@@ -8,10 +7,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 # Raised when the config requests individuals or references that do not exist on disk.
 # Unlike generic discovery failures, these must not be silently caught.
 class ConfigValidationError(Exception):
     pass
+
 
 # -----------------------------------------------------------------------------------------------
 # Read the config filter lists for a given species and key (e.g. "individuals", "references").
@@ -25,6 +26,7 @@ def _get_species_config_list(species, key):
         return None
     return list(value)
 
+
 # -----------------------------------------------------------------------------------------------
 # Get all files in a folder matching a specific pattern (e.g., *.fastq.gz)
 def get_files_in_folder_matching_pattern(folder: str, pattern: str) -> list:
@@ -36,6 +38,7 @@ def get_files_in_folder_matching_pattern(folder: str, pattern: str) -> list:
     files = glob.glob(os.path.join(folder, pattern))
     return files
 
+
 # -----------------------------------------------------------------------------------------------
 # Get all FASTA-like files (.fna, .fasta, .fa) in a folder. Used wherever a reference/feature
 # library/SCG/competition folder is scanned for its sequence files.
@@ -45,6 +48,7 @@ def _get_fasta_files_in_folder(folder: str) -> list:
         files += get_files_in_folder_matching_pattern(folder, pattern)
     return files
 
+
 # -----------------------------------------------------------------------------------------------
 # Supported raw read file extensions, checked in this order wherever a raw file needs to be
 # matched or resolved by its filename stem.
@@ -52,7 +56,10 @@ RAW_READ_EXTENSIONS = (".fastq.gz", ".fq.gz")
 
 # -----------------------------------------------------------------------------------------------
 # Human-readable description of the accepted raw read naming pattern, for use in error messages.
-_RAW_READ_PATTERN_HINT = " or ".join(f"<Individual>*_R1*{ext} or <Individual>*_1*{ext}" for ext in RAW_READ_EXTENSIONS)
+_RAW_READ_PATTERN_HINT = " or ".join(
+    f"<Individual>*_R1*{ext} or <Individual>*_1*{ext}" for ext in RAW_READ_EXTENSIONS
+)
+
 
 # -----------------------------------------------------------------------------------------------
 # Get all raw read files for a given species, from both input/read_module/ and the species folder
@@ -93,12 +100,17 @@ def get_read_files_for_species(species: str) -> list[str]:
         )
 
     if len(read_files) == 0:
-        logger.warning(f"No read files found for species {species}. Make sure the files are named with the pattern {_RAW_READ_PATTERN_HINT} and are located in either {read_folder} or {species}.")
-        raise Exception(f"No read files found for species {species}. Make sure the files are named with the pattern {_RAW_READ_PATTERN_HINT} and are located in either {read_folder} or {species}.")
+        logger.warning(
+            f"No read files found for species {species}. Make sure the files are named with the pattern {_RAW_READ_PATTERN_HINT} and are located in either {read_folder} or {species}."
+        )
+        raise Exception(
+            f"No read files found for species {species}. Make sure the files are named with the pattern {_RAW_READ_PATTERN_HINT} and are located in either {read_folder} or {species}."
+        )
 
     logger.debug(f"Read files for species {species}: {read_files}")
 
     return read_files
+
 
 # -----------------------------------------------------------------------------------------------
 # Strip a raw read file's compressed-FASTQ extension (see RAW_READ_EXTENSIONS) from a filename.
@@ -107,6 +119,7 @@ def strip_raw_read_extension(filename: str) -> str:
         if filename.endswith(ext):
             return filename[: -len(ext)]
     return filename
+
 
 # -----------------------------------------------------------------------------------------------
 # Resolve the on-disk path of a raw read file given its filename stem (the filename with its
@@ -118,11 +131,14 @@ def get_raw_read_path_for_stem(species: str, stem: str) -> str:
         candidate = os.path.join(reads_dir, f"{stem}{ext}")
         # Reads placed directly in <species>/ are moved into reads_dir by prepare_raw_reads, so
         # still return the reads_dir path: that makes Snakemake run the move rule first.
-        if os.path.exists(candidate) or os.path.exists(os.path.join(species, f"{stem}{ext}")):
+        if os.path.exists(candidate) or os.path.exists(
+            os.path.join(species, f"{stem}{ext}")
+        ):
             return candidate
     raise FileNotFoundError(
         f"No raw read file found for '{stem}' in {reads_dir} or {species} (tried extensions: {', '.join(RAW_READ_EXTENSIONS)})."
     )
+
 
 # -----------------------------------------------------------------------------------------------
 # (internal) Discover uncompressed *.fastq/*.fq files in a species' raw read folder and the
@@ -141,6 +157,7 @@ def _discover_uncompressed_fastq_files_for_species(species: str) -> list[str]:
 
     logger.debug(f"Uncompressed .fastq/.fq files found for species {species}: {files}")
     return files
+
 
 # -----------------------------------------------------------------------------------------------
 # Regexes matching the "read number" marker in a raw read filename: the conventional R1/R2
@@ -161,6 +178,7 @@ _READ_BARE_MARKER_RE = {
     "2": re.compile(rf"_2(?=_|(?:{_EXT_ALTERNATION})$)"),
 }
 
+
 # -----------------------------------------------------------------------------------------------
 # Find the read-number marker in a filename. Prefers an explicit R1/R2 token; only falls back
 # to a bare 1/2 segment if no R-token is present *anywhere* in the filename - not just for the
@@ -173,7 +191,9 @@ _READ_BARE_MARKER_RE = {
 def _find_read_marker(filename: str, read_num: str):
     r_matches = list(_READ_R_MARKER_RE[read_num].finditer(filename))
     if len(r_matches) > 1:
-        raise ValueError(f"File '{filename}' has multiple R{read_num} markers; cannot determine read number unambiguously.")
+        raise ValueError(
+            f"File '{filename}' has multiple R{read_num} markers; cannot determine read number unambiguously."
+        )
     if r_matches:
         return r_matches[0]
 
@@ -183,8 +203,11 @@ def _find_read_marker(filename: str, read_num: str):
 
     bare_matches = list(_READ_BARE_MARKER_RE[read_num].finditer(filename))
     if len(bare_matches) > 1:
-        raise ValueError(f"File '{filename}' has multiple standalone '{read_num}' markers; cannot determine read number unambiguously.")
+        raise ValueError(
+            f"File '{filename}' has multiple standalone '{read_num}' markers; cannot determine read number unambiguously."
+        )
     return bare_matches[0] if bare_matches else None
+
 
 # -----------------------------------------------------------------------------------------------
 # Why the pipeline can't use a raw read file name, or None if the name is fine. Shared by
@@ -197,6 +220,7 @@ def get_read_name_problem(filename: str):
     except ValueError:
         return "more than one read marker, the pipeline stops with an error"
     return "no read marker, the pipeline ignores it"
+
 
 # -----------------------------------------------------------------------------------------------
 # (internal) Discover all R1 raw read files from disk without applying any config filter
@@ -212,13 +236,18 @@ def _discover_all_r1_read_files_for_species(species: str) -> list[str]:
     r1_files = [f for f in files if _find_read_marker(os.path.basename(f), "1")]
 
     if len(r1_files) == 0:
-        logger.warning(f"No R1 read files found for species {species}. Make sure the files are named with the pattern {_RAW_READ_PATTERN_HINT}.")
+        logger.warning(
+            f"No R1 read files found for species {species}. Make sure the files are named with the pattern {_RAW_READ_PATTERN_HINT}."
+        )
         logger.warning(f"Available read files for species {species}: {files}")
-        raise Exception(f"No R1 read files found for species {species}. Make sure the files are named with the pattern {_RAW_READ_PATTERN_HINT}.")
+        raise Exception(
+            f"No R1 read files found for species {species}. Make sure the files are named with the pattern {_RAW_READ_PATTERN_HINT}."
+        )
 
     logger.debug(f"Discovered R1 read files for species {species}: {r1_files}")
 
     return r1_files
+
 
 # -----------------------------------------------------------------------------------------------
 # (internal) Discover raw read files on disk whose names the pipeline can't use (see
@@ -232,8 +261,11 @@ def _discover_unmatched_read_files_for_species(species: str) -> list[str]:
 
     unmatched = [f for f in files if get_read_name_problem(os.path.basename(f))]
 
-    logger.debug(f"Read files ignored (naming convention) for species {species}: {unmatched}")
+    logger.debug(
+        f"Read files ignored (naming convention) for species {species}: {unmatched}"
+    )
     return unmatched
+
 
 # -----------------------------------------------------------------------------------------------
 # Get R1 raw read files for a given species, restricted to the individuals selected in the config
@@ -243,11 +275,16 @@ def get_r1_read_files_for_species(species: str) -> list[str]:
     all_r1_files = _discover_all_r1_read_files_for_species(species)
 
     selected_individuals = set(get_individuals_for_species(species))
-    r1_files = [f for f in all_r1_files if get_individual_from_filepath(f) in selected_individuals]
+    r1_files = [
+        f
+        for f in all_r1_files
+        if get_individual_from_filepath(f) in selected_individuals
+    ]
 
     logger.debug(f"Config-filtered R1 read files for species {species}: {r1_files}")
 
     return r1_files
+
 
 # -----------------------------------------------------------------------------------------------
 # (internal) The sample ID a raw read filename belongs to: the filename stem (extension removed)
@@ -264,12 +301,15 @@ def _sample_id_from_filename(filename: str, read_num: str):
     stem = strip_raw_read_extension(filename)
     return stem[: marker.start()] + stem[marker.end() :]
 
+
 # -----------------------------------------------------------------------------------------------
 # (internal) Discover all sample IDs from disk without applying any config filter
 def _discover_all_sample_ids_for_species(species):
     samples = [s for s, reads in _sample_read_map(species).items() if reads["1"]]
     if not samples:
-        _discover_all_r1_read_files_for_species(species)  # raises the "no R1 read files" error
+        _discover_all_r1_read_files_for_species(
+            species
+        )  # raises the "no R1 read files" error
 
     logger.debug(f"Discovered sample IDs for species {species}: {samples}")
 
@@ -279,6 +319,7 @@ def _discover_all_sample_ids_for_species(species):
 
     return samples
 
+
 # -----------------------------------------------------------------------------------------------
 # Get sample IDs for a species based on raw read filenames, restricted to the individuals
 # selected in the config (see get_individuals_for_species).
@@ -286,15 +327,22 @@ def get_sample_ids_for_species(species):
     all_samples = _discover_all_sample_ids_for_species(species)
 
     selected_individuals = set(get_individuals_for_species(species))
-    samples = [s for s in all_samples if get_individual_from_sample(s) in selected_individuals]
+    samples = [
+        s for s in all_samples if get_individual_from_sample(s) in selected_individuals
+    ]
 
     logger.debug(f"Config-filtered sample IDs for species {species}: {samples}")
 
     if len(samples) == 0:
-        logger.warning(f"No sample IDs found for species {species} after applying the config individuals filter.")
-        raise Exception(f"No sample IDs found for species {species} after applying the config individuals filter.")
+        logger.warning(
+            f"No sample IDs found for species {species} after applying the config individuals filter."
+        )
+        raise Exception(
+            f"No sample IDs found for species {species} after applying the config individuals filter."
+        )
 
     return samples
+
 
 # -----------------------------------------------------------------------------------------------
 # (internal) Map every sample ID (see _sample_id_from_filename) to its R1 and R2 file names,
@@ -309,6 +357,7 @@ def _sample_read_map(species):
             if sample is not None:
                 sample_map.setdefault(sample, {"1": [], "2": []})[read_num].append(name)
     return sample_map
+
 
 def get_raw_reads_for_sample(species, sample):
 
@@ -345,7 +394,7 @@ def get_raw_reads_for_sample(species, sample):
     candidates_r2 = candidates["2"]
 
     if not candidates_r2:
-        return [r1]      # Single-end
+        return [r1]  # Single-end
     if len(candidates_r2) > 1:
         raise ValueError(
             f"Sample {sample} has more than one R2 candidate, cannot pick unambiguously: {sorted(candidates_r2)}. "
@@ -356,6 +405,7 @@ def get_raw_reads_for_sample(species, sample):
     r2 = os.path.join(reads_dir, candidates_r2[0])
     return [r1, r2]  # Paired-end
 
+
 # -----------------------------------------------------------------------------------------------
 # Given the path to a read 1 file, return the path its read 2 counterpart would have
 # (whether or not that file actually exists on disk), by swapping the read-number marker
@@ -365,10 +415,13 @@ def get_read2_counterpart_path(read1_path):
     filename = os.path.basename(read1_path)
     marker = _find_read_marker(filename, "1")
     if not marker:
-        raise ValueError(f"File '{filename}' does not contain a recognizable read 1 marker (R1 or a standalone 1).")
+        raise ValueError(
+            f"File '{filename}' does not contain a recognizable read 1 marker (R1 or a standalone 1)."
+        )
     replacement = "_R2" if marker.group(0) == "_R1" else "_2"
-    filename2 = filename[:marker.start()] + replacement + filename[marker.end():]
+    filename2 = filename[: marker.start()] + replacement + filename[marker.end() :]
     return os.path.join(directory, filename2)
+
 
 # -----------------------------------------------------------------------------------------------
 # (internal) Discover all individuals from disk without applying any config filter
@@ -384,6 +437,7 @@ def _discover_all_individuals_for_species(species):
         individuals.add(get_individual_from_sample(s))
     logger.debug(f"Discovered individuals for species {species}: {individuals}")
     return sorted(list(individuals))
+
 
 # -----------------------------------------------------------------------------------------------
 # Get individual sample IDs for a given species based on raw read filenames.
@@ -409,6 +463,7 @@ def get_individuals_for_species(species):
     logger.debug(f"Config-filtered individuals for species {species}: {selected}")
     return selected
 
+
 # -----------------------------------------------------------------------------------------------
 # Map FASTA files to (id, path) pairs. The ID is the filename stem with dots replaced by
 # underscores, so two files can share an ID ('genome.fa' + 'genome.fna', 'X.0.fna' + 'X_0.fna').
@@ -425,24 +480,32 @@ def _fasta_files_to_id_path_pairs(files, kind, species):
         seen[file_id] = f
     return [(i, f) for i, f in seen.items()]
 
+
 # -----------------------------------------------------------------------------------------------
 # (internal) Discover all reference files from disk without applying any config filter
-def _discover_all_reference_file_list_for_species(species: str) -> list[tuple[str, str]]:
+def _discover_all_reference_file_list_for_species(
+    species: str,
+) -> list[tuple[str, str]]:
     species_folder = species
     reference_folder = f"{species}/input/reference_module"
     try:
-        logger.debug(f"Looking for reference files in {reference_folder} for species {species}.")
+        logger.debug(
+            f"Looking for reference files in {reference_folder} for species {species}."
+        )
         reference_files = _get_fasta_files_in_folder(reference_folder)
     except Exception:
-        logger.debug(f"Reference folder not found for species {species}. Trying species folder directly.")
+        logger.debug(
+            f"Reference folder not found for species {species}. Trying species folder directly."
+        )
         reference_files = _get_fasta_files_in_folder(species_folder)
 
     if len(reference_files) == 0:
         raise Exception(f"No reference found for species {species}.")
 
-    result = _fasta_files_to_id_path_pairs(reference_files, 'reference', species)
+    result = _fasta_files_to_id_path_pairs(reference_files, "reference", species)
     logger.debug(f"Discovered reference files for species {species}: {result}")
     return result
+
 
 # -----------------------------------------------------------------------------------------------
 # Get reference files for a given species (supports .fna, .fasta, .fa).
@@ -470,16 +533,19 @@ def get_reference_file_list_for_species(species: str) -> list[tuple[str, str]]:
     logger.debug(f"Config-filtered references for species {species}: {selected}")
     return selected
 
+
 # -----------------------------------------------------------------------------------------------
 # Extract individual ID from a given file path or sample name
 def get_individual_from_filepath(filepath):
     basename = os.path.basename(filepath)
     return get_individual_from_sample(basename)
 
+
 # -----------------------------------------------------------------------------------------------
 # Extract individual ID from a sample name
 def get_individual_from_sample(sample):
     return sample.split("_")[0]
+
 
 # -----------------------------------------------------------------------------------------------
 # Get only reference file paths for a species
@@ -487,11 +553,13 @@ def get_references_paths_for_species(species):
     refs = get_reference_file_list_for_species(species)
     return [ref[1] for ref in refs]
 
+
 # -----------------------------------------------------------------------------------------------
 # Get only reference IDs for a species
 def get_references_ids_for_species(species):
     refs = get_reference_file_list_for_species(species)
     return [ref[0] for ref in refs]
+
 
 # -----------------------------------------------------------------------------------------------
 # Get sample IDs for a specific individual within a species
@@ -504,40 +572,54 @@ def get_samples_for_species_individual(species, individual):
     # Currently, a sample is the filename stem with the read-number marker (see
     # _READ_R_MARKER_RE/_READ_BARE_MARKER_RE) cut out, e.g. _R1/_R2 or a standalone _1/_2.
     # The first part of the sample name (before the first "_") is considered the individual ID.
-    # The sample might contain additional information after the individual ID, 
+    # The sample might contain additional information after the individual ID,
     # but we only want to match the samples with the individual ID at the start of the sample name.
     samples_of_individual = [f for f in samples if f.startswith(f"{individual}_")]
 
-    # in case there is no additional information after the individual ID, 
+    # in case there is no additional information after the individual ID,
     # the sample name will be the same as the individual ID.
     samples_of_individual += [f for f in samples if f == individual]
 
-    logger.debug(f"Samples for individual {individual} in species {species}: {samples_of_individual}")
+    logger.debug(
+        f"Samples for individual {individual} in species {species}: {samples_of_individual}"
+    )
 
     if len(samples_of_individual) == 0:
-        logger.warning(f"No samples found for individual {individual} in species {species}. Available samples: {samples}")
-        raise Exception(f"No samples found for individual {individual} in species {species}.")
-    
+        logger.warning(
+            f"No samples found for individual {individual} in species {species}. Available samples: {samples}"
+        )
+        raise Exception(
+            f"No samples found for individual {individual} in species {species}."
+        )
+
     return samples_of_individual
+
 
 # -----------------------------------------------------------------------------------------------
 # (internal) Discover all feature library files from disk without applying any config filter
-def _discover_all_feature_library_file_list_for_species(species: str) -> list[tuple[str, str]]:
+def _discover_all_feature_library_file_list_for_species(
+    species: str,
+) -> list[tuple[str, str]]:
     species_folder = species
     feature_library_folder = f"{species_folder}/input/reveal_module/feature_library"
     library_files = []
     try:
-        logger.debug(f"Looking for feature library files in {feature_library_folder} for species {species}.")
+        logger.debug(
+            f"Looking for feature library files in {feature_library_folder} for species {species}."
+        )
         library_files = _get_fasta_files_in_folder(feature_library_folder)
     except Exception as e:
-        logger.warning(f"Failed to find feature library files in {feature_library_folder} for species {species}. Exception: {e}")
+        logger.warning(
+            f"Failed to find feature library files in {feature_library_folder} for species {species}. Exception: {e}"
+        )
 
     if len(library_files) == 0:
         raise Exception(f"No feature library files found for species {species}.")
 
-    result = _fasta_files_to_id_path_pairs(library_files, 'feature library', species)
+    result = _fasta_files_to_id_path_pairs(library_files, "feature library", species)
     logger.debug(f"Discovered feature library files for species {species}: {result}")
     return result
+
 
 # -----------------------------------------------------------------------------------------------
 # Get feature library files for a given species (supports .fna, .fasta, .fa).
@@ -565,17 +647,20 @@ def get_feature_library_file_list_for_species(species: str) -> list[tuple[str, s
     logger.debug(f"Config-filtered feature libraries for species {species}: {selected}")
     return selected
 
+
 # -----------------------------------------------------------------------------------------------
 # Get only reference file paths for a species
 def get_feature_library_paths_for_species(species):
     refs = get_feature_library_file_list_for_species(species)
     return [ref[1] for ref in refs]
 
+
 # -----------------------------------------------------------------------------------------------
 # Get only reference IDs for a species
 def get_feature_library_ids_for_species(species):
     refs = get_feature_library_file_list_for_species(species)
     return [ref[0] for ref in refs]
+
 
 # -----------------------------------------------------------------------------------------------
 # Get scg library files for a given species (supports .fna, .fasta, .fa)
@@ -589,11 +674,15 @@ def get_scg_library_file_list_for_species(species: str) -> list[tuple[str, str]]
     library_files = []
     try:
         # Collect all supported reference files
-        logger.debug(f"Looking for SCG library files in {scg_library_folder} for species {species}.")
+        logger.debug(
+            f"Looking for SCG library files in {scg_library_folder} for species {species}."
+        )
 
         library_files = _get_fasta_files_in_folder(scg_library_folder)
     except Exception as e:
-        logger.debug(f"Failed to find SCG library files in {scg_library_folder} for species {species}. Exception: {e}")
+        logger.debug(
+            f"Failed to find SCG library files in {scg_library_folder} for species {species}. Exception: {e}"
+        )
 
     if len(library_files) == 0:
         logger.debug(f"No user-provided SCG library files found for species {species}.")
@@ -607,28 +696,36 @@ def get_scg_library_file_list_for_species(species: str) -> list[tuple[str, str]]
         )
 
     # Return as list of tuples: (filename without extension, full path)
-    library_files_with_filename = _fasta_files_to_id_path_pairs(library_files, 'SCG', species)
+    library_files_with_filename = _fasta_files_to_id_path_pairs(
+        library_files, "SCG", species
+    )
 
-    logger.debug(f"SCG library files for species {species}: {library_files_with_filename}")
+    logger.debug(
+        f"SCG library files for species {species}: {library_files_with_filename}"
+    )
 
     return library_files_with_filename
+
 
 # -----------------------------------------------------------------------------------------------
 # Get only scg library file paths for a species
 def get_scg_library_paths_for_species(species):
     refs = get_scg_library_file_list_for_species(species)
-    return [ref[1] for ref in refs] 
+    return [ref[1] for ref in refs]
+
 
 # -----------------------------------------------------------------------------------------------
-# Get only scg library IDs for a species  
+# Get only scg library IDs for a species
 def get_scg_library_ids_for_species(species):
     refs = get_scg_library_file_list_for_species(species)
     return [ref[0] for ref in refs]
 
+
 # -----------------------------------------------------------------------------------------------
 # Get cleaned feature library ID for a given feature library path
 def get_cleaned_feature_library_id_for_library_path(feature_library_path):
-    return os.path.splitext(os.path.basename(feature_library_path))[0].replace('.', '_')
+    return os.path.splitext(os.path.basename(feature_library_path))[0].replace(".", "_")
+
 
 # -----------------------------------------------------------------------------------------------
 # Get feature library file for a given species and library ID
@@ -637,8 +734,13 @@ def get_feature_library_file_for_species_and_library(species, library_id):
     for lib in libraries:
         if lib[0] == library_id:
             return lib[1]
-    logger.error(f"Feature library with ID {library_id} not found for species {species}. Available libraries: {libraries}")
-    raise Exception(f"Feature library with ID {library_id} not found for species {species}.")
+    logger.error(
+        f"Feature library with ID {library_id} not found for species {species}. Available libraries: {libraries}"
+    )
+    raise Exception(
+        f"Feature library with ID {library_id} not found for species {species}."
+    )
+
 
 # -----------------------------------------------------------------------------------------------
 # Get scg library file for a given species and library ID
@@ -647,8 +749,13 @@ def get_scg_library_file_for_species_and_library(species, library_id):
     for lib in libraries:
         if lib[0] == library_id:
             return lib[1]
-    logger.warning(f"SCG library with ID {library_id} not found for species {species}. Available libraries: {libraries}")
-    raise ValueError(f"SCG library with ID {library_id} not found for species {species}.")
+    logger.warning(
+        f"SCG library with ID {library_id} not found for species {species}. Available libraries: {libraries}"
+    )
+    raise ValueError(
+        f"SCG library with ID {library_id} not found for species {species}."
+    )
+
 
 # -----------------------------------------------------------------------------------------------
 # Resolve the reference genome path that SCG determination (BUSCO) will use.
@@ -656,6 +763,7 @@ def get_scg_library_file_for_species_and_library(species, library_id):
 # Raises ValueError when 0 or >1 references are found without an explicit config override.
 def get_scg_determination_reference_path(species):
     import logging as _log
+
     config_ref = config.get("species", {}).get(species, {}).get("scg_reference")
     if config_ref:
         return config_ref
@@ -680,18 +788,25 @@ def get_scg_determination_reference_path(species):
     _log.info(f"[SCG Selector] Auto-detected reference for '{species}': {refs[0][1]}")
     return refs[0][1]
 
+
 # -----------------------------------------------------------------------------------------------
 # Return True when all of the following hold:
 #   1. scg_selector.execute is true in pipeline config
 #   2. No user-provided SCG FASTA exists in {species}/input/reveal_module/scg/
 #   3. A BUSCO lineage is configured for the species (required to run BUSCO)
 def should_auto_determine_scg(species):
-    if not config.get("pipeline", {}).get("reveal_module", {}).get("scg_selector", {}).get("execute", True):
+    if (
+        not config.get("pipeline", {})
+        .get("reveal_module", {})
+        .get("scg_selector", {})
+        .get("execute", True)
+    ):
         return False
     if get_scg_library_file_list_for_species(species):
         return False
     lineage = config.get("species", {}).get(species, {}).get("lineage")
     return bool(lineage)
+
 
 # -----------------------------------------------------------------------------------------------
 # Return the SCG library ID to use: user-provided ID or the auto-determined sentinel.
@@ -701,6 +816,7 @@ def get_effective_scg_library_id_for_species(species):
         return user_scgs[0][0]
     return f"{species}_determined_scg"
 
+
 # -----------------------------------------------------------------------------------------------
 # Return the FASTA path for the SCG library: user-provided or auto-determined.
 def get_effective_scg_library_path_for_species(species):
@@ -708,6 +824,7 @@ def get_effective_scg_library_path_for_species(species):
     if user_scgs:
         return user_scgs[0][1]
     return f"{species}/results/reveal_module/scg/{species}_relevant_scg.fasta"
+
 
 # -----------------------------------------------------------------------------------------------
 # Get the competition FASTA file for a species from {species}/input/reveal_module/competition/.
@@ -717,7 +834,9 @@ def get_competition_fasta_for_species(species):
     competition_folder = f"{species}/input/reveal_module/competition"
     files = []
     try:
-        logger.debug(f"Looking for competition FASTA in {competition_folder} for species {species}.")
+        logger.debug(
+            f"Looking for competition FASTA in {competition_folder} for species {species}."
+        )
         files = _get_fasta_files_in_folder(competition_folder)
     except Exception as e:
         logger.debug(f"No competition folder found for species {species}: {e}")

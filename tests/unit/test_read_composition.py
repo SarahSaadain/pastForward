@@ -8,6 +8,7 @@ Pure Python, stdlib only, no Snakemake/conda required. Run with either:
     python3 tests/unit/test_read_composition.py
     python3 -m unittest tests.test_read_composition -v          (from the repo root)
 """
+
 import os
 import sys
 import unittest
@@ -47,7 +48,9 @@ class TestSampleComposition(unittest.TestCase):
         self.assertAlmostEqual(row["merged_percent"], 97.69, places=2)
 
     def test_single_end_is_all_single(self):
-        row = sample_composition("S1_x", 100, {"filtering_result": {"passed_filter_reads": 100}})
+        row = sample_composition(
+            "S1_x", 100, {"filtering_result": {"passed_filter_reads": 100}}
+        )
         self.assertEqual(row["layout"], "single")
         self.assertEqual(row["single_end_reads"], 100)
         self.assertEqual(row["merged_reads"], 0)
@@ -64,7 +67,10 @@ class TestSampleComposition(unittest.TestCase):
     def test_missing_merge_section_raises(self):
         with self.assertRaises(ValueError):
             sample_composition(
-                "S1", 100, {"filtering_result": {"passed_filter_reads": 100}}, paired=True
+                "S1",
+                100,
+                {"filtering_result": {"passed_filter_reads": 100}},
+                paired=True,
             )
 
     def test_adapter_removal_skipped(self):
@@ -84,7 +90,9 @@ class TestByIndividual(unittest.TestCase):
     def test_sums_samples_and_recomputes_percent(self):
         rows = [
             sample_composition("A_1", 100, pe_json(passed=180, merged=80)),  # 80/20/0
-            sample_composition("A_2", 100, {"filtering_result": {"passed_filter_reads": 100}}),
+            sample_composition(
+                "A_2", 100, {"filtering_result": {"passed_filter_reads": 100}}
+            ),
             sample_composition("B_1", 50, pe_json(passed=50, merged=0)),
         ]
         out = {r["individual"]: r for r in by_individual(rows)}

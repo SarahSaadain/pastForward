@@ -11,6 +11,7 @@ file_manager.py's functions directly against it. Run with either:
     python3 tests/unit/test_file_manager.py
     python3 -m unittest tests.test_file_manager -v          (from the repo root)
 """
+
 import os
 import shutil
 import sys
@@ -42,7 +43,9 @@ class FileManagerTestCase(unittest.TestCase):
         fm.get_read_files_for_species.cache_clear()
         fm._sample_read_map.cache_clear()
         if self.fixture_kwargs is not None:
-            self.lib = testlib.build_species_library(self.project_dir, **self.fixture_kwargs)
+            self.lib = testlib.build_species_library(
+                self.project_dir, **self.fixture_kwargs
+            )
 
     def tearDown(self):
         os.chdir(self._orig_cwd)
@@ -59,14 +62,21 @@ class FileManagerTestCase(unittest.TestCase):
 
 class TestReadDiscovery(FileManagerTestCase):
     def test_get_read_files_includes_all_fastq_gz_but_not_uncompressed(self):
-        basenames = sorted(os.path.basename(f) for f in fm.get_read_files_for_species("Dmel"))
-        expected = sorted([
-            "IND001_R1.fastq.gz", "IND001_R2.fastq.gz",
-            "IND002_lib1_1.fastq.gz", "IND002_lib1_2.fastq.gz",
-            "IND002_lib2_1.fastq.gz", "IND002_lib2_2.fastq.gz",
-            "IND003_R1.fastq.gz",
-            "IND004_readme.fastq.gz",
-        ])
+        basenames = sorted(
+            os.path.basename(f) for f in fm.get_read_files_for_species("Dmel")
+        )
+        expected = sorted(
+            [
+                "IND001_R1.fastq.gz",
+                "IND001_R2.fastq.gz",
+                "IND002_lib1_1.fastq.gz",
+                "IND002_lib1_2.fastq.gz",
+                "IND002_lib2_1.fastq.gz",
+                "IND002_lib2_2.fastq.gz",
+                "IND003_R1.fastq.gz",
+                "IND004_readme.fastq.gz",
+            ]
+        )
         self.assertEqual(basenames, expected)
 
     def test_get_read_files_raises_when_none_found(self):
@@ -76,10 +86,16 @@ class TestReadDiscovery(FileManagerTestCase):
 
     def test_unmatched_read_files_are_discovered_separately(self):
         unmatched = fm._discover_unmatched_read_files_for_species("Dmel")
-        self.assertEqual([os.path.basename(f) for f in unmatched], ["IND004_readme.fastq.gz"])
+        self.assertEqual(
+            [os.path.basename(f) for f in unmatched], ["IND004_readme.fastq.gz"]
+        )
 
     def test_read_name_problem_matches_discovery(self):
-        for name in ("IND001_R1.fastq.gz", "IND002_lib1_2.fq.gz", "IND_1_box-3_R2.fastq.gz"):
+        for name in (
+            "IND001_R1.fastq.gz",
+            "IND002_lib1_2.fq.gz",
+            "IND_1_box-3_R2.fastq.gz",
+        ):
             self.assertIsNone(fm.get_read_name_problem(name), name)
         self.assertIn("ignores", fm.get_read_name_problem("IND004_readme.fastq.gz"))
         # Discovery raises on these, so they must be reported, not silently accepted.
@@ -96,8 +112,12 @@ class TestReadDiscovery(FileManagerTestCase):
 
     def test_uncompressed_fastq_is_discovered_but_not_processed(self):
         uncompressed = fm._discover_uncompressed_fastq_files_for_species("Dmel")
-        self.assertEqual([os.path.basename(f) for f in uncompressed], ["IND005_R1.fastq"])
-        all_read_files = [os.path.basename(f) for f in fm.get_read_files_for_species("Dmel")]
+        self.assertEqual(
+            [os.path.basename(f) for f in uncompressed], ["IND005_R1.fastq"]
+        )
+        all_read_files = [
+            os.path.basename(f) for f in fm.get_read_files_for_species("Dmel")
+        ]
         self.assertNotIn("IND005_R1.fastq", all_read_files)
 
     def test_strip_raw_read_extension(self):
@@ -134,12 +154,18 @@ class TestRawReadPathForStem(FileManagerTestCase):
     def test_found_in_reads_dir(self):
         os.makedirs("Sp/input/read_module")
         open("Sp/input/read_module/A_R1.fastq.gz", "w").close()
-        self.assertEqual(fm.get_raw_read_path_for_stem("Sp", "A_R1"), "Sp/input/read_module/A_R1.fastq.gz")
+        self.assertEqual(
+            fm.get_raw_read_path_for_stem("Sp", "A_R1"),
+            "Sp/input/read_module/A_R1.fastq.gz",
+        )
 
     def test_species_dir_returns_reads_dir_path(self):
         os.makedirs("Sp")
         open("Sp/A_R1.fq.gz", "w").close()
-        self.assertEqual(fm.get_raw_read_path_for_stem("Sp", "A_R1"), "Sp/input/read_module/A_R1.fq.gz")
+        self.assertEqual(
+            fm.get_raw_read_path_for_stem("Sp", "A_R1"),
+            "Sp/input/read_module/A_R1.fq.gz",
+        )
 
     def test_missing_raises(self):
         os.makedirs("Sp")
@@ -150,6 +176,7 @@ class TestRawReadPathForStem(FileManagerTestCase):
 class TestReadsInBothFolders(FileManagerTestCase):
     """Reads dropped into <species>/ after the first run (when input/read_module/ already
     exists) must still be found, and resolve to the read_module path the move rule produces."""
+
     fixture_kwargs = None
 
     def setUp(self):
@@ -162,7 +189,10 @@ class TestReadsInBothFolders(FileManagerTestCase):
         self.assertEqual(sorted(fm.get_sample_ids_for_species("Sp")), ["A", "B"])
 
     def test_root_read_resolves_to_read_module_path(self):
-        self.assertEqual(fm.get_raw_reads_for_sample("Sp", "B"), ["Sp/input/read_module/B_R1.fastq.gz"])
+        self.assertEqual(
+            fm.get_raw_reads_for_sample("Sp", "B"),
+            ["Sp/input/read_module/B_R1.fastq.gz"],
+        )
 
     def test_same_name_in_both_folders_raises(self):
         open("Sp/A_R1.fastq.gz", "w").close()
@@ -184,7 +214,9 @@ class TestReadDiscoveryIsCached(FileManagerTestCase):
 
 class TestIndividualsAndSamples(FileManagerTestCase):
     def test_individuals_discovered_sorted_excluding_unmatched(self):
-        self.assertEqual(fm.get_individuals_for_species("Dmel"), ["IND001", "IND002", "IND003"])
+        self.assertEqual(
+            fm.get_individuals_for_species("Dmel"), ["IND001", "IND002", "IND003"]
+        )
 
     def test_individuals_config_filter(self):
         self.configure(species_overrides={"individuals": ["IND002"]})
@@ -204,14 +236,20 @@ class TestIndividualsAndSamples(FileManagerTestCase):
 
     def test_sample_ids_config_filtered_by_individual(self):
         self.configure(species_overrides={"individuals": ["IND002"]})
-        self.assertEqual(set(fm.get_sample_ids_for_species("Dmel")), {"IND002_lib1", "IND002_lib2"})
+        self.assertEqual(
+            set(fm.get_sample_ids_for_species("Dmel")), {"IND002_lib1", "IND002_lib2"}
+        )
 
     def test_samples_for_multi_sample_individual(self):
-        self.assertEqual(sorted(fm.get_samples_for_species_individual("Dmel", "IND002")),
-                          ["IND002_lib1", "IND002_lib2"])
+        self.assertEqual(
+            sorted(fm.get_samples_for_species_individual("Dmel", "IND002")),
+            ["IND002_lib1", "IND002_lib2"],
+        )
 
     def test_samples_for_single_sample_individual(self):
-        self.assertEqual(fm.get_samples_for_species_individual("Dmel", "IND001"), ["IND001"])
+        self.assertEqual(
+            fm.get_samples_for_species_individual("Dmel", "IND001"), ["IND001"]
+        )
 
     def test_samples_for_unknown_individual_raises(self):
         with self.assertRaises(Exception):
@@ -219,7 +257,10 @@ class TestIndividualsAndSamples(FileManagerTestCase):
 
     def test_raw_reads_for_paired_sample(self):
         reads = fm.get_raw_reads_for_sample("Dmel", "IND001")
-        self.assertEqual([os.path.basename(r) for r in reads], ["IND001_R1.fastq.gz", "IND001_R2.fastq.gz"])
+        self.assertEqual(
+            [os.path.basename(r) for r in reads],
+            ["IND001_R1.fastq.gz", "IND001_R2.fastq.gz"],
+        )
 
     def test_raw_reads_for_single_end_sample(self):
         reads = fm.get_raw_reads_for_sample("Dmel", "IND003")
@@ -251,7 +292,10 @@ class TestReferenceDiscovery(FileManagerTestCase):
             fm.get_reference_file_list_for_species("Dmel")
 
     def test_references_paths_and_ids_helpers(self):
-        self.assertEqual(set(fm.get_references_ids_for_species("Dmel")), {"genome", "alt_assembly_v2"})
+        self.assertEqual(
+            set(fm.get_references_ids_for_species("Dmel")),
+            {"genome", "alt_assembly_v2"},
+        )
         self.assertEqual(len(fm.get_references_paths_for_species("Dmel")), 2)
 
 
@@ -264,12 +308,19 @@ class TestDuplicateIdsRaise(FileManagerTestCase):
             open(p, "w").write(">x\nACGT\n")
 
     def test_reference_same_stem_different_extension_raises(self):
-        self._touch("Dmel/input/reference_module/genome.fa", "Dmel/input/reference_module/genome.fna")
-        with self.assertRaisesRegex(fm.ConfigValidationError, "genome.fa.*genome.fna|genome.fna.*genome.fa"):
+        self._touch(
+            "Dmel/input/reference_module/genome.fa",
+            "Dmel/input/reference_module/genome.fna",
+        )
+        with self.assertRaisesRegex(
+            fm.ConfigValidationError, "genome.fa.*genome.fna|genome.fna.*genome.fa"
+        ):
             fm.get_reference_file_list_for_species("Dmel")
 
     def test_reference_normalised_name_clash_raises(self):
-        self._touch("Dmel/input/reference_module/X.0.fna", "Dmel/input/reference_module/X_0.fna")
+        self._touch(
+            "Dmel/input/reference_module/X.0.fna", "Dmel/input/reference_module/X_0.fna"
+        )
         with self.assertRaises(fm.ConfigValidationError):
             fm.get_reference_file_list_for_species("Dmel")
 
@@ -286,7 +337,9 @@ class TestDuplicateIdsRaise(FileManagerTestCase):
             fm.get_scg_library_file_list_for_species("Dmel")
 
     def test_distinct_ids_still_work(self):
-        self._touch("Dmel/input/reference_module/a.fna", "Dmel/input/reference_module/b.fa")
+        self._touch(
+            "Dmel/input/reference_module/a.fna", "Dmel/input/reference_module/b.fa"
+        )
         ids = [i for i, _ in fm.get_reference_file_list_for_species("Dmel")]
         self.assertEqual(sorted(ids), ["a", "b"])
 
@@ -312,7 +365,9 @@ class TestReferenceDiscoveryEdgeCases(FileManagerTestCase):
     def test_scg_determination_reference_config_override_wins(self):
         testlib.build_species_library(self.project_dir, include_second_reference=True)
         self.configure(species_overrides={"scg_reference": "/some/explicit/path.fasta"})
-        self.assertEqual(fm.get_scg_determination_reference_path("Dmel"), "/some/explicit/path.fasta")
+        self.assertEqual(
+            fm.get_scg_determination_reference_path("Dmel"), "/some/explicit/path.fasta"
+        )
 
     def test_scg_determination_reference_none_found_raises(self):
         # get_reference_file_list_for_species() itself raises (plain Exception, not
@@ -329,7 +384,10 @@ class TestFeatureLibraryDiscovery(FileManagerTestCase):
     fixture_kwargs = {"include_second_feature_library": True}
 
     def test_feature_libraries_discovered(self):
-        self.assertEqual(set(fm.get_feature_library_ids_for_species("Dmel")), {"te_features", "my_extra_lib"})
+        self.assertEqual(
+            set(fm.get_feature_library_ids_for_species("Dmel")),
+            {"te_features", "my_extra_lib"},
+        )
 
     def test_feature_library_config_filter_missing_raises(self):
         self.configure(species_overrides={"feature_libraries": ["NOPE"]})
@@ -337,7 +395,9 @@ class TestFeatureLibraryDiscovery(FileManagerTestCase):
             fm.get_feature_library_file_list_for_species("Dmel")
 
     def test_get_feature_library_file_for_species_and_library(self):
-        path = fm.get_feature_library_file_for_species_and_library("Dmel", "te_features")
+        path = fm.get_feature_library_file_for_species_and_library(
+            "Dmel", "te_features"
+        )
         self.assertTrue(path.endswith("te_features.fasta"))
         with self.assertRaises(Exception):
             fm.get_feature_library_file_for_species_and_library("Dmel", "NOPE")
@@ -375,7 +435,9 @@ class TestScgDiscovery(FileManagerTestCase):
         self.assertFalse(fm.should_auto_determine_scg("Dmel"))
 
     def test_effective_scg_id_and_path_when_none_provided(self):
-        self.assertEqual(fm.get_effective_scg_library_id_for_species("Dmel"), "Dmel_determined_scg")
+        self.assertEqual(
+            fm.get_effective_scg_library_id_for_species("Dmel"), "Dmel_determined_scg"
+        )
         self.assertEqual(
             fm.get_effective_scg_library_path_for_species("Dmel"),
             "Dmel/results/reveal_module/scg/Dmel_relevant_scg.fasta",
@@ -394,8 +456,14 @@ class TestScgDiscoveryWithUserLibrary(FileManagerTestCase):
         self.assertFalse(fm.should_auto_determine_scg("Dmel"))
 
     def test_effective_scg_id_and_path_prefer_user_provided(self):
-        self.assertEqual(fm.get_effective_scg_library_id_for_species("Dmel"), "scg_markers")
-        self.assertTrue(fm.get_effective_scg_library_path_for_species("Dmel").endswith("scg_markers.fasta"))
+        self.assertEqual(
+            fm.get_effective_scg_library_id_for_species("Dmel"), "scg_markers"
+        )
+        self.assertTrue(
+            fm.get_effective_scg_library_path_for_species("Dmel").endswith(
+                "scg_markers.fasta"
+            )
+        )
 
 
 class TestCompetitionFasta(FileManagerTestCase):
@@ -403,7 +471,9 @@ class TestCompetitionFasta(FileManagerTestCase):
         self.assertIsNone(fm.get_competition_fasta_for_species("Dmel"))
 
     def test_single_file_returned(self):
-        testlib.write_fasta(os.path.join("Dmel/input/reveal_module/competition", "competitor.fasta"))
+        testlib.write_fasta(
+            os.path.join("Dmel/input/reveal_module/competition", "competitor.fasta")
+        )
         path = fm.get_competition_fasta_for_species("Dmel")
         self.assertTrue(path.endswith("competitor.fasta"))
 
@@ -437,7 +507,9 @@ class TestReadMarkerRPrefersOverBare(unittest.TestCase):
 
     def test_r2_counterpart_of_r1_file_with_earlier_bare_digit(self):
         r1 = "Tni157_2_box-1-20_R1.fastq.gz"
-        self.assertEqual(fm.get_read2_counterpart_path(r1), "Tni157_2_box-1-20_R2.fastq.gz")
+        self.assertEqual(
+            fm.get_read2_counterpart_path(r1), "Tni157_2_box-1-20_R2.fastq.gz"
+        )
 
     def test_multiple_bare_markers_raise(self):
         with self.assertRaises(ValueError):
@@ -475,7 +547,9 @@ class TestReadMarkerRPrefersOverBare(unittest.TestCase):
         samples = [fm._sample_id_from_filename(f, "1") for f in files]
         self.assertEqual(
             sorted(s for s in samples if s),
-            sorted(["DfunF2_B_1_box-3-227", "DfunF2_B_2_box-3-231", "DfunF2_B_3_box-3-219"]),
+            sorted(
+                ["DfunF2_B_1_box-3-227", "DfunF2_B_2_box-3-231", "DfunF2_B_3_box-3-219"]
+            ),
         )
 
     def test_sample_id_keeps_text_after_the_read_marker(self):
@@ -483,7 +557,9 @@ class TestReadMarkerRPrefersOverBare(unittest.TestCase):
         # collapse every lane of an individual into one sample ID and error out as ambiguous.
         # The suffix has to survive into the sample ID for the lanes to stay separate samples.
         self.assertEqual(
-            fm._sample_id_from_filename("Bger3_D_340269_S41_R1_set1_lane6.fastq.gz", "1"),
+            fm._sample_id_from_filename(
+                "Bger3_D_340269_S41_R1_set1_lane6.fastq.gz", "1"
+            ),
             "Bger3_D_340269_S41_set1_lane6",
         )
         self.assertEqual(
@@ -492,8 +568,12 @@ class TestReadMarkerRPrefersOverBare(unittest.TestCase):
         )
 
     def test_sample_id_with_no_text_after_the_marker(self):
-        self.assertEqual(fm._sample_id_from_filename("IND001_R1.fastq.gz", "1"), "IND001")
-        self.assertEqual(fm._sample_id_from_filename("IND002_lib1_1.fastq.gz", "1"), "IND002_lib1")
+        self.assertEqual(
+            fm._sample_id_from_filename("IND001_R1.fastq.gz", "1"), "IND001"
+        )
+        self.assertEqual(
+            fm._sample_id_from_filename("IND002_lib1_1.fastq.gz", "1"), "IND002_lib1"
+        )
 
     def test_sample_id_is_none_without_a_marker(self):
         self.assertIsNone(fm._sample_id_from_filename("IND004_readme.fastq.gz", "1"))
@@ -533,7 +613,9 @@ class TestOneReadFileOrPairPerSample(unittest.TestCase):
             for lane in ("lane6", "lane7", "lane8"):
                 for read in ("R1", "R2"):
                     testlib.write_fastq_gz(
-                        os.path.join(self.reads_dir, f"IND001_{read}_{set_id}_{lane}.fastq.gz")
+                        os.path.join(
+                            self.reads_dir, f"IND001_{read}_{set_id}_{lane}.fastq.gz"
+                        )
                     )
 
         self.assertEqual(
@@ -551,7 +633,9 @@ class TestOneReadFileOrPairPerSample(unittest.TestCase):
 
         # They still belong to one individual, so the merge step still pulls them together.
         self.assertEqual(fm._discover_all_individuals_for_species("Dmel"), ["IND001"])
-        self.assertEqual(len(fm.get_samples_for_species_individual("Dmel", "IND001")), 6)
+        self.assertEqual(
+            len(fm.get_samples_for_species_individual("Dmel", "IND001")), 6
+        )
 
     def test_two_r1_candidates_for_same_sample_raises(self):
         # Same sample, same read number, two extensions on disk - ambiguous, must not

@@ -5,6 +5,7 @@ CLI tests that need the Snakemake environment. `run`, `resume`, `unlock` and
 tests skip themselves without it. Run them with the env on PATH:
     PATH=<snakemake-env>/bin:$PATH python3 -m unittest tests/integration/test_cli_snakemake.py -v
 """
+
 import contextlib
 import io
 import json
@@ -14,7 +15,9 @@ import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "unit"))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "unit")
+)
 
 # Import the module, not the class: a TestCase name in this namespace would run its tests twice.
 import test_cli  # noqa: E402
@@ -56,9 +59,14 @@ class SnakemakeArgvTestCase(unittest.TestCase):
         cli.common.STATE_DIR.mkdir(parents=True, exist_ok=True)
         cli.common.STATE_FILE.write_text(json.dumps({"pid": os.getpid()}))
         orig = cli.doctor._list_conda_envs
-        cli.doctor._list_conda_envs = lambda: [{"env_file": "workflow/envs/x.yaml", "location": str(env_dir)}]
+        cli.doctor._list_conda_envs = lambda: [
+            {"env_file": "workflow/envs/x.yaml", "location": str(env_dir)}
+        ]
         try:
-            with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as cm:
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaises(SystemExit) as cm,
+            ):
                 cli.doctor.cmd_doctor(["--rebuild-envs"])
         finally:
             cli.doctor._list_conda_envs = orig
@@ -100,7 +108,9 @@ class SnakemakeArgvTestCase(unittest.TestCase):
         target = os.path.join(self.project_dir, "elsewhere", "processed")
         os.makedirs(target)
         with open(self.configfile, "w") as f:
-            f.write(f"project_name: test\nspecies:\n  Dmel:\n    processed_dir: {target}\n")
+            f.write(
+                f"project_name: test\nspecies:\n  Dmel:\n    processed_dir: {target}\n"
+            )
         lock = Path(target, ".pastforward.lock")
         lock.write_text(json.dumps(owner))
         return lock
@@ -108,7 +118,10 @@ class SnakemakeArgvTestCase(unittest.TestCase):
     def test_unlock_lists_cross_project_locks_but_keeps_them(self):
         self._stub_snakemake_unlock()
         lock = self._write_cross_project_lock({"hostname": "other-host", "pid": 1})
-        with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
+        with (
+            contextlib.redirect_stdout(io.StringIO()) as out,
+            self.assertRaises(SystemExit),
+        ):
             cli.run.cmd_unlock([])
         self.assertIn(str(lock), out.getvalue())
         self.assertIn("--cross-project", out.getvalue())
@@ -123,8 +136,13 @@ class SnakemakeArgvTestCase(unittest.TestCase):
 
     def test_unlock_cross_project_never_removes_a_live_local_lock(self):
         self._stub_snakemake_unlock()
-        lock = self._write_cross_project_lock({"hostname": cli.run.socket.gethostname(), "pid": os.getpid()})
-        with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
+        lock = self._write_cross_project_lock(
+            {"hostname": cli.run.socket.gethostname(), "pid": os.getpid()}
+        )
+        with (
+            contextlib.redirect_stdout(io.StringIO()) as out,
+            self.assertRaises(SystemExit),
+        ):
             cli.run.cmd_unlock(["--cross-project"])
         self.assertTrue(lock.exists())
         self.assertIn("owner still running", out.getvalue())

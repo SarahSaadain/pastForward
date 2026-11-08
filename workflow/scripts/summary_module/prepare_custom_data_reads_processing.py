@@ -16,21 +16,16 @@ output_file = snakemake.output[0]
 reads_df = pd.read_csv(reads_file)
 reads_df = reads_df[reads_df["individual"] == individual]
 
-reads_summary = reads_df[
-    [
-        "raw_count",
-        "adapter_removed_count",
-        "quality_filtered_count"
-    ]
-].sum().to_dict()
+reads_summary = (
+    reads_df[["raw_count", "adapter_removed_count", "quality_filtered_count"]]
+    .sum()
+    .to_dict()
+)
 
 # ------------------------
 # Default dedup structure (safe fallback)
 # ------------------------
-dedup_data = {
-    "mapped_reads": 0,
-    "total_removed": 0
-}
+dedup_data = {"mapped_reads": 0, "total_removed": 0}
 # Denominator for every endogenous %. Without an endogenous CSV, fall back to
 # the quality-filtered count, which is what went into mapping.
 mapped_input_reads = reads_summary.get("quality_filtered_count", 0)
@@ -65,7 +60,8 @@ summary = {
     "after_quality_filter": reads_summary.get("quality_filtered_count", 0),
     "mapped_input_reads": mapped_input_reads,
     "mapped_endogenous_reads": dedup_data["mapped_reads"],
-    "endogenous_duplicates_removed": dedup_data["mapped_reads"] - dedup_data["total_removed"]
+    "endogenous_duplicates_removed": dedup_data["mapped_reads"]
+    - dedup_data["total_removed"],
 }
 
 # ------------------------

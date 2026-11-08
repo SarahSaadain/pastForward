@@ -3,9 +3,11 @@ import pandas as pd
 from pathlib import Path
 
 # Access Snakemake object
-input_files = snakemake.input         # list of input TSVs
-output_file = snakemake.output[0]     # output TSV path
-taxonomic_hierarchy = snakemake.params.taxonomic_hierarchy  # e.g., "genus", "family", etc.
+input_files = snakemake.input  # list of input TSVs
+output_file = snakemake.output[0]  # output TSV path
+taxonomic_hierarchy = (
+    snakemake.params.taxonomic_hierarchy
+)  # e.g., "genus", "family", etc.
 
 all_dfs = []
 taxonomic_column = taxonomic_hierarchy.lower()
@@ -22,11 +24,13 @@ for file in input_files:
         df = pd.DataFrame({taxonomic_column: ["none_detected"], "TotalReads": [1]})
 
     sample_name = Path(file).stem
-    df['Sample'] = sample_name.replace(f"_Mito_summary_{taxonomic_hierarchy}_proportions", '')
+    df["Sample"] = sample_name.replace(
+        f"_Mito_summary_{taxonomic_hierarchy}_proportions", ""
+    )
 
     # remove Proportion column if exists
-    if 'Proportion' in df.columns:
-        df = df.drop(columns=['Proportion'])
+    if "Proportion" in df.columns:
+        df = df.drop(columns=["Proportion"])
 
     all_dfs.append(df)
 
@@ -35,10 +39,10 @@ combined = pd.concat(all_dfs, ignore_index=True)
 
 # Pivot: rows = Sample, columns = Genus, values = TotalReads
 matrix = combined.pivot_table(
-    index='Sample',
+    index="Sample",
     columns=taxonomic_hierarchy.lower(),
-    values='TotalReads',
-    fill_value=0   # fill missing combinations with 0
+    values="TotalReads",
+    fill_value=0,  # fill missing combinations with 0
 )
 
 # Sort columns by total reads (descending)

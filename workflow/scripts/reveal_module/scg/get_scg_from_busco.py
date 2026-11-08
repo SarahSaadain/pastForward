@@ -8,13 +8,15 @@ import pandas as pd
 
 logging.basicConfig(
     level=logging.INFO,
-    format='[%(asctime)s] [%(levelname)s] %(message)s',
-    handlers=[logging.StreamHandler(sys.stderr)]
+    format="[%(asctime)s] [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stderr)],
 )
 logger = logging.getLogger(__name__)
 
 
-def extract_busco_sequences(df, reference_fasta, min_length_scg, max_length_scg) -> List[Tuple[str, str]]:
+def extract_busco_sequences(
+    df, reference_fasta, min_length_scg, max_length_scg
+) -> List[Tuple[str, str]]:
     fasta_entries = []
 
     with pysam.FastaFile(reference_fasta) as fasta:
@@ -34,11 +36,15 @@ def extract_busco_sequences(df, reference_fasta, min_length_scg, max_length_scg)
                     start, end = end, start
 
                 if end - start <= min_length_scg:
-                    logger.warning(f"Skipping {busco_id}: length {end - start} is less than minimum length ({min_length_scg}).")
+                    logger.warning(
+                        f"Skipping {busco_id}: length {end - start} is less than minimum length ({min_length_scg})."
+                    )
                     continue
 
                 if end - start >= max_length_scg:
-                    logger.warning(f"Skipping {busco_id}: length {end - start} exceeds maximum length ({max_length_scg}).")
+                    logger.warning(
+                        f"Skipping {busco_id}: length {end - start} exceeds maximum length ({max_length_scg})."
+                    )
                     continue
 
                 seq = extract_sequence(fasta, chrom, start, end)
@@ -82,19 +88,29 @@ if not os.path.isfile(reference_fasta):
 # Read BUSCO full_table.tsv, skipping comment lines
 df = pd.read_csv(
     full_table_path,
-    sep='\t',
-    comment='#',
+    sep="\t",
+    comment="#",
     header=None,
     names=[
-        "Busco_id", "Status", "Sequence", "Gene_Start", "Gene_End",
-        "Strand", "Score", "Length", "OrthoDB_url", "Description"
+        "Busco_id",
+        "Status",
+        "Sequence",
+        "Gene_Start",
+        "Gene_End",
+        "Strand",
+        "Score",
+        "Length",
+        "OrthoDB_url",
+        "Description",
     ],
-    dtype=str
+    dtype=str,
 )
 
 df = df[df["Status"].str.contains("Complete", na=False)]
 
-fasta_entries = extract_busco_sequences(df, reference_fasta, min_length_scg, max_length_scg)
+fasta_entries = extract_busco_sequences(
+    df, reference_fasta, min_length_scg, max_length_scg
+)
 
 logger.info(f"Extracted {len(fasta_entries)} SCG sequences from BUSCO results.")
 

@@ -1,4 +1,5 @@
 """status, abort, print-log: watching and stopping a run, and reading its logs."""
+
 import contextlib
 import io
 import json
@@ -46,7 +47,9 @@ PROGRESS_RE = re.compile(r"(\d+) of (\d+) steps \(([\d.]+)%\) done")
 # scheduling/job_scheduler.py), duplicated onto stdout by initialize.smk's root
 # logging.basicConfig - unlike the "rule X:" block Snakemake also prints, these two are
 # emitted for every job regardless of whether the rule has a `message:` directive.
-JOB_STARTED_RE = re.compile(r"^\[.*?\]\s*\[INFO\]\s+Rule:\s*(\S+),\s*Jobid:\s*(\d+)\s*$", re.MULTILINE)
+JOB_STARTED_RE = re.compile(
+    r"^\[.*?\]\s*\[INFO\]\s+Rule:\s*(\S+),\s*Jobid:\s*(\d+)\s*$", re.MULTILINE
+)
 JOB_FINISHED_RE = re.compile(r"Finished jobid:\s*(\d+)\s*\(Rule:\s*(\S+)\)")
 
 
@@ -54,14 +57,21 @@ FAILED_RE = re.compile(r"At least one job did not complete successfully\.")
 LOCK_RE = re.compile(r"LockException")
 # Printed instead of a "N of N steps" progress line when the DAG's targets were already all
 # present and up to date - a legitimate no-op success, not a sign the run never started.
-NOTHING_TO_DO_RE = re.compile(r"^Nothing to be done \(all requested files are present and up to date\)\.", re.MULTILINE)
+NOTHING_TO_DO_RE = re.compile(
+    r"^Nothing to be done \(all requested files are present and up to date\)\.",
+    re.MULTILINE,
+)
 # Snakemake >= 9.26 logs the whole run's wall time when it exits, on success and on failure
 # alike, as a str(timedelta): "Elapsed time: 2:03:04.123456" or "1 day, 2:03:04.123456".
 ELAPSED_RE = re.compile(r"Elapsed time: (?:(\d+) days?, )?(\d+):(\d+):(\d+(?:\.\d+)?)")
 # Snakemake creates conda envs one at a time before any job runs, logging each start and end.
-CONDA_CREATING_RE = re.compile(r"Creating conda environment (.+)\.\.\.\s*$", re.MULTILINE)
+CONDA_CREATING_RE = re.compile(
+    r"Creating conda environment (.+)\.\.\.\s*$", re.MULTILINE
+)
 CONDA_CREATED_RE = re.compile(r"Environment for .+ created \(location:")
-PROJECT_NAME_RE = re.compile(r'^project_name:\s*["\']?([^"\'\n]+?)["\']?\s*$', re.MULTILINE)
+PROJECT_NAME_RE = re.compile(
+    r'^project_name:\s*["\']?([^"\'\n]+?)["\']?\s*$', re.MULTILINE
+)
 JOB_ERROR_BLOCK_RE = re.compile(r"^Error in rule \S+:\n(?:[ \t]+.*\n?)*", re.MULTILINE)
 # The `log:` line Snakemake prints inside an "Error in rule" block - points at the rule's own
 # log file (from its `log:` directive), which holds the actual command output/error message.
@@ -70,12 +80,16 @@ JOB_ERROR_BLOCK_RE = re.compile(r"^Error in rule \S+:\n(?:[ \t]+.*\n?)*", re.MUL
 # The exact wording has changed across Snakemake versions (seen: "message", "details"), so match
 # either rather than hardcoding one - a mismatch here means the suffix gets captured as part of
 # the path instead of stripped, breaking the tail-the-failed-log lookup.
-JOB_LOG_PATH_RE = re.compile(r"^\s*log:\s*(.+?)(?:\s*\(check log file\(s\) for error \w+\))?\s*$", re.MULTILINE)
+JOB_LOG_PATH_RE = re.compile(
+    r"^\s*log:\s*(.+?)(?:\s*\(check log file\(s\) for error \w+\))?\s*$", re.MULTILINE
+)
 
 
 def _read_state():
     if not STATE_FILE.exists():
-        _die("pastForward: no tracked run in this directory (start one with `./pastForward run`).")
+        _die(
+            "pastForward: no tracked run in this directory (start one with `./pastForward run`)."
+        )
     return json.loads(STATE_FILE.read_text())
 
 
@@ -91,7 +105,9 @@ def _parse_last_steps(text, n=5):
         finished_seen.setdefault(jobid, rule)
     finished = [(rule, jobid) for jobid, rule in finished_seen.items()]
     finished_ids = set(finished_seen)
-    running = [(rule, jobid) for jobid, rule in started.items() if jobid not in finished_ids]
+    running = [
+        (rule, jobid) for jobid, rule in started.items() if jobid not in finished_ids
+    ]
     return finished[-n:], running
 
 
@@ -142,13 +158,33 @@ RESUME_HINT = "Resume with: ./pastForward resume --cores <N>"
 # they stay one column wide and the header lines keep aligning.
 STATE_DISPLAY = {
     "running": ("▶", "Running", CYAN, None),
-    "aborting": ("⏳", "Aborting", YELLOW, "Will exit after finishing currently running jobs (scheduler)."),
+    "aborting": (
+        "⏳",
+        "Aborting",
+        YELLOW,
+        "Will exit after finishing currently running jobs (scheduler).",
+    ),
     "unknown": ("?", "Unknown", DIM, "No log file yet."),
-    "dryrun_done": ("✔", "Dry run finished", GREEN, "Nothing was executed, so there is nothing to resume."),
+    "dryrun_done": (
+        "✔",
+        "Dry run finished",
+        GREEN,
+        "Nothing was executed, so there is nothing to resume.",
+    ),
     "completed": ("✔", "Completed", GREEN, None),
     "failed": ("✖", "Failed", RED, "At least one job did not complete successfully."),
-    "locked": ("✖", "Locked", RED, "Directory is locked (stale lock from a killed run or power loss)."),
-    "aborted": ("■", "Aborted", YELLOW, "Stopped on request before all jobs were done."),
+    "locked": (
+        "✖",
+        "Locked",
+        RED,
+        "Directory is locked (stale lock from a killed run or power loss).",
+    ),
+    "aborted": (
+        "■",
+        "Aborted",
+        YELLOW,
+        "Stopped on request before all jobs were done.",
+    ),
     "interrupted": (
         "⚠",
         "Interrupted",
@@ -180,7 +216,9 @@ def _run_state(alive, dryrun, text, progress):
         return "failed"
     # A DAG with nothing left to run prints "Nothing to be done" instead of a progress line at
     # all, which would otherwise look identical to a run that never got going.
-    if (progress is not None and float(progress.group(3)) == 100.0) or NOTHING_TO_DO_RE.search(text):
+    if (
+        progress is not None and float(progress.group(3)) == 100.0
+    ) or NOTHING_TO_DO_RE.search(text):
         return "completed"
     return "interrupted"
 
@@ -270,7 +308,9 @@ def _elapsed_seconds(text):
     if not matches:
         return None
     days, hours, minutes, seconds = matches[-1]
-    return int(days or 0) * 86400 + int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+    return (
+        int(days or 0) * 86400 + int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+    )
 
 
 def _conda_env_line(alive, text):
@@ -283,7 +323,9 @@ def _conda_env_line(alive, text):
         return _color(GREEN, f"{created} installed")
     pending = creating[-1]
     if alive:
-        return _color(YELLOW, f"installing {pending}") + _color(DIM, f" ({created} done)")
+        return _color(YELLOW, f"installing {pending}") + _color(
+            DIM, f" ({created} done)"
+        )
     return _color(RED, f"{created} installed, {pending} not finished")
 
 
@@ -296,7 +338,11 @@ def _runtime(alive, started, log_path, text):
     elapsed = _elapsed_seconds(text)
     if elapsed is not None:
         return _format_duration(elapsed)
-    end = datetime.fromtimestamp(log_path.stat().st_mtime) if log_path.exists() else started
+    end = (
+        datetime.fromtimestamp(log_path.stat().st_mtime)
+        if log_path.exists()
+        else started
+    )
     return _format_duration((end - started).total_seconds())
 
 
@@ -309,7 +355,9 @@ def _print_status(tail=None):
     configfiles = _configfiles_from_cmd(state["cmd"])
     # Later files override earlier ones, and config/config.yaml (when present) comes first.
     names = [_read_project_name(f) for f in [DEFAULT_CONFIGFILE] + configfiles]
-    project_name = next((n for n in reversed(names) if n), None) or _color(DIM, "(unknown)")
+    project_name = next((n for n in reversed(names) if n), None) or _color(
+        DIM, "(unknown)"
+    )
     cores = _cores_from_args(state["cmd"]) or "?"
     # `run`/`resume` pass unknown flags straight through to Snakemake, so `run --cores N -n`
     # tracks a dry run in the state file. A dry run executes nothing, so none of the progress
@@ -329,13 +377,17 @@ def _print_status(tail=None):
     print(f"{_color(CYAN, 'Config:')}    {', '.join(configfiles)}")
     # The PID line stays neutral: the Status line below already says how the run ended, so a red
     # "not running" here would flag every clean finish as if something went wrong.
-    print(f"{_color(CYAN, 'PID:')}       {pid} ({_color(GREEN, 'running') if alive else _color(DIM, 'not running')})")
+    print(
+        f"{_color(CYAN, 'PID:')}       {pid} ({_color(GREEN, 'running') if alive else _color(DIM, 'not running')})"
+    )
     print(f"{_color(CYAN, 'Started:')}   {state['started_at']}")
     print(f"{_color(CYAN, 'Runtime:')}   {runtime}")
     print(f"{_color(CYAN, 'Cores:')}     {cores}")
     print(f"{_color(CYAN, 'Log:')}       {state['log_file']}")
     if dryrun:
-        print(f"{_color(CYAN, 'Mode:')}      {_color(YELLOW, 'dry run (--dryrun) - no jobs are executed')}")
+        print(
+            f"{_color(CYAN, 'Mode:')}      {_color(YELLOW, 'dry run (--dryrun) - no jobs are executed')}"
+        )
 
     print()
     _print_state_line(state_key)
@@ -356,7 +408,12 @@ def _print_status(tail=None):
     print(f"{_color(CYAN, 'Progress:')}  {bar}  {steps}")
     # Seeded with the PID so `status --watch` keeps the same quip on every refresh.
     if state_key == "completed":
-        _quip("nothing_to_do" if NOTHING_TO_DO_RE.search(text) else "done", sys.stdout, pid, LABEL_INDENT)
+        _quip(
+            "nothing_to_do" if NOTHING_TO_DO_RE.search(text) else "done",
+            sys.stdout,
+            pid,
+            LABEL_INDENT,
+        )
     elif alive and progress and 45 <= float(progress.group(3)) <= 55:
         _quip("halfway", sys.stdout, pid, LABEL_INDENT)
     conda_line = _conda_env_line(alive, text)
@@ -376,7 +433,9 @@ def _print_status(tail=None):
                     _print_failed_job_log(job_log_path)
         _print_hint(RESUME_HINT)
     elif state_key == "locked":
-        _print_hint("Fix with: ./pastForward unlock, then ./pastForward resume --cores <N>")
+        _print_hint(
+            "Fix with: ./pastForward unlock, then ./pastForward resume --cores <N>"
+        )
     elif state_key in ("aborted", "interrupted"):
         _print_hint(RESUME_HINT)
 
@@ -385,10 +444,18 @@ def _print_status(tail=None):
     # (plus the failed-job logs) already covers what matters for a finished run.
     if alive:
         finished, running = _parse_last_steps(text)
-        print(_color(CYAN, "Last finished jobs:") if finished else _color(DIM, "Last finished jobs: (none yet)"))
+        print(
+            _color(CYAN, "Last finished jobs:")
+            if finished
+            else _color(DIM, "Last finished jobs: (none yet)")
+        )
         for rule_name, jobid in finished:
             print(f"  - {rule_name} (jobid {jobid}) [{_color(GREEN, 'done')}]")
-        print(_color(CYAN, f"Currently running jobs ({len(running)}):") if running else _color(DIM, "Currently running jobs: (none)"))
+        print(
+            _color(CYAN, f"Currently running jobs ({len(running)}):")
+            if running
+            else _color(DIM, "Currently running jobs: (none)")
+        )
         for rule_name, jobid in running:
             print(f"  - {rule_name} (jobid {jobid})")
 
@@ -402,15 +469,31 @@ def cmd_abort(argv):
     pid = state["pid"]
     if not _is_alive(pid, if_unknown=False):
         if _command_line(pid) is None:
-            _die(f"pastForward: cannot check PID {pid} (`ps` not found). If it is your run, stop it by hand: kill {pid}")
+            _die(
+                f"pastForward: cannot check PID {pid} (`ps` not found). If it is your run, stop it by hand: kill {pid}"
+            )
         _die("pastForward: tracked process is not running (or no longer snakemake).")
     if any(a in ("--force", "-f") for a in argv):
         os.killpg(pid, signal.SIGKILL)
-        print(_color(RED, f"Force-killed process group {pid} (main process + subprocesses)."))
+        print(
+            _color(
+                RED, f"Force-killed process group {pid} (main process + subprocesses)."
+            )
+        )
     else:
         os.kill(pid, signal.SIGTERM)
-        print(_color(YELLOW, f"Sent SIGTERM to PID {pid}. Snakemake will shut its subprocesses down itself."))
-        print(_color(DIM, "Use --force (-f) to kill the whole process group immediately instead."))
+        print(
+            _color(
+                YELLOW,
+                f"Sent SIGTERM to PID {pid}. Snakemake will shut its subprocesses down itself.",
+            )
+        )
+        print(
+            _color(
+                DIM,
+                "Use --force (-f) to kill the whole process group immediately instead.",
+            )
+        )
     _quip("abort")
 
 
@@ -441,7 +524,9 @@ def cmd_print_log(argv):
     if rest:
         _die(f"pastForward print-log: unknown argument(s): {' '.join(rest)}")
     if not LOG_DIR.is_dir():
-        _die("pastForward: no logs/ directory found — run `./pastForward run` or `./pastForward dryrun` first.")
+        _die(
+            "pastForward: no logs/ directory found — run `./pastForward run` or `./pastForward dryrun` first."
+        )
     logs = sorted(LOG_DIR.glob("*.log"), key=lambda p: p.stat().st_mtime)
     if not logs:
         _die("pastForward: no log files found in logs/.")

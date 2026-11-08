@@ -1,4 +1,5 @@
 """run, resume, dryrun, touch, unlock: the commands that shell out to `snakemake`."""
+
 import json
 import socket
 import subprocess
@@ -34,10 +35,20 @@ from .common import (
 # `--sdm` are its documented aliases; `--use-conda` is the deprecated flag, which just adds conda
 # to the same set. Repeating the option does NOT union: argparse keeps only the last occurrence,
 # so passing ours alongside a user's `--sdm apptainer` would silently drop their choice.
-DEPLOYMENT_FLAGS = (SDM_FLAG, "--deployment-method", "--deployment", "--sdm", "--use-conda")
+DEPLOYMENT_FLAGS = (
+    SDM_FLAG,
+    "--deployment-method",
+    "--deployment",
+    "--sdm",
+    "--use-conda",
+)
 
 # Matches CLAUDE.md's documented "real run" command.
-DEFAULT_RUN_FLAGS = [(SDM_FLAG, "conda"), ("--keep-going", None), ("--rerun-trigger", "mtime")]
+DEFAULT_RUN_FLAGS = [
+    (SDM_FLAG, "conda"),
+    ("--keep-going", None),
+    ("--rerun-trigger", "mtime"),
+]
 
 
 def _timestamp():
@@ -79,7 +90,9 @@ def _build_touch_cmd(extra_args):
     # is on, touch or not), which is a long detour for a command that only stamps mtimes on
     # files that already exist. --rerun-trigger mtime stays, so "out of date" means the same
     # here as it does for `run`.
-    return _build_run_cmd(_with_default_cores(extra_args), defaults=[("--rerun-trigger", "mtime")]) + ["--touch"]
+    return _build_run_cmd(
+        _with_default_cores(extra_args), defaults=[("--rerun-trigger", "mtime")]
+    ) + ["--touch"]
 
 
 def _run_foreground(cmd, log_path, resumable=False):
@@ -87,7 +100,9 @@ def _run_foreground(cmd, log_path, resumable=False):
     print(_color(DIM, f"$ {' '.join(cmd)}"))
     print(_color(DIM, f"Logging to {log_path}"))
     with open(log_path, "w") as logf:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+        )
 
         def copy_output():
             for line in proc.stdout:
@@ -102,7 +117,10 @@ def _run_foreground(cmd, log_path, resumable=False):
             copy_output()
             print(_color(YELLOW, "Interrupted."), file=sys.stderr)
             if resumable:
-                print(_color(DIM, "Resume with: ./pastForward resume --cores <N>"), file=sys.stderr)
+                print(
+                    _color(DIM, "Resume with: ./pastForward resume --cores <N>"),
+                    file=sys.stderr,
+                )
             _quip("interrupt")
             return proc.wait() or 130
         return proc.wait()
@@ -118,7 +136,11 @@ def _run_background(cmd, log_path):
     log_path.parent.mkdir(parents=True, exist_ok=True)
     logf = open(log_path, "w")
     proc = subprocess.Popen(
-        cmd, stdout=logf, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True
+        cmd,
+        stdout=logf,
+        stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL,
+        start_new_session=True,
     )
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(
@@ -204,7 +226,9 @@ def _cross_project_locks(config):
 def _lock_owner_alive(owner):
     # Only a PID on this host can be checked. One from another host counts as not alive here,
     # because the user asked to clear it and the FAQ's only other advice is deleting it by hand.
-    return owner.get("hostname") == socket.gethostname() and _is_alive(owner.get("pid", -1))
+    return owner.get("hostname") == socket.gethostname() and _is_alive(
+        owner.get("pid", -1)
+    )
 
 
 def cmd_unlock(argv):
@@ -223,7 +247,12 @@ def cmd_unlock(argv):
     if not locks:
         sys.exit(code)
     print()
-    print(_color(YELLOW, f"Cross-project locks ({len(locks)}), separate from Snakemake's own lock:"))
+    print(
+        _color(
+            YELLOW,
+            f"Cross-project locks ({len(locks)}), separate from Snakemake's own lock:",
+        )
+    )
     for lock, owner in locks:
         alive = _lock_owner_alive(owner)
         who = f"host {owner.get('hostname')}, PID {owner.get('pid')}, project {owner.get('working_directory')}"
@@ -234,5 +263,10 @@ def cmd_unlock(argv):
             label = _color(RED, "owner still running") if alive else _color(DIM, "kept")
             print(f"  {lock}  {label}  ({who})")
     if not cross_project:
-        print(_color(DIM, "Add --cross-project to remove them. A lock whose run is still alive on this host is never removed."))
+        print(
+            _color(
+                DIM,
+                "Add --cross-project to remove them. A lock whose run is still alive on this host is never removed.",
+            )
+        )
     sys.exit(code)

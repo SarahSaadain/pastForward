@@ -14,7 +14,7 @@ for file in input_files:
     else:
         print(f"Warning: Input file {file} does not exist and will be skipped.")
 
-#sort the columns: endogenous, duplicates, non_endogenous
+# sort the columns: endogenous, duplicates, non_endogenous
 columns_order = ["individual", "endogenous", "duplicates", "non_endogenous"]
 combined_df = combined_df[columns_order]
 

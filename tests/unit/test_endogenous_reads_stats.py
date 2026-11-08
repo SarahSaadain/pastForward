@@ -12,6 +12,7 @@ Pure Python, stdlib only, no Snakemake/conda required. Run with either:
     python3 tests/unit/test_endogenous_reads_stats.py
     python3 -m unittest tests.test_endogenous_reads_stats -v          (from the repo root)
 """
+
 import csv
 import os
 import shutil
@@ -64,12 +65,17 @@ class TestDetermineEndogenousReadsFromStats(EndogenousStatsTestCase):
         determine_endogenous_reads_from_stats(stats_path, out_path, "IND001")
 
         rows = _read_csv_rows(out_path)
-        self.assertEqual(rows[0], ["filename", "individual", "mapped_reads", "total_reads", "proportion"])
+        self.assertEqual(
+            rows[0],
+            ["filename", "individual", "mapped_reads", "total_reads", "proportion"],
+        )
         self.assertEqual(rows[1], ["sample.stats", "IND001", "800", "1000", "80.0000"])
 
     def test_missing_stats_file_defaults_to_zero(self):
         out_path = self.path("out.csv")
-        determine_endogenous_reads_from_stats(self.path("does_not_exist.stats"), out_path, "IND001")
+        determine_endogenous_reads_from_stats(
+            self.path("does_not_exist.stats"), out_path, "IND001"
+        )
         rows = _read_csv_rows(out_path)
         self.assertEqual(rows[1][2:], ["0", "0", "0.0000"])
 
@@ -81,7 +87,9 @@ class TestDetermineEndogenousReadsFromStats(EndogenousStatsTestCase):
         self.assertEqual(rows[1][2:], ["0", "0", "0.0000"])
 
     def test_malformed_numeric_value_defaults_to_zero(self):
-        stats_path = self.write_stats("sample.stats", raw_total="not_a_number", mapped=800)
+        stats_path = self.write_stats(
+            "sample.stats", raw_total="not_a_number", mapped=800
+        )
         out_path = self.path("out.csv")
         determine_endogenous_reads_from_stats(stats_path, out_path, "IND001")
         rows = _read_csv_rows(out_path)
@@ -96,13 +104,17 @@ class TestDetermineEndogenousReadsFromStats(EndogenousStatsTestCase):
         with open(dedup_path, "w") as f:
             f.write('{"metrics": {"mapped_reads": 1500, "total_removed": 200}}')
         out_path = self.path("out.csv")
-        determine_endogenous_reads_from_stats(stats_path, out_path, "IND001", dedup_path)
+        determine_endogenous_reads_from_stats(
+            stats_path, out_path, "IND001", dedup_path
+        )
         rows = _read_csv_rows(out_path)
         self.assertEqual(rows[1][2:], ["800", "900", "88.8889"])
 
 
 class TestCombineEndogenousFiles(EndogenousStatsTestCase):
-    def _write_individual_csv(self, name, filename, individual, mapped, total, proportion):
+    def _write_individual_csv(
+        self, name, filename, individual, mapped, total, proportion
+    ):
         path = self.path(name)
         with open(path, "w") as f:
             f.write("filename,individual,mapped_reads,total_reads,proportion\n")
@@ -110,21 +122,30 @@ class TestCombineEndogenousFiles(EndogenousStatsTestCase):
         return path
 
     def test_combines_multiple_files_with_single_header(self):
-        f1 = self._write_individual_csv("a.csv", "a.stats", "IND001", 800, 1000, "80.0000")
-        f2 = self._write_individual_csv("b.csv", "b.stats", "IND002", 400, 1000, "40.0000")
+        f1 = self._write_individual_csv(
+            "a.csv", "a.stats", "IND001", 800, 1000, "80.0000"
+        )
+        f2 = self._write_individual_csv(
+            "b.csv", "b.stats", "IND002", 400, 1000, "40.0000"
+        )
         combined_path = self.path("combined.csv")
 
         combine_endogenous_files([f2, f1], combined_path)  # deliberately out of order
 
         rows = _read_csv_rows(combined_path)
-        self.assertEqual(rows[0], ["filename", "individual", "mapped_reads", "total_reads", "proportion"])
+        self.assertEqual(
+            rows[0],
+            ["filename", "individual", "mapped_reads", "total_reads", "proportion"],
+        )
         self.assertEqual(len(rows), 3)
         # sorted() by file path inside combine_endogenous_files -> a.csv (IND001) before b.csv
         self.assertEqual(rows[1][1], "IND001")
         self.assertEqual(rows[2][1], "IND002")
 
     def test_missing_input_file_is_skipped_not_fatal(self):
-        f1 = self._write_individual_csv("a.csv", "a.stats", "IND001", 800, 1000, "80.0000")
+        f1 = self._write_individual_csv(
+            "a.csv", "a.stats", "IND001", 800, 1000, "80.0000"
+        )
         combined_path = self.path("combined.csv")
 
         combine_endogenous_files([f1, self.path("missing.csv")], combined_path)

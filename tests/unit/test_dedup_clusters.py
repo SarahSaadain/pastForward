@@ -9,6 +9,7 @@ Pure Python, stdlib only, no Snakemake/conda required. Run with either:
     python3 tests/unit/test_dedup_clusters.py
     python3 -m unittest tests.test_dedup_clusters -v          (from the repo root)
 """
+
 import json
 import os
 import shutil
@@ -39,7 +40,9 @@ class DedupClusterTestCase(unittest.TestCase):
         bed = os.path.join(self.tmp_dir, f"contigs_{n_contigs}_{cores}.bed")
         with open(bed, "w") as f:
             f.write("\n".join(contigs) + "\n")
-        folder = os.path.join(self.tmp_dir, f"clusters_{n_contigs}_{cores}_{min_per}_{max_per}")
+        folder = os.path.join(
+            self.tmp_dir, f"clusters_{n_contigs}_{cores}_{min_per}_{max_per}"
+        )
         create_contig_clusters(bed, folder, cores, min_per, max_per)
         return contigs, folder
 
@@ -47,15 +50,21 @@ class DedupClusterTestCase(unittest.TestCase):
         for n_contigs in (1, 2, 3, 7, 10, 64, 501, 1234):
             for cores in (1, 2, 3, 4, 8, 16, 2000):
                 for min_per, max_per in ((1, 500), (5, 500), (1, 10)):
-                    with self.subTest(n=n_contigs, cores=cores, min=min_per, max=max_per):
-                        contigs, folder = self._cluster(n_contigs, cores, min_per, max_per)
+                    with self.subTest(
+                        n=n_contigs, cores=cores, min=min_per, max=max_per
+                    ):
+                        contigs, folder = self._cluster(
+                            n_contigs, cores, min_per, max_per
+                        )
                         seen = []
                         for name in os.listdir(folder):
-                            start, end = map(int, name[len("cluster_"):-len(".bed")].split("_"))
+                            start, end = map(
+                                int, name[len("cluster_") : -len(".bed")].split("_")
+                            )
                             with open(os.path.join(folder, name)) as f:
                                 lines = [ln for ln in f.read().splitlines() if ln]
                             # the 1-based range in the filename matches the contigs inside
-                            self.assertEqual(lines, contigs[start - 1:end])
+                            self.assertEqual(lines, contigs[start - 1 : end])
                             self.assertLessEqual(len(lines), max(max_per, 1))
                             seen.extend(lines)
                         self.assertEqual(sorted(seen), sorted(contigs))
@@ -67,12 +76,30 @@ class DedupClusterTestCase(unittest.TestCase):
 
     def test_merge_sums_counts_across_clusters(self):
         metrics = [
-            {"total_reads": 100, "mapped_reads": 80, "merged_removed": 5,
-             "forward_removed": 3, "reverse_removed": 2, "total_removed": 10},
-            {"total_reads": 50, "mapped_reads": 40, "merged_removed": 1,
-             "forward_removed": 2, "reverse_removed": 3, "total_removed": 6},
-            {"total_reads": 0, "mapped_reads": 0, "merged_removed": 0,
-             "forward_removed": 0, "reverse_removed": 0, "total_removed": 0},
+            {
+                "total_reads": 100,
+                "mapped_reads": 80,
+                "merged_removed": 5,
+                "forward_removed": 3,
+                "reverse_removed": 2,
+                "total_removed": 10,
+            },
+            {
+                "total_reads": 50,
+                "mapped_reads": 40,
+                "merged_removed": 1,
+                "forward_removed": 2,
+                "reverse_removed": 3,
+                "total_removed": 6,
+            },
+            {
+                "total_reads": 0,
+                "mapped_reads": 0,
+                "merged_removed": 0,
+                "forward_removed": 0,
+                "reverse_removed": 0,
+                "total_removed": 0,
+            },
         ]
         paths = []
         for i, m in enumerate(metrics):
@@ -93,9 +120,22 @@ class DedupClusterTestCase(unittest.TestCase):
     def test_merge_with_no_mapped_reads_has_zero_rates(self):
         p = os.path.join(self.tmp_dir, "empty.dedup.json")
         with open(p, "w") as f:
-            json.dump({"metrics": {k: 0 for k in (
-                "total_reads", "mapped_reads", "merged_removed",
-                "forward_removed", "reverse_removed", "total_removed")}}, f)
+            json.dump(
+                {
+                    "metrics": {
+                        k: 0
+                        for k in (
+                            "total_reads",
+                            "mapped_reads",
+                            "merged_removed",
+                            "forward_removed",
+                            "reverse_removed",
+                            "total_removed",
+                        )
+                    }
+                },
+                f,
+            )
         out = merge_dedup_jsons([p], "x")["metrics"]
         self.assertEqual(out["dup_rate"], "0.0000")
         self.assertEqual(out["clusterfactor"], "0.0000")

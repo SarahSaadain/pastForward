@@ -1,7 +1,10 @@
 import pandas as pd
 import os
 
-def combine_analysis_files(individual_analysis_files, combined_file_path, combined_detailed_file_path):
+
+def combine_analysis_files(
+    individual_analysis_files, combined_file_path, combined_detailed_file_path
+):
     """
     Combine multiple extended coverage analysis files into aggregated summary and detailed CSVs.
     """
@@ -17,7 +20,9 @@ def combine_analysis_files(individual_analysis_files, combined_file_path, combin
     for analysis_file in individual_analysis_files:
         try:
             # Scaffold names stay text: "4" stays "4" and "NA" is a name, not missing
-            df_analysis = pd.read_csv(analysis_file, dtype={"scaffold": str}, keep_default_na=False)
+            df_analysis = pd.read_csv(
+                analysis_file, dtype={"scaffold": str}, keep_default_na=False
+            )
 
             if df_analysis.empty:
                 print(f"Analysis file {analysis_file} is empty.")
@@ -30,30 +35,35 @@ def combine_analysis_files(individual_analysis_files, combined_file_path, combin
             original_bam_filename = original_bam_base + "_final.bam"
 
             # --- Aggregated stats ---
-            total_bases_sum = df_analysis['total_bases'].sum()
+            total_bases_sum = df_analysis["total_bases"].sum()
             overall_avg_depth = (
-                (df_analysis['avg_depth'] * df_analysis['total_bases']).sum() / total_bases_sum
-                if total_bases_sum > 0 else 0
+                (df_analysis["avg_depth"] * df_analysis["total_bases"]).sum()
+                / total_bases_sum
+                if total_bases_sum > 0
+                else 0
             )
-            overall_max_depth = df_analysis['max_depth'].max()
-            overall_covered_bases = df_analysis['covered_bases'].sum()
+            overall_max_depth = df_analysis["max_depth"].max()
+            overall_covered_bases = df_analysis["covered_bases"].sum()
             overall_total_bases = total_bases_sum
             overall_percent_covered = (
                 (overall_covered_bases / overall_total_bases) * 100
-                if overall_total_bases > 0 else 0
+                if overall_total_bases > 0
+                else 0
             )
 
-            combined_data.append({
-                "Filename": original_bam_filename,
-                "OverallAvgDepth": overall_avg_depth,
-                "OverallMaxDepth": overall_max_depth,
-                "OverallCoveredBases": overall_covered_bases,
-                "OverallTotalBases": overall_total_bases,
-                "OverallPercentCovered": overall_percent_covered
-            })
+            combined_data.append(
+                {
+                    "Filename": original_bam_filename,
+                    "OverallAvgDepth": overall_avg_depth,
+                    "OverallMaxDepth": overall_max_depth,
+                    "OverallCoveredBases": overall_covered_bases,
+                    "OverallTotalBases": overall_total_bases,
+                    "OverallPercentCovered": overall_percent_covered,
+                }
+            )
 
             # --- Append raw rows, tagged with filename ---
-            df_analysis['Filename'] = original_bam_filename
+            df_analysis["Filename"] = original_bam_filename
             detailed_rows.append(df_analysis)
 
         except Exception as e:

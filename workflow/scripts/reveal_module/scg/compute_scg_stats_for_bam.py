@@ -10,15 +10,17 @@ stats_file = snakemake.output.stats
 
 logging.basicConfig(
     level=logging.INFO,
-    format='[%(asctime)s] [%(levelname)s] %(message)s',
-    handlers=[logging.StreamHandler(sys.stderr), logging.FileHandler(log_filename)]
+    format="[%(asctime)s] [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stderr), logging.FileHandler(log_filename)],
 )
 logger = logging.getLogger(__name__)
 
 
 def stats_from_array(depths: np.ndarray, length: int, contig: str) -> dict:
     if len(depths) != length:
-        logger.warning(f"Contig {contig}: expected {length} positions, got {len(depths)}")
+        logger.warning(
+            f"Contig {contig}: expected {length} positions, got {len(depths)}"
+        )
 
     return {
         "min_depth": int(depths.min()),
@@ -44,10 +46,17 @@ def compute_all_contig_stats(bam_path: str) -> dict:
             logger.info(f"[{i}/{contig_count}] Processing contig {contig}")
 
             if length == 0:
-                logger.warning(f"[{i}/{contig_count}] Contig {contig} has length 0, skipping")
+                logger.warning(
+                    f"[{i}/{contig_count}] Contig {contig} has length 0, skipping"
+                )
                 scg_stats[contig] = {
-                    "min_depth": 0, "avg_depth": 0.0, "median_depth": 0.0,
-                    "max_depth": 0, "length": 0, "covered_bases": 0, "breadth": 0.0
+                    "min_depth": 0,
+                    "avg_depth": 0.0,
+                    "median_depth": 0.0,
+                    "max_depth": 0,
+                    "length": 0,
+                    "covered_bases": 0,
+                    "breadth": 0.0,
                 }
                 continue
 

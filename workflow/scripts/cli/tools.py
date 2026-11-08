@@ -1,10 +1,22 @@
 """tools: helpers for setting up a project (create-species, link-reads)."""
+
 import os
 import re
 import sys
 from pathlib import Path
 
-from .common import CYAN, DEFAULT_CONFIGFILE, DIM, GREEN, RED, STATE_DIR, YELLOW, _color, _die, _ensure_project_root
+from .common import (
+    CYAN,
+    DEFAULT_CONFIGFILE,
+    DIM,
+    GREEN,
+    RED,
+    STATE_DIR,
+    YELLOW,
+    _color,
+    _die,
+    _ensure_project_root,
+)
 
 
 # The input folders file_manager.py scans. processed/ and results/ are left out on purpose:
@@ -59,12 +71,22 @@ def tool_create_species(argv):
     print("Put raw reads in <species>/input/read_module/ and reference genomes in")
     print("<species>/input/reference_module/. The reveal_module folders are optional.")
     print()
-    print(_color(CYAN, f"Add this to {DEFAULT_CONFIGFILE} (merge into an existing species: block):"))
+    print(
+        _color(
+            CYAN,
+            f"Add this to {DEFAULT_CONFIGFILE} (merge into an existing species: block):",
+        )
+    )
     print()
     print(_species_config_snippet(argv))
 
 
-LINK_READS_FLAGS = {"--source": "source", "-d": "source", "--species": "species", "-s": "species"}
+LINK_READS_FLAGS = {
+    "--source": "source",
+    "-d": "source",
+    "--species": "species",
+    "-s": "species",
+}
 
 
 def tool_link_reads(argv):
@@ -72,7 +94,9 @@ def tool_link_reads(argv):
     opts = {}
     args = iter(argv)
     for arg in args:
-        flag, eq, value = arg.partition("=")  # accepts both `--species Dmel` and `--species=Dmel`
+        flag, eq, value = arg.partition(
+            "="
+        )  # accepts both `--species Dmel` and `--species=Dmel`
         name = LINK_READS_FLAGS.get(flag)
         if name is None or name in opts:
             _die(f"pastForward tools link-reads: unexpected argument '{arg}'. {usage}")
@@ -102,7 +126,9 @@ def tool_link_reads(argv):
         if p.is_file() and p.name.endswith(extensions) and not p.name.startswith(".")
     )
     if not reads:
-        _die(f"pastForward: no {' or '.join('*' + e for e in extensions)} files in '{source}'.")
+        _die(
+            f"pastForward: no {' or '.join('*' + e for e in extensions)} files in '{source}'."
+        )
     counts = {"linked": 0, "exists": 0, "skipped": 0}
     print(_color(CYAN, f"{reads_dir}/"))
     for read in reads:
@@ -110,7 +136,12 @@ def tool_link_reads(argv):
         if link.is_symlink() and Path(os.readlink(link)) == read:
             state, label = "exists", _color(DIM, "exists")
         elif link.exists() or link.is_symlink():
-            state, label = "skipped", _color(YELLOW, "skipped, a different file with this name is already there")
+            state, label = (
+                "skipped",
+                _color(
+                    YELLOW, "skipped, a different file with this name is already there"
+                ),
+            )
         else:
             link.symlink_to(read)
             state, label = "linked", _color(GREEN, "linked")
@@ -119,10 +150,19 @@ def tool_link_reads(argv):
     print()
     print(", ".join(f"{n} {state}" for state, n in counts.items()))
 
-    problems = [(r.name, why) for r in reads if (why := file_manager.get_read_name_problem(r.name))]
+    problems = [
+        (r.name, why)
+        for r in reads
+        if (why := file_manager.get_read_name_problem(r.name))
+    ]
     if problems:
         print()
-        print(_color(YELLOW, f"Warning: {len(problems)} file name(s) don't match the raw read naming convention:"))
+        print(
+            _color(
+                YELLOW,
+                f"Warning: {len(problems)} file name(s) don't match the raw read naming convention:",
+            )
+        )
         for name, why in problems:
             print(_color(YELLOW, f"  {name:<50}{why}"))
         print(

@@ -10,6 +10,7 @@ Run with either:
     python3 tests/unit/test_config_schema.py
     python3 -m unittest tests.test_config_schema -v          (from the repo root)
 """
+
 import copy
 import os
 import re
@@ -29,7 +30,11 @@ try:
 except ImportError:
     jsonschema = None
 
-SAMPLE_CONFIGS = ["min_config_sample.yaml", "max_config_sample.yaml", "max_config_modern_sample.yaml"]
+SAMPLE_CONFIGS = [
+    "min_config_sample.yaml",
+    "max_config_sample.yaml",
+    "max_config_modern_sample.yaml",
+]
 
 
 def _load_sample(name, uncomment=False):
@@ -67,8 +72,12 @@ class TestValidateConfig(unittest.TestCase):
             "pipeline.read_module.adapter_removal: unknown key 'exectue' (did you mean 'execute'?)",
             message,
         )
-        self.assertIn("pipeline.reference_module.mapping.settings.mapper: 'bwa'", message)
-        self.assertIn("pipeline.summary_module.execute: 'false' is not of type 'boolean'", message)
+        self.assertIn(
+            "pipeline.reference_module.mapping.settings.mapper: 'bwa'", message
+        )
+        self.assertIn(
+            "pipeline.summary_module.execute: 'false' is not of type 'boolean'", message
+        )
         self.assertIn("species.demo.individuals", message)
 
     def test_execute_on_always_on_step_is_rejected(self):
@@ -78,9 +87,12 @@ class TestValidateConfig(unittest.TestCase):
             validate_config(config)
 
     def test_fully_commented_section_gets_clear_message(self):
-        config = yaml.safe_load("pipeline:\n  reference_module:\n    deduplication:\n      settings:\n        #mem_mb: 1\n")
+        config = yaml.safe_load(
+            "pipeline:\n  reference_module:\n    deduplication:\n      settings:\n        #mem_mb: 1\n"
+        )
         with self.assertRaisesRegex(
-            ConfigValidationError, r"deduplication\.settings: is empty\. Remove the line"
+            ConfigValidationError,
+            r"deduplication\.settings: is empty\. Remove the line",
         ):
             validate_config(config)
 

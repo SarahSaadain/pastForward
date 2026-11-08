@@ -30,7 +30,11 @@ def _format_schema_error(error):
                 + (f" (did you mean '{hint[0]}'?)" if hint else "")
             )
         return lines
-    if error.validator == "type" and error.validator_value == "object" and error.instance is None:
+    if (
+        error.validator == "type"
+        and error.validator_value == "object"
+        and error.instance is None
+    ):
         # A section whose every line is commented out loads as null, not {}.
         return [f"{path}: is empty. Remove the line, or set at least one key under it."]
     if error.validator == "type" and error.instance is None:
@@ -62,7 +66,9 @@ def validate_config(config):
         schema = yaml.safe_load(f)
     validator = jsonschema.Draft202012Validator(schema)
     problems = []
-    for error in sorted(validator.iter_errors(config), key=lambda e: list(map(str, e.absolute_path))):
+    for error in sorted(
+        validator.iter_errors(config), key=lambda e: list(map(str, e.absolute_path))
+    ):
         problems.extend(_format_schema_error(error))
     if problems:
         raise ConfigValidationError(

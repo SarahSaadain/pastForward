@@ -8,6 +8,7 @@ Needs numpy. No Snakemake/conda required. Run with either:
     python3 tests/unit/test_scg_ranking.py
     python3 -m unittest tests.test_scg_ranking -v          (from the repo root)
 """
+
 import os
 import sys
 import unittest

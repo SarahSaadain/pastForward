@@ -2,7 +2,10 @@ import json
 import os
 import sys
 
-def determine_endogenous_reads_from_stats(stats_file, output_file, individual_id, dedup_file=None):
+
+def determine_endogenous_reads_from_stats(
+    stats_file, output_file, individual_id, dedup_file=None
+):
     """
     Parse samtools stats file and compute mapped/unmapped proportion.
 
@@ -27,7 +30,7 @@ def determine_endogenous_reads_from_stats(stats_file, output_file, individual_id
                 if line.startswith("SN"):
                     parts = line.strip().split("\t")
                     if len(parts) < 3:
-                        continue # Skip malformed lines
+                        continue  # Skip malformed lines
 
                     # Find total reads
                     if parts[1].startswith("raw total sequences:"):
@@ -35,15 +38,21 @@ def determine_endogenous_reads_from_stats(stats_file, output_file, individual_id
                         try:
                             total_reads = int(parts[2])
                         except ValueError:
-                            print(f"Warning: Could not parse total reads value '{parts[2]}' in {stats_file}", file=sys.stderr)
+                            print(
+                                f"Warning: Could not parse total reads value '{parts[2]}' in {stats_file}",
+                                file=sys.stderr,
+                            )
                             total_reads = 0
-                    
+
                     # Find mapped reads
                     elif parts[1].startswith("reads mapped:"):
                         try:
                             mapped_reads = int(parts[2])
                         except ValueError:
-                            print(f"Warning: Could not parse mapped reads value '{parts[2]}' in {stats_file}", file=sys.stderr)
+                            print(
+                                f"Warning: Could not parse mapped reads value '{parts[2]}' in {stats_file}",
+                                file=sys.stderr,
+                            )
                             mapped_reads = 0
     except FileNotFoundError:
         print(f"Error: Stats file not found at {stats_file}", file=sys.stderr)
@@ -78,8 +87,8 @@ def determine_endogenous_reads_from_stats(stats_file, output_file, individual_id
 if __name__ == "__main__":
     # Assuming 'individual' is the wildcard name used in your Snakemake rule
     # If your wildcard is named 'sample', use snakemake.wildcards.sample instead.
-    individual_id = snakemake.wildcards.individual 
-    
+    individual_id = snakemake.wildcards.individual
+
     determine_endogenous_reads_from_stats(
         snakemake.input.stats,
         snakemake.output.csv,

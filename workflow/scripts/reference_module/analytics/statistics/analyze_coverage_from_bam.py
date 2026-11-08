@@ -86,8 +86,12 @@ def write_summary(rows, out):
     )
     summary = summary.set_index("scaffold").astype("int64")
     summary["avg_depth"] = summary["depth_sum"] / summary["total_bases"]
-    summary["percent_covered"] = (summary["covered_bases"] / summary["total_bases"]) * 100
-    summary[["avg_depth", "max_depth", "covered_bases", "total_bases", "percent_covered"]].to_csv(out)
+    summary["percent_covered"] = (
+        summary["covered_bases"] / summary["total_bases"]
+    ) * 100
+    summary[
+        ["avg_depth", "max_depth", "covered_bases", "total_bases", "percent_covered"]
+    ].to_csv(out)
 
 
 def coverage_rows(bam, log):
@@ -95,15 +99,21 @@ def coverage_rows(bam, log):
 
     with pysam.AlignmentFile(bam) as f:
         names, lengths = f.references, f.lengths
-    proc = subprocess.Popen(["samtools", "depth", bam], stdout=subprocess.PIPE, stderr=log)
+    proc = subprocess.Popen(
+        ["samtools", "depth", bam], stdout=subprocess.PIPE, stderr=log
+    )
     try:
         return summarize_depth_stream(proc.stdout, names, lengths)
     finally:
         proc.stdout.close()
         if proc.wait() != 0:
-            raise RuntimeError(f"samtools depth failed on {bam} (exit {proc.returncode})")
+            raise RuntimeError(
+                f"samtools depth failed on {bam} (exit {proc.returncode})"
+            )
 
 
 if __name__ == "__main__":
     with open(snakemake.log[0], "w") as log:
-        write_summary(coverage_rows(snakemake.input.bam, log), snakemake.output.analysis)
+        write_summary(
+            coverage_rows(snakemake.input.bam, log), snakemake.output.analysis
+        )

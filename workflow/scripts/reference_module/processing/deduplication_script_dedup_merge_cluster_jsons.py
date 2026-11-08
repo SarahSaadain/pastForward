@@ -21,13 +21,14 @@ def merge_dedup_jsons(json_paths, sample_name):
     # recompute derived metrics
     dup_rate = (
         totals["total_removed"] / totals["mapped_reads"]
-        if totals["mapped_reads"] > 0 else 0
+        if totals["mapped_reads"] > 0
+        else 0
     )
 
     clusterfactor = (
-        totals["total_reads"] /
-        (totals["total_reads"] - totals["total_removed"])
-        if totals["total_reads"] > totals["total_removed"] else 0
+        totals["total_reads"] / (totals["total_reads"] - totals["total_removed"])
+        if totals["total_reads"] > totals["total_removed"]
+        else 0
     )
 
     merged = {

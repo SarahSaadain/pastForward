@@ -11,6 +11,7 @@ For an end-to-end check that the symlinks actually resolve correctly through a r
 Snakemake DAG (dry runs), see tests/integration/dryrun_scenarios.sh instead — that one does need the
 `snakemake` conda environment.
 """
+
 import json
 import os
 import shutil
@@ -54,9 +55,13 @@ class SpeciesPathsTestCase(unittest.TestCase):
     def make_species_root(self, root):
         """Create the full conventional subfolder layout under `root`."""
         for sub in [
-            "input/read_module", "input/reference_module", "input/reveal_module/scg",
-            "input/reveal_module/feature_library", "input/reveal_module/competition",
-            "processed", "results",
+            "input/read_module",
+            "input/reference_module",
+            "input/reveal_module/scg",
+            "input/reveal_module/feature_library",
+            "input/reveal_module/competition",
+            "processed",
+            "results",
         ]:
             os.makedirs(os.path.join(root, sub), exist_ok=True)
 
@@ -65,7 +70,10 @@ class TestFallback(SpeciesPathsTestCase):
     def test_no_config_touches_nothing(self):
         config = {"species": {"Dmel": {"name": "Drosophila melanogaster"}}}
         sp.setup_species_data_locations(config)
-        self.assertFalse(os.path.exists("Dmel"), "no override configured -> Dmel/ must not be created")
+        self.assertFalse(
+            os.path.exists("Dmel"),
+            "no override configured -> Dmel/ must not be created",
+        )
         self.assertEqual(len(sp._ACQUIRED_LOCKS), 0)
 
 
@@ -74,19 +82,43 @@ class TestFreshSpeciesDir(SpeciesPathsTestCase):
         super().setUp()
         self.species_root = self.make_external_dir("pf_test_species_root_")
         self.make_species_root(self.species_root)
-        with open(os.path.join(self.species_root, "input/read_module", "IND001_R1.fastq.gz"), "w") as f:
+        with open(
+            os.path.join(self.species_root, "input/read_module", "IND001_R1.fastq.gz"),
+            "w",
+        ) as f:
             f.write("fake")
-        self.config = {"species": {"Dmel": {"name": "Drosophila melanogaster", "species_dir": self.species_root}}}
+        self.config = {
+            "species": {
+                "Dmel": {
+                    "name": "Drosophila melanogaster",
+                    "species_dir": self.species_root,
+                }
+            }
+        }
 
     def expected_links(self):
         return {
-            "Dmel/input/read_module": os.path.realpath(os.path.join(self.species_root, "input/read_module")),
-            "Dmel/input/reference_module": os.path.realpath(os.path.join(self.species_root, "input/reference_module")),
-            "Dmel/input/reveal_module/scg": os.path.realpath(os.path.join(self.species_root, "input/reveal_module/scg")),
-            "Dmel/input/reveal_module/feature_library": os.path.realpath(os.path.join(self.species_root, "input/reveal_module/feature_library")),
-            "Dmel/input/reveal_module/competition": os.path.realpath(os.path.join(self.species_root, "input/reveal_module/competition")),
-            "Dmel/processed": os.path.realpath(os.path.join(self.species_root, "processed")),
-            "Dmel/results": os.path.realpath(os.path.join(self.species_root, "results")),
+            "Dmel/input/read_module": os.path.realpath(
+                os.path.join(self.species_root, "input/read_module")
+            ),
+            "Dmel/input/reference_module": os.path.realpath(
+                os.path.join(self.species_root, "input/reference_module")
+            ),
+            "Dmel/input/reveal_module/scg": os.path.realpath(
+                os.path.join(self.species_root, "input/reveal_module/scg")
+            ),
+            "Dmel/input/reveal_module/feature_library": os.path.realpath(
+                os.path.join(self.species_root, "input/reveal_module/feature_library")
+            ),
+            "Dmel/input/reveal_module/competition": os.path.realpath(
+                os.path.join(self.species_root, "input/reveal_module/competition")
+            ),
+            "Dmel/processed": os.path.realpath(
+                os.path.join(self.species_root, "processed")
+            ),
+            "Dmel/results": os.path.realpath(
+                os.path.join(self.species_root, "results")
+            ),
         }
 
     def test_symlinks_created_with_correct_targets(self):
@@ -98,6 +130,7 @@ class TestFreshSpeciesDir(SpeciesPathsTestCase):
     def test_glob_discovery_follows_symlink(self):
         # Mirrors how file_manager.py's get_files_in_folder_matching_pattern works.
         import glob
+
         sp.setup_species_data_locations(self.config)
         files = glob.glob(os.path.join("Dmel/input/read_module", "*.fastq.gz"))
         self.assertEqual(len(files), 1)
@@ -125,8 +158,12 @@ class TestFreshSpeciesDir(SpeciesPathsTestCase):
             self.assertTrue(os.path.islink(link), f"missing symlink at {link}")
         self.assertEqual(len(sp._ACQUIRED_LOCKS), 0)
         links = self.expected_links()
-        self.assertFalse(os.path.exists(os.path.join(links["Dmel/processed"], ".pastforward.lock")))
-        self.assertFalse(os.path.exists(os.path.join(links["Dmel/results"], ".pastforward.lock")))
+        self.assertFalse(
+            os.path.exists(os.path.join(links["Dmel/processed"], ".pastforward.lock"))
+        )
+        self.assertFalse(
+            os.path.exists(os.path.join(links["Dmel/results"], ".pastforward.lock"))
+        )
 
     def test_idempotent_rerun(self):
         sp.setup_species_data_locations(self.config)
@@ -135,8 +172,12 @@ class TestFreshSpeciesDir(SpeciesPathsTestCase):
         sp.setup_species_data_locations(self.config)  # must not raise
         sp.acquire_pastforward_locks(self.config)
         mtime_after = os.lstat("Dmel/input/read_module").st_mtime_ns
-        self.assertEqual(mtime_before, mtime_after, "symlink was recreated instead of left alone")
-        self.assertEqual(len(sp._ACQUIRED_LOCKS), 2, "second run must not double-acquire locks")
+        self.assertEqual(
+            mtime_before, mtime_after, "symlink was recreated instead of left alone"
+        )
+        self.assertEqual(
+            len(sp._ACQUIRED_LOCKS), 2, "second run must not double-acquire locks"
+        )
 
 
 class TestConflictDetection(SpeciesPathsTestCase):
@@ -175,7 +216,9 @@ class TestConflictDetection(SpeciesPathsTestCase):
 class TestExecuteFalseSkipsSpecies(SpeciesPathsTestCase):
     def test_skipped_species_untouched(self):
         processed_target = self.make_external_dir("pf_test_processed_")
-        config = {"species": {"Dmel": {"execute": False, "processed_dir": processed_target}}}
+        config = {
+            "species": {"Dmel": {"execute": False, "processed_dir": processed_target}}
+        }
         sp.setup_species_data_locations(config)
         sp.acquire_pastforward_locks(config)
         self.assertFalse(os.path.exists("Dmel"))
@@ -243,8 +286,12 @@ class TestCrossProjectLock(SpeciesPathsTestCase):
         self.assertEqual(unchanged, foreign)
 
     def _live_foreign_lock(self):
-        return {"working_directory": "/racing/project", "pid": 1,
-                "hostname": socket.gethostname(), "start_timestamp": "2026-01-01T00:00:00"}
+        return {
+            "working_directory": "/racing/project",
+            "pid": 1,
+            "hostname": socket.gethostname(),
+            "start_timestamp": "2026-01-01T00:00:00",
+        }
 
     def _dead_pid(self):
         pid = 999999
@@ -264,7 +311,9 @@ class TestCrossProjectLock(SpeciesPathsTestCase):
             with open(lock_path, "w") as f:
                 json.dump(foreign, f)
 
-        with mock.patch.object(sp.Path, "mkdir", autospec=True, side_effect=mkdir_then_race):
+        with mock.patch.object(
+            sp.Path, "mkdir", autospec=True, side_effect=mkdir_then_race
+        ):
             with self.assertRaises(sp.CrossProjectLockError):
                 sp._acquire_project_lock(target, "Dmel", "processed")
 
@@ -340,8 +389,12 @@ class TestCrossProjectLock(SpeciesPathsTestCase):
         # target must release the first lock itself.
         t1 = self.make_external_dir("pf_test_rel1_")
         t2 = self.make_external_dir("pf_test_rel2_")
-        foreign = {"working_directory": "/elsewhere", "pid": 1, "hostname": "other-host",
-                   "start_timestamp": "2026-01-01T00:00:00"}
+        foreign = {
+            "working_directory": "/elsewhere",
+            "pid": 1,
+            "hostname": "other-host",
+            "start_timestamp": "2026-01-01T00:00:00",
+        }
         with open(os.path.join(t2, ".pastforward.lock"), "w") as f:
             json.dump(foreign, f)
         config = {"species": {"Dmel": {"processed_dir": t1, "results_dir": t2}}}

@@ -78,7 +78,9 @@ def _remove(paths) -> None:
 
 def _unpack(gz: Path) -> None:
     # -k keeps the .gz; gzip/pigz restore the mtime stored in the archive.
-    subprocess.run([shutil.which("pigz") or "gzip", "-d", "-k", "-f", str(gz)], check=True)
+    subprocess.run(
+        [shutil.which("pigz") or "gzip", "-d", "-k", "-f", str(gz)], check=True
+    )
 
 
 def restore_indexes(config: dict, dryrun: bool) -> None:

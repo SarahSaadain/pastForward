@@ -80,8 +80,12 @@ class IndexCompressionTest(unittest.TestCase):
             "restore_indexes({'species': {'Sp': {}}}, dryrun=False);"
             "import os; print(os.path.exists(%r))"
         ) % (str(Path(__file__).resolve().parents[2] / "workflow"), str(self.raw))
-        out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
-        self.assertEqual(out.stdout.strip(), "True")  # placeholder while the process ran
+        out = subprocess.run(
+            [sys.executable, "-c", code], capture_output=True, text=True, check=True
+        )
+        self.assertEqual(
+            out.stdout.strip(), "True"
+        )  # placeholder while the process ran
         self.assertFalse(self.raw.exists())  # gone after exit
         self.assertTrue(self.gz.exists())
 
@@ -92,7 +96,9 @@ class IndexCompressionTest(unittest.TestCase):
         self.assertIn("a.fa.0123.gz", index_archives("a.fa", "bwa-mem2"))
         self.assertNotIn("a.fa.0123.gz", index_archives("a.fa", "bwa-mem3"))
         self.assertIn("a.fa.pac.gz", index_archives("a.fa", "bwa-mem3"))
-        self.assertEqual(index_archives("a.fa", "minibwa"), ["a.fa.l2b.gz", "a.fa.mbw.gz"])
+        self.assertEqual(
+            index_archives("a.fa", "minibwa"), ["a.fa.l2b.gz", "a.fa.mbw.gz"]
+        )
         self.assertIn("a.fa.rev.2.bt2.gz", index_archives("a.fa", "bowtie2"))
         self.assertIn("a.fa.4.ebwt.gz", index_archives("a.fa", "bowtie"))
         self.assertTrue(re.fullmatch(INDEX_REGEX + r"\.gz", "x/a.fa.rev.1.bt2.gz"))
@@ -100,11 +106,21 @@ class IndexCompressionTest(unittest.TestCase):
     def test_dryrun_detection(self):
         for argv in (["--dryrun"], ["--dry-run"], ["-n"], ["-np"], ["-nq"], ["-pn"]):
             self.assertTrue(is_dryrun(["snakemake", "--cores", "4"] + argv), argv)
-        for argv in (["--cores", "4"], ["-p"], ["--rerun-incomplete"], ["-c4"], ["--notemp"]):
+        for argv in (
+            ["--cores", "4"],
+            ["-p"],
+            ["--rerun-incomplete"],
+            ["-c4"],
+            ["--notemp"],
+        ):
             self.assertFalse(is_dryrun(["snakemake"] + argv), argv)
 
     def test_mapper_lookup_and_fallback(self):
-        cfg = {"pipeline": {"reveal_module": {"mapping": {"settings": {"mapper": "minimap2"}}}}}
+        cfg = {
+            "pipeline": {
+                "reveal_module": {"mapping": {"settings": {"mapper": "minimap2"}}}
+            }
+        }
         self.assertEqual(mapper({}, "reference_module"), "bwa-mem3")
         self.assertEqual(mapper(cfg, "reveal_module"), "minimap2")
         self.assertEqual(mapper(cfg, "reveal_module", "scg_selector"), "minimap2")

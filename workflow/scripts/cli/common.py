@@ -1,4 +1,5 @@
 """Shared by every command: project/state paths, colors, error exit, project-root check."""
+
 import json
 import os
 import random
@@ -19,7 +20,9 @@ CORES_FLAGS = ("--cores", "-c", "-j", "--jobs")
 
 DRYRUN_FLAGS = ("--dryrun", "--dry-run", "-n")
 CONFIGFILE_FLAGS = ("--configfile", "--configfiles")
-DEFAULT_CONFIGFILE = "config/config.yaml"  # matches initialize.smk's `configfile:` directive
+DEFAULT_CONFIGFILE = (
+    "config/config.yaml"  # matches initialize.smk's `configfile:` directive
+)
 
 
 # Snakemake 8 replaced `--use-conda` with `--software-deployment-method conda`. The old spelling
@@ -28,7 +31,9 @@ DEFAULT_CONFIGFILE = "config/config.yaml"  # matches initialize.smk's `configfil
 SDM_FLAG = "--software-deployment-method"
 
 
-ABORTING_RE = re.compile(r"Will exit after finishing currently running jobs \(scheduler\)\.")
+ABORTING_RE = re.compile(
+    r"Will exit after finishing currently running jobs \(scheduler\)\."
+)
 
 
 RED, GREEN, YELLOW, CYAN, DIM, BOLD_GREEN = 31, 32, 33, 36, 90, "1;32"
@@ -200,7 +205,11 @@ def _cores_from_args(args):
         if a in CORES_FLAGS:
             return args[i + 1] if i + 1 < len(args) else ""
         # Attached short form (-c8, -jall); digits/"all" only, so other -c... args don't misfire.
-        if a[:2] in CORES_FLAGS and not a.startswith("--") and (a[2:].isdigit() or a[2:] == "all"):
+        if (
+            a[:2] in CORES_FLAGS
+            and not a.startswith("--")
+            and (a[2:].isdigit() or a[2:] == "all")
+        ):
             return a[2:]
     return None
 
@@ -255,7 +264,9 @@ def _load_config(configfiles):
     import yaml  # not at module level: version/print-log must work without PyYAML
 
     config = {}
-    for path in ([DEFAULT_CONFIGFILE] if Path(DEFAULT_CONFIGFILE).is_file() else []) + list(configfiles):
+    for path in (
+        [DEFAULT_CONFIGFILE] if Path(DEFAULT_CONFIGFILE).is_file() else []
+    ) + list(configfiles):
         _merge_config(config, yaml.safe_load(Path(path).read_text()) or {})
     return config
 
@@ -284,13 +295,17 @@ def _ensure_project_root(require_snakemake=True, require_config=False, configfil
     # read config.yaml, so they fail later on ImportError instead; version and print-log need
     # neither (print-log only reads files back out of logs/).
     if require_snakemake and shutil.which("snakemake") is None:
-        _die("pastForward: `snakemake` not found on PATH. Activate its conda env first.")
+        _die(
+            "pastForward: `snakemake` not found on PATH. Activate its conda env first."
+        )
 
 
 def _command_line(pid):
     """`ps` command line of pid ("" once it has exited), or None when `ps` cannot run."""
     try:
-        return subprocess.run(["ps", "-o", "command=", "-p", str(pid)], capture_output=True, text=True).stdout
+        return subprocess.run(
+            ["ps", "-o", "command=", "-p", str(pid)], capture_output=True, text=True
+        ).stdout
     except OSError:
         return None
 

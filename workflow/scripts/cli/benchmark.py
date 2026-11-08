@@ -1,11 +1,20 @@
 """benchmark: summarize the per-job benchmark files every run writes."""
+
 import json
 import math
 import os
 import statistics
 from pathlib import Path
 
-from .common import CYAN, DIM, YELLOW, _color, _die, _ensure_project_root, _format_duration
+from .common import (
+    CYAN,
+    DIM,
+    YELLOW,
+    _color,
+    _die,
+    _ensure_project_root,
+    _format_duration,
+)
 
 
 # Written by every rule, via workflow/rules/benchmark.smk. One JSON line per job.
@@ -35,7 +44,9 @@ def _find_benchmark_files(root="."):
         # Skip the pipeline's own code and every dot-directory (.snakemake, .git, .pastforward):
         # no run ever writes a benchmark file there.
         dirnames[:] = [d for d in dirnames if d != "workflow" and not d.startswith(".")]
-        files += [os.path.join(dirpath, f) for f in filenames if f.endswith(BENCHMARK_SUFFIX)]
+        files += [
+            os.path.join(dirpath, f) for f in filenames if f.endswith(BENCHMARK_SUFFIX)
+        ]
     return sorted(files)
 
 
@@ -75,17 +86,29 @@ def _summarize_benchmarks(records):
     for record in records:
         # rule_name is an extended-format field. benchmark.smk turns the extended format on for
         # the whole workflow, so it is only missing for files written before that landed.
-        by_rule.setdefault(record.get("rule_name") or "(unknown rule)", []).append(record)
+        by_rule.setdefault(record.get("rule_name") or "(unknown rule)", []).append(
+            record
+        )
 
     rows = []
     for rule_name, group in by_rule.items():
-        seconds = [s for s in (_benchmark_number(r.get("s")) for r in group) if s is not None]
-        memory = [m for m in (_benchmark_number(r.get("max_rss")) for r in group) if m is not None]
+        seconds = [
+            s for s in (_benchmark_number(r.get("s")) for r in group) if s is not None
+        ]
+        memory = [
+            m
+            for m in (_benchmark_number(r.get("max_rss")) for r in group)
+            if m is not None
+        ]
         core_seconds = sum(
-            (_benchmark_number(r.get("s")) or 0) * (_benchmark_number(r.get("threads")) or 1) for r in group
+            (_benchmark_number(r.get("s")) or 0)
+            * (_benchmark_number(r.get("threads")) or 1)
+            for r in group
         )
         input_sizes = [
-            sum(r["input_size_mb"].values()) for r in group if isinstance(r.get("input_size_mb"), dict)
+            sum(r["input_size_mb"].values())
+            for r in group
+            if isinstance(r.get("input_size_mb"), dict)
         ]
         rows.append(
             {
@@ -103,21 +126,29 @@ def _summarize_benchmarks(records):
 
 def _emit_benchmark_profile(rows):
     print("# Snakemake resource settings derived from the benchmarks above. Paste into")
-    print("# workflow/profiles/default/profile.yaml, below its `default-resources:` block, or")
+    print(
+        "# workflow/profiles/default/profile.yaml, below its `default-resources:` block, or"
+    )
     print("# pass individual entries as `--set-resources <rule>:<resource>=<value>`.")
     print(
         f"# runtime is in minutes at {BENCHMARK_RUNTIME_FACTOR:g}x the longest job observed; mem_mb is "
         f"{BENCHMARK_MEM_FACTOR:g}x the highest peak memory observed."
     )
-    print("# These are starting points measured on one dataset on one machine, not limits.")
+    print(
+        "# These are starting points measured on one dataset on one machine, not limits."
+    )
     print("set-resources:")
     for row in rows:
         if row["max_s"] is None:
             continue
         print(f"  {row['rule']}:")
-        print(f"    runtime: {max(1, math.ceil(BENCHMARK_RUNTIME_FACTOR * row['max_s'] / 60))}")
+        print(
+            f"    runtime: {max(1, math.ceil(BENCHMARK_RUNTIME_FACTOR * row['max_s'] / 60))}"
+        )
         if row["max_rss_mb"] is not None:
-            print(f"    mem_mb: {max(1, math.ceil(BENCHMARK_MEM_FACTOR * row['max_rss_mb']))}")
+            print(
+                f"    mem_mb: {max(1, math.ceil(BENCHMARK_MEM_FACTOR * row['max_rss_mb']))}"
+            )
 
 
 def _print_benchmark_table(rows):
@@ -138,7 +169,11 @@ def _print_benchmark_table(rows):
 
     def _row(cells):
         # Rule names left, every measured number right, so the columns line up on the decimal.
-        return cells[0].ljust(widths[0]) + "  " + "  ".join(c.rjust(w) for c, w in zip(cells[1:], widths[1:]))
+        return (
+            cells[0].ljust(widths[0])
+            + "  "
+            + "  ".join(c.rjust(w) for c, w in zip(cells[1:], widths[1:]))
+        )
 
     print(_color(CYAN, _row(headers)))
     for cells in body:
@@ -160,7 +195,9 @@ def cmd_benchmark(argv):
         )
     records, unreadable = _load_benchmark_records(paths)
     if not records:
-        _die(f"pastForward: found {len(paths)} benchmark file(s), but none of them held a usable record.")
+        _die(
+            f"pastForward: found {len(paths)} benchmark file(s), but none of them held a usable record."
+        )
     rows = _summarize_benchmarks(records)
 
     print(
@@ -196,7 +233,11 @@ def cmd_benchmark(argv):
         )
     )
     if unreadable:
-        print(_color(YELLOW, f"{len(unreadable)} file(s) could not be read and were skipped."))
+        print(
+            _color(
+                YELLOW, f"{len(unreadable)} file(s) could not be read and were skipped."
+            )
+        )
     if emit_profile:
         print()
         _emit_benchmark_profile(rows)

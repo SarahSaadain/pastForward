@@ -92,7 +92,9 @@ def by_individual(rows):
 
 
 def _write(path, rows, first_columns):
-    columns = first_columns + ["adapter_removed_reads"] + COUNT_COLUMNS + PERCENT_COLUMNS
+    columns = (
+        first_columns + ["adapter_removed_reads"] + COUNT_COLUMNS + PERCENT_COLUMNS
+    )
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=columns)
         writer.writeheader()
@@ -101,10 +103,15 @@ def _write(path, rows, first_columns):
 
 if __name__ == "__main__":
     # No fastp reports when adapter removal is skipped.
-    json_paths = list(snakemake.input.fastp_json) or [None] * len(snakemake.params.samples)
+    json_paths = list(snakemake.input.fastp_json) or [None] * len(
+        snakemake.params.samples
+    )
     rows = []
     for sample, paired, json_path, count_path in zip(
-        snakemake.params.samples, snakemake.params.paired, json_paths, snakemake.input.counts
+        snakemake.params.samples,
+        snakemake.params.paired,
+        json_paths,
+        snakemake.input.counts,
     ):
         with open(count_path) as f:
             count = int(f.read().strip())
@@ -115,4 +122,8 @@ if __name__ == "__main__":
         rows.append(sample_composition(sample, count, fastp, paired=paired))
     rows.sort(key=lambda r: r["sample"])
     _write(snakemake.output.by_sample, rows, ["sample", "individual", "layout"])
-    _write(snakemake.output.by_individual, by_individual(rows), ["individual", "samples", "layout"])
+    _write(
+        snakemake.output.by_individual,
+        by_individual(rows),
+        ["individual", "samples", "layout"],
+    )

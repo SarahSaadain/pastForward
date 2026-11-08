@@ -19,6 +19,7 @@ Run with either:
     python3 tests/unit/test_expected_output_manager.py
     python3 -m unittest tests.test_expected_output_manager -v          (from the repo root)
 """
+
 import os
 import shutil
 import sys
@@ -66,7 +67,14 @@ class TestCoreOutputsFromMinimalConfig(ExpectedOutputManagerTestCase):
     def setUp(self):
         super().setUp()
         self.lib = testlib.build_species_library(self.project_dir)
-        self.config = {"species": {"Dmel": {"name": "Drosophila melanogaster", "lineage": "drosophilidae_odb12"}}}
+        self.config = {
+            "species": {
+                "Dmel": {
+                    "name": "Drosophila melanogaster",
+                    "lineage": "drosophilidae_odb12",
+                }
+            }
+        }
 
     def test_representative_outputs_present_across_all_modules(self):
         outputs = self.get_all_outputs(self.config)
@@ -90,14 +98,25 @@ class TestCoreOutputsFromMinimalConfig(ExpectedOutputManagerTestCase):
 
     def test_read_composition_kept_without_adapter_removal(self):
         # No fastp reports then, but the composition is still written (all reads unmerged).
-        config = dict(self.config, pipeline={"read_module": {"adapter_removal": {"execute": False}}})
+        config = dict(
+            self.config,
+            pipeline={"read_module": {"adapter_removal": {"execute": False}}},
+        )
         outputs = self.get_all_outputs(config)
-        self.assertIn("Dmel/results/read_module/statistics/Dmel_read_composition_by_sample.csv", outputs)
+        self.assertIn(
+            "Dmel/results/read_module/statistics/Dmel_read_composition_by_sample.csv",
+            outputs,
+        )
 
     def test_keep_reads_requests_results_copy_only_when_on(self):
         marker = "/results/read_module/reads_final/"
         self.assertFalse(any(marker in o for o in self.get_all_outputs(self.config)))
-        config = dict(self.config, pipeline={"read_module": {"quality_filtering": {"settings": {"keep_reads": True}}}})
+        config = dict(
+            self.config,
+            pipeline={
+                "read_module": {"quality_filtering": {"settings": {"keep_reads": True}}}
+            },
+        )
         self.assertTrue(any(marker in o for o in self.get_all_outputs(config)))
 
     def test_keep_reads_final_needs_a_read_step(self):
@@ -122,23 +141,70 @@ class TestCoreOutputsFromMinimalConfig(ExpectedOutputManagerTestCase):
 
     def test_keep_bam_requests_results_copy_only_when_on(self):
         outputs = self.get_all_outputs(self.config)
-        self.assertFalse(any("_sorted" in o and "/results/reference_module/" in o and "/mapped/" in o for o in outputs))
-        on = {"mapping": {"settings": {"keep_bam": True}}, "deduplication": {"settings": {"keep_bam": True}}}
-        outputs = self.get_all_outputs(dict(self.config, pipeline={"reference_module": on}))
-        self.assertTrue(any(o.endswith("_sorted.bam") and "/results/reference_module/" in o for o in outputs))
-        self.assertTrue(any(o.endswith("_sorted_dedupped.bam.bai") and "/results/reference_module/" in o for o in outputs))
-        self.assertFalse(any(o.endswith("_sorted_dedupped_rescaled.bam") and "/mapped/" in o and "/analytics/" not in o for o in outputs))
+        self.assertFalse(
+            any(
+                "_sorted" in o and "/results/reference_module/" in o and "/mapped/" in o
+                for o in outputs
+            )
+        )
+        on = {
+            "mapping": {"settings": {"keep_bam": True}},
+            "deduplication": {"settings": {"keep_bam": True}},
+        }
+        outputs = self.get_all_outputs(
+            dict(self.config, pipeline={"reference_module": on})
+        )
+        self.assertTrue(
+            any(
+                o.endswith("_sorted.bam") and "/results/reference_module/" in o
+                for o in outputs
+            )
+        )
+        self.assertTrue(
+            any(
+                o.endswith("_sorted_dedupped.bam.bai")
+                and "/results/reference_module/" in o
+                for o in outputs
+            )
+        )
+        self.assertFalse(
+            any(
+                o.endswith("_sorted_dedupped_rescaled.bam")
+                and "/mapped/" in o
+                and "/analytics/" not in o
+                for o in outputs
+            )
+        )
         on = {"damage_rescaling": {"settings": {"keep_bam": True}}}
-        outputs = self.get_all_outputs(dict(self.config, pipeline={"reference_module": on}))
-        self.assertTrue(any(o.endswith("_sorted_dedupped_rescaled.bam") and "/results/reference_module/" in o for o in outputs))
+        outputs = self.get_all_outputs(
+            dict(self.config, pipeline={"reference_module": on})
+        )
+        self.assertTrue(
+            any(
+                o.endswith("_sorted_dedupped_rescaled.bam")
+                and "/results/reference_module/" in o
+                for o in outputs
+            )
+        )
 
     def test_keep_bam_dedup_needs_dedup_step(self):
         off = {"deduplication": {"execute": False, "settings": {"keep_bam": True}}}
-        outputs = self.get_all_outputs(dict(self.config, pipeline={"reference_module": off}))
-        self.assertFalse(any("_sorted_dedupped" in o and "/results/reference_module/" in o for o in outputs))
+        outputs = self.get_all_outputs(
+            dict(self.config, pipeline={"reference_module": off})
+        )
+        self.assertFalse(
+            any(
+                "_sorted_dedupped" in o and "/results/reference_module/" in o
+                for o in outputs
+            )
+        )
         off = {"damage_rescaling": {"execute": False, "settings": {"keep_bam": True}}}
-        outputs = self.get_all_outputs(dict(self.config, pipeline={"reference_module": off}))
-        self.assertFalse(any("_rescaled" in o and "/results/reference_module/" in o for o in outputs))
+        outputs = self.get_all_outputs(
+            dict(self.config, pipeline={"reference_module": off})
+        )
+        self.assertFalse(
+            any("_rescaled" in o and "/results/reference_module/" in o for o in outputs)
+        )
 
     def test_unmapped_reads_filtering_absent_by_default(self):
         # filter_unmapped_reads.execute defaults to False (unlike almost every other switch,
@@ -176,7 +242,9 @@ class TestModuleExecuteFlags(ExpectedOutputManagerTestCase):
         self.assertTrue(any("results/reference_module" in o for o in outputs))
 
     def test_reference_module_disabled(self):
-        config = dict(self.base_config, pipeline={"reference_module": {"execute": False}})
+        config = dict(
+            self.base_config, pipeline={"reference_module": {"execute": False}}
+        )
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("results/reference_module" in o for o in outputs))
         self.assertTrue(any("results/read_module" in o for o in outputs))
@@ -201,17 +269,27 @@ class TestTaxonomicScreeningToolToggles(ExpectedOutputManagerTestCase):
         self.base_config = {"species": {"Dmel": {"lineage": "drosophilidae_odb12"}}}
 
     def test_centrifuge_disabled_leaves_ecmsd(self):
-        config = dict(self.base_config, pipeline={
-            "read_module": {"taxonomic_screening": {"tools": {"centrifuge": {"execute": False}}}}
-        })
+        config = dict(
+            self.base_config,
+            pipeline={
+                "read_module": {
+                    "taxonomic_screening": {"tools": {"centrifuge": {"execute": False}}}
+                }
+            },
+        )
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("taxonomic_screening/centrifuge" in o for o in outputs))
         self.assertTrue(any("taxonomic_screening/ecmsd" in o for o in outputs))
 
     def test_ecmsd_disabled_leaves_centrifuge(self):
-        config = dict(self.base_config, pipeline={
-            "read_module": {"taxonomic_screening": {"tools": {"ecmsd": {"execute": False}}}}
-        })
+        config = dict(
+            self.base_config,
+            pipeline={
+                "read_module": {
+                    "taxonomic_screening": {"tools": {"ecmsd": {"execute": False}}}
+                }
+            },
+        )
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("taxonomic_screening/ecmsd" in o for o in outputs))
         self.assertTrue(any("taxonomic_screening/centrifuge" in o for o in outputs))
@@ -220,17 +298,23 @@ class TestTaxonomicScreeningToolToggles(ExpectedOutputManagerTestCase):
         """`taxonomic_screening` was previously called `contamination`; config_compat
         keeps the old key working, so a config written against the old name must still
         reach the same expected outputs."""
-        config = dict(self.base_config, pipeline={
-            "read_module": {"contamination": {"tools": {"centrifuge": {"execute": False}}}}
-        })
+        config = dict(
+            self.base_config,
+            pipeline={
+                "read_module": {
+                    "contamination": {"tools": {"centrifuge": {"execute": False}}}
+                }
+            },
+        )
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("taxonomic_screening/centrifuge" in o for o in outputs))
         self.assertTrue(any("taxonomic_screening/ecmsd" in o for o in outputs))
 
     def test_deprecated_contamination_key_still_disables_whole_step(self):
-        config = dict(self.base_config, pipeline={
-            "read_module": {"contamination": {"execute": False}}
-        })
+        config = dict(
+            self.base_config,
+            pipeline={"read_module": {"contamination": {"execute": False}}},
+        )
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("taxonomic_screening" in o for o in outputs))
 
@@ -256,12 +340,17 @@ class TestScgSelectorDefaults(ExpectedOutputManagerTestCase):
         self.assertTrue(any("visualization" in o for o in outputs))
 
     def test_scg_selector_explicitly_disabled_skips_reveal_entirely(self):
-        config = dict(self.base_config, pipeline={"reveal_module": {"scg_selector": {"execute": False}}})
+        config = dict(
+            self.base_config,
+            pipeline={"reveal_module": {"scg_selector": {"execute": False}}},
+        )
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("results/reveal_module" in o for o in outputs))
 
     def test_user_provided_scg_skips_auto_determination(self):
-        testlib.build_species_library(self.project_dir, include_second_reference=False, include_scg=True)
+        testlib.build_species_library(
+            self.project_dir, include_second_reference=False, include_scg=True
+        )
         outputs = self.get_all_outputs(self.base_config)
         self.assertFalse(any("scg_ranked" in o for o in outputs))
         self.assertTrue(any("visualization" in o for o in outputs))
@@ -292,7 +381,10 @@ class TestScgSelectorDefaults(ExpectedOutputManagerTestCase):
 
     def test_no_feature_library_returns_scg_outputs_only(self):
         testlib.build_species_library(
-            self.project_dir, species="NoLib", include_second_reference=False, include_feature_library=False
+            self.project_dir,
+            species="NoLib",
+            include_second_reference=False,
+            include_feature_library=False,
         )
         config = {"species": {"NoLib": {"lineage": "drosophilidae_odb12"}}}
         ns = self.load(config)
@@ -300,15 +392,21 @@ class TestScgSelectorDefaults(ExpectedOutputManagerTestCase):
         # The gzip copies of the SCG library's mapping index are requested too (pack_index rule).
         archives = [o for o in outputs if o.endswith(".gz")]  # bwa-mem3 index: 4 files
         self.assertEqual(len(archives), 4)
-        self.assertTrue(all("NoLib/processed/reveal_module/scg/NoLib_scg_library.fasta." in o for o in archives))
+        self.assertTrue(
+            all(
+                "NoLib/processed/reveal_module/scg/NoLib_scg_library.fasta." in o
+                for o in archives
+            )
+        )
         self.assertEqual(
             sorted(o for o in outputs if not o.endswith(".gz")),
-            sorted([
-                "NoLib/results/reveal_module/scg/NoLib_scg_ranked.tsv",
-                "NoLib/results/reveal_module/scg/NoLib_scg_ranked.json",
-            ]),
+            sorted(
+                [
+                    "NoLib/results/reveal_module/scg/NoLib_scg_ranked.tsv",
+                    "NoLib/results/reveal_module/scg/NoLib_scg_ranked.json",
+                ]
+            ),
         )
-
 
     def test_skip_low_coverage_individuals_adds_excluded_report(self):
         outputs = self.get_all_outputs(self.base_config)
@@ -316,7 +414,13 @@ class TestScgSelectorDefaults(ExpectedOutputManagerTestCase):
 
         config = dict(
             self.base_config,
-            pipeline={"reveal_module": {"normalization": {"settings": {"skip_low_coverage_individuals": True}}}},
+            pipeline={
+                "reveal_module": {
+                    "normalization": {
+                        "settings": {"skip_low_coverage_individuals": True}
+                    }
+                }
+            },
         )
         outputs = self.get_all_outputs(config)
         self.assertTrue(any(o.endswith("_excluded_individuals.tsv") for o in outputs))
@@ -327,7 +431,9 @@ class TestSkipExistingFiles(ExpectedOutputManagerTestCase):
         super().setUp()
         testlib.build_species_library(self.project_dir)
         self.config = {"species": {"Dmel": {"lineage": "drosophilidae_odb12"}}}
-        self.existing_output = "Dmel/results/read_module/statistics/Dmel_reads_counts.csv"
+        self.existing_output = (
+            "Dmel/results/read_module/statistics/Dmel_reads_counts.csv"
+        )
         os.makedirs(os.path.dirname(self.existing_output))
         with open(self.existing_output, "w") as f:
             f.write("already computed")
@@ -354,35 +460,46 @@ class TestReferenceModuleToggles(ExpectedOutputManagerTestCase):
         self.base_config = {"species": {"Dmel": {"lineage": "drosophilidae_odb12"}}}
 
     def test_create_plots_disabled(self):
-        config = dict(self.base_config, pipeline={
-            "reference_module": {"analysis": {"settings": {"create_plots": False}}}
-        })
+        config = dict(
+            self.base_config,
+            pipeline={
+                "reference_module": {"analysis": {"settings": {"create_plots": False}}}
+            },
+        )
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("reference_module/genome/plots" in o for o in outputs))
         self.assertTrue(any("genome/mapped" in o for o in outputs))
 
     def test_coverage_analysis_disabled(self):
-        config = dict(self.base_config, pipeline={
-            "reference_module": {"analysis": {"settings": {"coverage_analysis": False}}}
-        })
+        config = dict(
+            self.base_config,
+            pipeline={
+                "reference_module": {
+                    "analysis": {"settings": {"coverage_analysis": False}}
+                }
+            },
+        )
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("/plots/coverage/" in o for o in outputs))
         self.assertTrue(any("/plots/endogenous_reads/" in o for o in outputs))
         self.assertTrue(any(o.endswith("_multiqc.html") for o in outputs))
 
     def test_damage_analysis_disabled(self):
-        config = dict(self.base_config, pipeline={
-            "reference_module": {"analysis": {"settings": {"damage_analysis": False}}}
-        })
+        config = dict(
+            self.base_config,
+            pipeline={
+                "reference_module": {
+                    "analysis": {"settings": {"damage_analysis": False}}
+                }
+            },
+        )
         outputs = self.get_all_outputs(config)
         self.assertFalse(any("mapdamage" in o for o in outputs))
 
     def test_damage_analysis_requests_gzipped_tables(self):
         outputs = self.get_all_outputs(self.base_config)
         for table in ("misincorporation", "dnacomp"):
-            self.assertTrue(
-                any(o.endswith(f".{table}.txt.gz") for o in outputs), table
-            )
+            self.assertTrue(any(o.endswith(f".{table}.txt.gz") for o in outputs), table)
 
     def test_authenticity_summary(self):
         table = "Dmel/results/reference_module/genome/analytics/species_level/Dmel/authenticity/genome_authenticity.tsv"
@@ -392,17 +509,36 @@ class TestReferenceModuleToggles(ExpectedOutputManagerTestCase):
             ({}, False, False),
         ):
             with self.subTest(settings=settings, analysis_execute=analysis_execute):
-                config = dict(self.base_config, pipeline={
-                    "reference_module": {"analysis": {"execute": analysis_execute, "settings": settings}}
-                })
+                config = dict(
+                    self.base_config,
+                    pipeline={
+                        "reference_module": {
+                            "analysis": {
+                                "execute": analysis_execute,
+                                "settings": settings,
+                            }
+                        }
+                    },
+                )
                 self.assertEqual(table in self.get_all_outputs(config), expected)
 
     def test_filter_unmapped_reads_extract_fastq_adds_output(self):
-        config = dict(self.base_config, pipeline={
-            "reference_module": {"filter_unmapped_reads": {"execute": True, "settings": {"action": "extract_fastq"}}}
-        })
+        config = dict(
+            self.base_config,
+            pipeline={
+                "reference_module": {
+                    "filter_unmapped_reads": {
+                        "execute": True,
+                        "settings": {"action": "extract_fastq"},
+                    }
+                }
+            },
+        )
         outputs = self.get_all_outputs(config)
-        self.assertIn("Dmel/results/reference_module/genome/unmapped/IND001_genome_unmapped.fastq.gz", outputs)
+        self.assertIn(
+            "Dmel/results/reference_module/genome/unmapped/IND001_genome_unmapped.fastq.gz",
+            outputs,
+        )
 
 
 if __name__ == "__main__":

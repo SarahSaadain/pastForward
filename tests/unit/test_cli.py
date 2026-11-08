@@ -10,6 +10,7 @@ snakemake/logging.py (_format_job_info, format_job_finished) and
 snakemake/scheduling/job_scheduler.py ("Finished jobid: ..."), plus a real --dryrun run of
 this repo's own initialize.smk/check.py/expected_output_manager.py.
 """
+
 import contextlib
 import io
 import json
@@ -34,11 +35,29 @@ class BuildCmdTestCase(unittest.TestCase):
         cmd = cli.run._build_run_cmd(["--cores", "8"])
         self.assertEqual(
             cmd,
-            ["snakemake", "--software-deployment-method", "conda", "--keep-going", "--rerun-trigger", "mtime", "--cores", "8"],
+            [
+                "snakemake",
+                "--software-deployment-method",
+                "conda",
+                "--keep-going",
+                "--rerun-trigger",
+                "mtime",
+                "--cores",
+                "8",
+            ],
         )
 
     def test_run_cmd_does_not_duplicate_user_supplied_flags(self):
-        cmd = cli.run._build_run_cmd(["--software-deployment-method", "conda", "--cores", "4", "--forceall", "count_reads_raw"])
+        cmd = cli.run._build_run_cmd(
+            [
+                "--software-deployment-method",
+                "conda",
+                "--cores",
+                "4",
+                "--forceall",
+                "count_reads_raw",
+            ]
+        )
         self.assertEqual(cmd.count("--software-deployment-method"), 1)
         self.assertEqual(cmd.count("--cores"), 1)
         self.assertIn("--forceall", cmd)
@@ -48,10 +67,17 @@ class BuildCmdTestCase(unittest.TestCase):
         # Snakemake keeps only the LAST --software-deployment-method it sees, so appending our
         # own next to a user's would silently drop theirs. Every alias, plus the deprecated
         # --use-conda, has to count as an override.
-        for user_flag in ("--sdm", "--deployment", "--deployment-method", "--software-deployment-method"):
+        for user_flag in (
+            "--sdm",
+            "--deployment",
+            "--deployment-method",
+            "--software-deployment-method",
+        ):
             with self.subTest(user_flag=user_flag):
                 cmd = cli.run._build_run_cmd([user_flag, "apptainer", "--cores", "4"])
-                self.assertNotIn("--software-deployment-method", cmd[: cmd.index(user_flag)])
+                self.assertNotIn(
+                    "--software-deployment-method", cmd[: cmd.index(user_flag)]
+                )
                 self.assertNotIn("conda", cmd)
         cmd = cli.run._build_run_cmd(["--use-conda", "--cores", "4"])
         self.assertNotIn("--software-deployment-method", cmd)
@@ -61,14 +87,34 @@ class BuildCmdTestCase(unittest.TestCase):
         cmd = cli.run._build_dryrun_cmd([])
         self.assertEqual(
             cmd,
-            ["snakemake", "--software-deployment-method", "conda", "--keep-going", "--rerun-trigger", "mtime", "--cores", "1", "--dryrun"],
+            [
+                "snakemake",
+                "--software-deployment-method",
+                "conda",
+                "--keep-going",
+                "--rerun-trigger",
+                "mtime",
+                "--cores",
+                "1",
+                "--dryrun",
+            ],
         )
 
     def test_dryrun_cmd_respects_user_cores(self):
         cmd = cli.run._build_dryrun_cmd(["-j", "8"])
         self.assertEqual(
             cmd,
-            ["snakemake", "--software-deployment-method", "conda", "--keep-going", "--rerun-trigger", "mtime", "-j", "8", "--dryrun"],
+            [
+                "snakemake",
+                "--software-deployment-method",
+                "conda",
+                "--keep-going",
+                "--rerun-trigger",
+                "mtime",
+                "-j",
+                "8",
+                "--dryrun",
+            ],
         )
 
     def test_dryrun_cmd_respects_user_cores_with_equals(self):
@@ -93,13 +139,26 @@ class BuildCmdTestCase(unittest.TestCase):
         # Conda deployment would make Snakemake build every rule's environment before touching
         # anything, which a touch has no use for.
         cmd = cli.run._build_touch_cmd([])
-        self.assertEqual(cmd, ["snakemake", "--rerun-trigger", "mtime", "--cores", "1", "--touch"])
+        self.assertEqual(
+            cmd, ["snakemake", "--rerun-trigger", "mtime", "--cores", "1", "--touch"]
+        )
 
     def test_touch_cmd_passes_user_flags_through(self):
-        cmd = cli.run._build_touch_cmd(["--cores", "4", "--forcerun", "count_reads_raw"])
+        cmd = cli.run._build_touch_cmd(
+            ["--cores", "4", "--forcerun", "count_reads_raw"]
+        )
         self.assertEqual(
             cmd,
-            ["snakemake", "--rerun-trigger", "mtime", "--cores", "4", "--forcerun", "count_reads_raw", "--touch"],
+            [
+                "snakemake",
+                "--rerun-trigger",
+                "mtime",
+                "--cores",
+                "4",
+                "--forcerun",
+                "count_reads_raw",
+                "--touch",
+            ],
         )
 
 
@@ -112,9 +171,13 @@ class StatusHelpersTestCase(unittest.TestCase):
 
     def test_elapsed_seconds(self):
         # str(timedelta) as Snakemake >= 9.26 logs it, with and without a day part.
-        self.assertEqual(cli.monitor._elapsed_seconds("Elapsed time: 2:03:04.5\n"), 7384.5)
         self.assertEqual(
-            cli.monitor._elapsed_seconds("[x] [INFO] Elapsed time: 1 day, 0:00:01\nElapsed time: 2 days, 1:00:00.25"),
+            cli.monitor._elapsed_seconds("Elapsed time: 2:03:04.5\n"), 7384.5
+        )
+        self.assertEqual(
+            cli.monitor._elapsed_seconds(
+                "[x] [INFO] Elapsed time: 1 day, 0:00:01\nElapsed time: 2 days, 1:00:00.25"
+            ),
             2 * 86400 + 3600.25,
         )
         self.assertIsNone(cli.monitor._elapsed_seconds("Finished jobid: 1 (Rule: all)"))
@@ -138,7 +201,9 @@ class StatusHelpersTestCase(unittest.TestCase):
         self.assertEqual(find(["-j8"]), "8")
         self.assertEqual(find(["-jall"]), "all")
         self.assertEqual(find(["--jobs=4"]), "4")
-        self.assertEqual(find(["--cores"]), "")  # bare trailing flag still counts as present
+        self.assertEqual(
+            find(["--cores"]), ""
+        )  # bare trailing flag still counts as present
         self.assertIsNone(find(["--cores-something", "8"]))
         self.assertIsNone(find(["-cfoo", "--configfile", "c.yaml"]))
         self.assertIsNone(find(["--c8"]))
@@ -149,28 +214,55 @@ class StatusHelpersTestCase(unittest.TestCase):
         self.assertIn("-c8", cmd)
 
     def test_cores_from_cmd(self):
-        self.assertEqual(cli.common._cores_from_args(["snakemake", "--software-deployment-method", "conda", "--cores", "8", "--forceall"]), "8")
+        self.assertEqual(
+            cli.common._cores_from_args(
+                [
+                    "snakemake",
+                    "--software-deployment-method",
+                    "conda",
+                    "--cores",
+                    "8",
+                    "--forceall",
+                ]
+            ),
+            "8",
+        )
         self.assertEqual(cli.common._cores_from_args(["snakemake", "-j", "all"]), "all")
         self.assertIsNone(cli.common._cores_from_args(["snakemake"]))
         self.assertEqual(cli.common._cores_from_args(["snakemake", "--cores=8"]), "8")
 
     def test_configfiles_from_cmd(self):
-        self.assertEqual(cli.monitor._configfiles_from_cmd(["snakemake", "--configfile", "other.yaml"]), ["other.yaml"])
-        self.assertEqual(cli.monitor._configfiles_from_cmd(["snakemake", "--cores", "4"]), [cli.common.DEFAULT_CONFIGFILE])
+        self.assertEqual(
+            cli.monitor._configfiles_from_cmd(
+                ["snakemake", "--configfile", "other.yaml"]
+            ),
+            ["other.yaml"],
+        )
+        self.assertEqual(
+            cli.monitor._configfiles_from_cmd(["snakemake", "--cores", "4"]),
+            [cli.common.DEFAULT_CONFIGFILE],
+        )
 
     def test_configfiles_from_args_follows_snakemake_parsing(self):
         parse = cli.common._configfiles_from_args
         # Several files per flag, up to the next flag.
-        self.assertEqual(parse(["--configfile", "a.yaml", "b.yaml", "--cores", "4"]), ["a.yaml", "b.yaml"])
+        self.assertEqual(
+            parse(["--configfile", "a.yaml", "b.yaml", "--cores", "4"]),
+            ["a.yaml", "b.yaml"],
+        )
         # The --flag=value form takes exactly one file, so a later word is a target.
         self.assertEqual(parse(["--configfiles=a.yaml", "target"]), ["a.yaml"])
         # Repeating the flag replaces, it does not add up (argparse keeps the last occurrence).
-        self.assertEqual(parse(["--configfile", "a.yaml", "--configfile", "b.yaml"]), ["b.yaml"])
+        self.assertEqual(
+            parse(["--configfile", "a.yaml", "--configfile", "b.yaml"]), ["b.yaml"]
+        )
         self.assertEqual(parse(["--cores", "4"]), [])
 
     def test_strip_configfile_args_keeps_everything_else(self):
         strip = cli.common._strip_configfile_args
-        self.assertEqual(strip(["--configfile", "a.yaml", "b.yaml", "--foo", "x"]), ["--foo", "x"])
+        self.assertEqual(
+            strip(["--configfile", "a.yaml", "b.yaml", "--foo", "x"]), ["--foo", "x"]
+        )
         self.assertEqual(strip(["--configfile=a.yaml", "target"]), ["target"])
         self.assertEqual(strip([]), [])
 
@@ -187,7 +279,13 @@ class StatusHelpersTestCase(unittest.TestCase):
                 config = cli.common._load_config(["other.yaml"])
             finally:
                 os.chdir(orig)
-        self.assertEqual(config, {"project_name": "base", "species": {"Dmel": {"name": "fly", "lineage": "y"}}})
+        self.assertEqual(
+            config,
+            {
+                "project_name": "base",
+                "species": {"Dmel": {"name": "fly", "lineage": "y"}},
+            },
+        )
 
     def test_read_project_name(self):
         with tempfile.TemporaryDirectory() as d:
@@ -195,7 +293,9 @@ class StatusHelpersTestCase(unittest.TestCase):
             with open(cfg, "w") as f:
                 f.write('project_name: "Demo Project"\n')
             self.assertEqual(cli.monitor._read_project_name(cfg), "Demo Project")
-            self.assertIsNone(cli.monitor._read_project_name(os.path.join(d, "missing.yaml")))
+            self.assertIsNone(
+                cli.monitor._read_project_name(os.path.join(d, "missing.yaml"))
+            )
 
     def test_run_state_covers_every_outcome(self):
         done = cli.monitor.PROGRESS_RE.search("177 of 177 steps (100%) done")
@@ -209,11 +309,35 @@ class StatusHelpersTestCase(unittest.TestCase):
             ((False, False, None, None), "unknown"),
             ((False, True, "This was a dry-run (flag -n).", None), "dryrun_done"),
             ((False, False, "", done), "completed"),
-            ((False, False, "Nothing to be done (all requested files are present and up to date).", None), "completed"),
-            ((False, False, "At least one job did not complete successfully.", partial), "failed"),
+            (
+                (
+                    False,
+                    False,
+                    "Nothing to be done (all requested files are present and up to date).",
+                    None,
+                ),
+                "completed",
+            ),
+            (
+                (
+                    False,
+                    False,
+                    "At least one job did not complete successfully.",
+                    partial,
+                ),
+                "failed",
+            ),
             ((False, False, "[ERROR] LockException:", None), "locked"),
             # An abort leaves failed jobs behind too, but "you stopped it" is the better answer.
-            ((False, False, aborting + "\nAt least one job did not complete successfully.", partial), "aborted"),
+            (
+                (
+                    False,
+                    False,
+                    aborting + "\nAt least one job did not complete successfully.",
+                    partial,
+                ),
+                "aborted",
+            ),
             ((False, False, "", partial), "interrupted"),
         ]
         for args, expected in cases:
@@ -253,7 +377,10 @@ class StatusHelpersTestCase(unittest.TestCase):
             "    jobid: 52\n"
             "    log: demo/results/Dmel1959_coverage.normalized.log (check log file(s) for error details)\n"
         )
-        self.assertEqual(cli.monitor._job_log_paths(block), ["demo/results/Dmel1959_coverage.normalized.log"])
+        self.assertEqual(
+            cli.monitor._job_log_paths(block),
+            ["demo/results/Dmel1959_coverage.normalized.log"],
+        )
 
 
 class ArgvValidationTestCase(unittest.TestCase):
@@ -429,7 +556,9 @@ class ArgvValidationTestCase(unittest.TestCase):
                 cli.monitor.cmd_status(["-w"])
         finally:
             cli.monitor._print_status = orig_print_status
-        self.assertEqual(calls, [cli.monitor.WATCH_TAIL_LINES, cli.monitor.WATCH_TAIL_LINES])
+        self.assertEqual(
+            calls, [cli.monitor.WATCH_TAIL_LINES, cli.monitor.WATCH_TAIL_LINES]
+        )
         # One frame per refresh, drawn over the old one rather than after clearing the screen.
         frame = "\033[Hline one\033[K\n\033[J"
         self.assertEqual(out.getvalue(), frame * 2)
@@ -514,7 +643,9 @@ class ArgvValidationTestCase(unittest.TestCase):
         cli.common.STATE_DIR.mkdir(parents=True, exist_ok=True)
         os.makedirs(cli.common.LOG_DIR)
         log_path = cli.common.LOG_DIR / "run_nothing_to_do.log"
-        log_path.write_text("Nothing to be done (all requested files are present and up to date).\n")
+        log_path.write_text(
+            "Nothing to be done (all requested files are present and up to date).\n"
+        )
         cli.common.STATE_FILE.write_text(
             json.dumps(
                 {
@@ -536,7 +667,9 @@ class ArgvValidationTestCase(unittest.TestCase):
         cli.common.STATE_DIR.mkdir(parents=True, exist_ok=True)
         os.makedirs(cli.common.LOG_DIR)
         log_path = cli.common.LOG_DIR / "run_dryrun.log"
-        log_path.write_text("This was a dry-run (flag -n). The order of jobs does not reflect the order of execution.\n")
+        log_path.write_text(
+            "This was a dry-run (flag -n). The order of jobs does not reflect the order of execution.\n"
+        )
         cli.common.STATE_FILE.write_text(
             json.dumps(
                 {
@@ -612,7 +745,9 @@ class ArgvValidationTestCase(unittest.TestCase):
         cli.common.STATE_DIR.mkdir(parents=True, exist_ok=True)
         os.makedirs(cli.common.LOG_DIR)
         log_path = cli.common.LOG_DIR / "run_finished_no_decimal.log"
-        log_path.write_text("177 of 177 steps (100%) done\nWorkflow finished, no error\n")
+        log_path.write_text(
+            "177 of 177 steps (100%) done\nWorkflow finished, no error\n"
+        )
         cli.common.STATE_FILE.write_text(
             json.dumps(
                 {
@@ -728,7 +863,9 @@ class TrackedPidTestCase(unittest.TestCase):
         cli.common.subprocess.run, cli.common._pid_alive = self._orig
 
     def test_snakemake_command_line_is_alive(self):
-        cli.common.subprocess.run = self._ps("/env/bin/python3 /env/bin/snakemake --cores 8\n")
+        cli.common.subprocess.run = self._ps(
+            "/env/bin/python3 /env/bin/snakemake --cores 8\n"
+        )
         self.assertTrue(cli.common._is_alive(4242))
 
     def test_foreign_command_line_is_not_alive(self):
@@ -774,7 +911,9 @@ class TrackedPidTestCase(unittest.TestCase):
             cli.common.STATE_FILE.write_text(json.dumps({"pid": 4242}))
             cli.common.subprocess.run = self._ps("zsh\n")
             self.assertIsNone(cli.common._live_tracked_pid())
-            cli.common.subprocess.run = self._ps("python /env/bin/snakemake --cores 2\n")
+            cli.common.subprocess.run = self._ps(
+                "python /env/bin/snakemake --cores 2\n"
+            )
             self.assertEqual(cli.common._live_tracked_pid(), 4242)
         finally:
             os.chdir(cwd)
@@ -864,11 +1003,15 @@ Workflow defines that rule index_reference_for_mapping_bwa_mem2 is eligible for 
     def test_preview_extracts_requested_skipped_and_disabled_species(self):
         import re
 
-        skipped_species = re.findall(r"Skipping species '(.+?)' \(execute: false\)", self.LOG)
+        skipped_species = re.findall(
+            r"Skipping species '(.+?)' \(execute: false\)", self.LOG
+        )
         existing = re.findall(r"- Skipping: (.+)", self.LOG)
         requested = re.findall(r"- Requesting: (.+)", self.LOG)
         self.assertEqual(skipped_species, ["OtherSpecies"])
-        self.assertEqual(existing, ["TestSpecies/results/read_module/reads_merged/IND001.fastq.gz"])
+        self.assertEqual(
+            existing, ["TestSpecies/results/read_module/reads_merged/IND001.fastq.gz"]
+        )
         self.assertEqual(len(requested), 2)
 
 
@@ -898,7 +1041,11 @@ workflow/envs/reference_module/environment.yaml\t-\t.snakemake/conda/1c817e9_
             cli.doctor.subprocess.run = real_run
         self.assertEqual(
             [e["location"] for e in envs],
-            [".snakemake/conda/3f83c79_", ".snakemake/conda/2844fb9_", ".snakemake/conda/1c817e9_"],
+            [
+                ".snakemake/conda/3f83c79_",
+                ".snakemake/conda/2844fb9_",
+                ".snakemake/conda/1c817e9_",
+            ],
         )
         self.assertEqual(envs[0]["env_file"], "workflow/envs/python_and_r.yaml")
 
@@ -922,7 +1069,9 @@ class BenchmarkRecordTestCase(unittest.TestCase):
             "params": {},
             "threads": threads,
             "resources": {"_cores": threads},
-            "input_size_mb": {"in.bam": input_size_mb} if input_size_mb is not None else {},
+            "input_size_mb": {"in.bam": input_size_mb}
+            if input_size_mb is not None
+            else {},
         }
 
     def test_benchmark_number_treats_na_as_missing(self):
@@ -959,7 +1108,9 @@ class BenchmarkRecordTestCase(unittest.TestCase):
             self._record("map", 10, input_size_mb=100),
             self._record("map", 10, input_size_mb=250),
         ]
-        self.assertEqual(cli.benchmark._summarize_benchmarks(records)[0]["max_input_mb"], 250)
+        self.assertEqual(
+            cli.benchmark._summarize_benchmarks(records)[0]["max_input_mb"], 250
+        )
 
     def test_summarize_labels_records_without_a_rule_name(self):
         # Pre-extended-format files (or a run where benchmark.smk could not switch the extended
@@ -969,7 +1120,10 @@ class BenchmarkRecordTestCase(unittest.TestCase):
 
     def test_emit_profile_skips_mem_mb_when_memory_was_never_measured(self):
         rows = cli.benchmark._summarize_benchmarks(
-            [self._record("measured", 60, max_rss=1000), self._record("wall_time_only", 60)]
+            [
+                self._record("measured", 60, max_rss=1000),
+                self._record("wall_time_only", 60),
+            ]
         )
         buffer = io.StringIO()
         with contextlib.redirect_stdout(buffer):
@@ -1003,7 +1157,9 @@ class FindBenchmarkFilesTestCase(unittest.TestCase):
         self._touch("Dmel/processed/reference_module/IND001_sorted.log")
         self._touch("Dmel/results/summary/Dmel_multiqc.benchmark.jsonl")
         found = [os.path.basename(p) for p in cli.benchmark._find_benchmark_files()]
-        self.assertEqual(found, ["IND001_sorted.benchmark.jsonl", "Dmel_multiqc.benchmark.jsonl"])
+        self.assertEqual(
+            found, ["IND001_sorted.benchmark.jsonl", "Dmel_multiqc.benchmark.jsonl"]
+        )
 
     def test_skips_the_pipeline_code_and_dot_directories(self):
         # .snakemake holds its own copies of a lot of things, and workflow/ is pipeline code that
@@ -1021,12 +1177,17 @@ class FindBenchmarkFilesTestCase(unittest.TestCase):
         os.makedirs(os.path.join(self.project_dir, "Dmel"))
         os.symlink(external, os.path.join(self.project_dir, "Dmel/processed"))
         found = cli.benchmark._find_benchmark_files("Dmel")
-        self.assertEqual([os.path.basename(p) for p in found], ["IND001.benchmark.jsonl"])
+        self.assertEqual(
+            [os.path.basename(p) for p in found], ["IND001.benchmark.jsonl"]
+        )
 
     def test_survives_a_symlink_cycle(self):
         # Following symlinks means a loop is possible; it must not hang the command.
         os.makedirs(os.path.join(self.project_dir, "Dmel/processed"))
-        os.symlink(os.path.join(self.project_dir, "Dmel"), os.path.join(self.project_dir, "Dmel/processed/loop"))
+        os.symlink(
+            os.path.join(self.project_dir, "Dmel"),
+            os.path.join(self.project_dir, "Dmel/processed/loop"),
+        )
         self._touch("Dmel/processed/IND001.benchmark.jsonl")
         self.assertEqual(len(cli.benchmark._find_benchmark_files()), 1)
 
@@ -1047,8 +1208,13 @@ class FindBenchmarkFilesTestCase(unittest.TestCase):
         os.makedirs(os.path.join(self.project_dir, "workflow"))
         os.makedirs(os.path.join(self.project_dir, "config"))
         good = self._touch("Dmel/processed/good.benchmark.jsonl")
-        Path(good).write_text(json.dumps({"s": 3, "max_rss": 10, "threads": 1, "rule_name": "good"}) + "\n")
-        Path(self._touch("Dmel/processed/bad.benchmark.jsonl")).write_text("{not json\n")
+        Path(good).write_text(
+            json.dumps({"s": 3, "max_rss": 10, "threads": 1, "rule_name": "good"})
+            + "\n"
+        )
+        Path(self._touch("Dmel/processed/bad.benchmark.jsonl")).write_text(
+            "{not json\n"
+        )
         buffer = io.StringIO()
         with contextlib.redirect_stdout(buffer):
             cli.benchmark.cmd_benchmark([])
@@ -1102,7 +1268,12 @@ class ToolsTestCase(unittest.TestCase):
         self._run(["Dmel"])
         source = Path(tempfile.mkdtemp(prefix="pf_test_cli_reads_"))
         self.addCleanup(shutil.rmtree, source, ignore_errors=True)
-        for name in ("IND1_R1.fastq.gz", "IND1_R2.fq.gz", "notes.txt", "._IND1_R1.fastq.gz"):
+        for name in (
+            "IND1_R1.fastq.gz",
+            "IND1_R2.fq.gz",
+            "notes.txt",
+            "._IND1_R1.fastq.gz",
+        ):
             (source / name).write_text("x")
         (source / "sub").mkdir()
         (source / "sub" / "IND2_R1.fastq.gz").write_text("x")
@@ -1110,12 +1281,21 @@ class ToolsTestCase(unittest.TestCase):
         (reads_dir / "IND1_R2.fq.gz").write_text("mine")
 
         with contextlib.redirect_stdout(io.StringIO()):
-            cli.main(["tools", "link-reads", "--source", str(source), "--species", "Dmel"])
-            cli.main(["tools", "link-reads", "-s", "Dmel", "-d", str(source)])  # rerun is harmless, any order
+            cli.main(
+                ["tools", "link-reads", "--source", str(source), "--species", "Dmel"]
+            )
+            cli.main(
+                ["tools", "link-reads", "-s", "Dmel", "-d", str(source)]
+            )  # rerun is harmless, any order
 
-        self.assertEqual(sorted(p.name for p in reads_dir.iterdir()), ["IND1_R1.fastq.gz", "IND1_R2.fq.gz"])
+        self.assertEqual(
+            sorted(p.name for p in reads_dir.iterdir()),
+            ["IND1_R1.fastq.gz", "IND1_R2.fq.gz"],
+        )
         link = reads_dir / "IND1_R1.fastq.gz"
-        self.assertEqual(Path(os.readlink(link)), (source / "IND1_R1.fastq.gz").resolve())
+        self.assertEqual(
+            Path(os.readlink(link)), (source / "IND1_R1.fastq.gz").resolve()
+        )
         self.assertTrue(Path(os.readlink(link)).is_absolute())
         self.assertEqual((reads_dir / "IND1_R2.fq.gz").read_text(), "mine")
 
@@ -1123,7 +1303,12 @@ class ToolsTestCase(unittest.TestCase):
         self._run(["Dmel"])
         source = Path(tempfile.mkdtemp(prefix="pf_test_cli_reads_"))
         self.addCleanup(shutil.rmtree, source, ignore_errors=True)
-        names = ("IND1_R1.fastq.gz", "IND2_1.fq.gz", "IND3.fastq.gz", "IND4_R1_x_R1.fastq.gz")
+        names = (
+            "IND1_R1.fastq.gz",
+            "IND2_1.fq.gz",
+            "IND3.fastq.gz",
+            "IND4_R1_x_R1.fastq.gz",
+        )
         for name in names:
             (source / name).write_text("x")
 
@@ -1137,10 +1322,14 @@ class ToolsTestCase(unittest.TestCase):
         self.assertIn("IND3.fastq.gz", warning)
         self.assertIn("IND4_R1_x_R1.fastq.gz", warning)
         # Still linked, so the links can be renamed in place.
-        self.assertEqual(len(list(Path("Dmel/input/read_module").iterdir())), len(names))
+        self.assertEqual(
+            len(list(Path("Dmel/input/read_module").iterdir())), len(names)
+        )
 
     def test_check_warns_about_read_names_even_when_no_individual_is_found(self):
-        Path("config/config.yaml").write_text("project_name: demo\nspecies:\n  Dmel:\n    name: Dmel\n")
+        Path("config/config.yaml").write_text(
+            "project_name: demo\nspecies:\n  Dmel:\n    name: Dmel\n"
+        )
         self._run(["Dmel"])
         Path("Dmel/input/read_module/IND1.fastq.gz").write_text("x")
 
@@ -1156,7 +1345,11 @@ class ToolsTestCase(unittest.TestCase):
     def test_link_reads_needs_the_species_folder_and_reads(self):
         source = tempfile.mkdtemp(prefix="pf_test_cli_reads_")
         self.addCleanup(shutil.rmtree, source, ignore_errors=True)
-        for argv in (["-d", source, "-s", "Dmel"], ["-d", source], ["-d", "/no/such/dir", "-s", "Dmel"]):
+        for argv in (
+            ["-d", source, "-s", "Dmel"],
+            ["-d", source],
+            ["-d", "/no/such/dir", "-s", "Dmel"],
+        ):
             with self.assertRaises(SystemExit):
                 cli.main(["tools", "link-reads", *argv])
         self._run(["Dmel"])
@@ -1175,7 +1368,10 @@ class ToolsTestCase(unittest.TestCase):
             ["-d", source, "-s", "Dmel", "--force"],  # unknown flag
         )
         for argv in bad:
-            with self.assertRaises(SystemExit), contextlib.redirect_stdout(io.StringIO()):
+            with (
+                self.assertRaises(SystemExit),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
                 cli.main(["tools", "link-reads", *argv])
         self.assertEqual(list(Path("Dmel/input/read_module").iterdir()), [])
 
@@ -1202,13 +1398,31 @@ class InstallTestCase(unittest.TestCase):
         self.assertIsNone(cli.install._parse_version(""))
 
     def test_env_prefix_matches_folder_name_only(self):
-        listing = json.dumps({"envs": ["/opt/miniforge3", "/opt/miniforge3/envs/snakemake_old", "/opt/miniforge3/envs/snakemake"]})
-        with unittest.mock.patch.object(cli.install.subprocess, "run", return_value=unittest.mock.Mock(stdout=listing)):
-            self.assertEqual(cli.install._env_prefix("conda", "snakemake"), "/opt/miniforge3/envs/snakemake")
+        listing = json.dumps(
+            {
+                "envs": [
+                    "/opt/miniforge3",
+                    "/opt/miniforge3/envs/snakemake_old",
+                    "/opt/miniforge3/envs/snakemake",
+                ]
+            }
+        )
+        with unittest.mock.patch.object(
+            cli.install.subprocess,
+            "run",
+            return_value=unittest.mock.Mock(stdout=listing),
+        ):
+            self.assertEqual(
+                cli.install._env_prefix("conda", "snakemake"),
+                "/opt/miniforge3/envs/snakemake",
+            )
             self.assertIsNone(cli.install._env_prefix("conda", "reveal"))
 
     def test_no_conda_points_to_miniforge(self):
-        with unittest.mock.patch.object(cli.install, "_conda_exe", return_value=None), self.assertRaises(SystemExit) as cm:
+        with (
+            unittest.mock.patch.object(cli.install, "_conda_exe", return_value=None),
+            self.assertRaises(SystemExit) as cm,
+        ):
             cli.main(["install"])
         self.assertIn("Miniforge", str(cm.exception.code))
 
@@ -1217,25 +1431,48 @@ class InstallTestCase(unittest.TestCase):
         os.makedirs(os.path.join(prefix, "bin"))
         Path(prefix, "bin", "snakemake").touch()
         lookups = {"snakemake": [None], "pastforward": [None, prefix]}
-        with unittest.mock.patch.object(
-            cli.install, "_env_prefix", side_effect=lambda conda, name: lookups[name].pop(0)
-        ), unittest.mock.patch.object(cli.install, "_tool_version", return_value=(9, 26, 1)), unittest.mock.patch.object(
-            cli.install.subprocess, "call", return_value=0
-        ) as call, contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(cli.install._snakemake_exe("conda"), os.path.join(prefix, "bin", "snakemake"))
-        self.assertEqual(call.call_args[0][0][:5], ["conda", "create", "-y", "-n", "pastforward"])
+        with (
+            unittest.mock.patch.object(
+                cli.install,
+                "_env_prefix",
+                side_effect=lambda conda, name: lookups[name].pop(0),
+            ),
+            unittest.mock.patch.object(
+                cli.install, "_tool_version", return_value=(9, 26, 1)
+            ),
+            unittest.mock.patch.object(
+                cli.install.subprocess, "call", return_value=0
+            ) as call,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            self.assertEqual(
+                cli.install._snakemake_exe("conda"),
+                os.path.join(prefix, "bin", "snakemake"),
+            )
+        self.assertEqual(
+            call.call_args[0][0][:5], ["conda", "create", "-y", "-n", "pastforward"]
+        )
         self.assertEqual(call.call_args[0][0][-1], "snakemake>=9.26.1")
 
     def test_new_enough_snakemake_env_is_reused(self):
         prefix = os.path.join(self.project_dir, "envs", "snakemake")
         os.makedirs(os.path.join(prefix, "bin"))
         Path(prefix, "bin", "snakemake").touch()
-        with unittest.mock.patch.object(
-            cli.install, "_env_prefix", side_effect=lambda conda, name: prefix if name == "snakemake" else None
-        ), unittest.mock.patch.object(cli.install, "_tool_version", return_value=(9, 26, 1)), unittest.mock.patch.object(
-            cli.install.subprocess, "call"
-        ) as call:
-            self.assertEqual(cli.install._snakemake_exe("conda"), os.path.join(prefix, "bin", "snakemake"))
+        with (
+            unittest.mock.patch.object(
+                cli.install,
+                "_env_prefix",
+                side_effect=lambda conda, name: prefix if name == "snakemake" else None,
+            ),
+            unittest.mock.patch.object(
+                cli.install, "_tool_version", return_value=(9, 26, 1)
+            ),
+            unittest.mock.patch.object(cli.install.subprocess, "call") as call,
+        ):
+            self.assertEqual(
+                cli.install._snakemake_exe("conda"),
+                os.path.join(prefix, "bin", "snakemake"),
+            )
         call.assert_not_called()
 
     def test_too_old_snakemake_env_is_left_alone(self):
@@ -1246,58 +1483,109 @@ class InstallTestCase(unittest.TestCase):
             Path(prefix, "bin", "snakemake").touch()
         lookups = {"snakemake": [old_prefix], "pastforward": [None, new_prefix]}
         versions = iter([(9, 9, 0), (9, 26, 1)])
-        with unittest.mock.patch.object(
-            cli.install, "_env_prefix", side_effect=lambda conda, name: lookups[name].pop(0)
-        ), unittest.mock.patch.object(cli.install, "_tool_version", side_effect=lambda *a: next(versions)), unittest.mock.patch.object(
-            cli.install.subprocess, "call", return_value=0
-        ) as call, contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(cli.install._snakemake_exe("conda"), os.path.join(new_prefix, "bin", "snakemake"))
+        with (
+            unittest.mock.patch.object(
+                cli.install,
+                "_env_prefix",
+                side_effect=lambda conda, name: lookups[name].pop(0),
+            ),
+            unittest.mock.patch.object(
+                cli.install, "_tool_version", side_effect=lambda *a: next(versions)
+            ),
+            unittest.mock.patch.object(
+                cli.install.subprocess, "call", return_value=0
+            ) as call,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            self.assertEqual(
+                cli.install._snakemake_exe("conda"),
+                os.path.join(new_prefix, "bin", "snakemake"),
+            )
         self.assertEqual(call.call_count, 1)
-        self.assertEqual(call.call_args[0][0][:5], ["conda", "create", "-y", "-n", "pastforward"])
+        self.assertEqual(
+            call.call_args[0][0][:5], ["conda", "create", "-y", "-n", "pastforward"]
+        )
 
     def test_too_old_env_is_upgraded(self):
         prefix = os.path.join(self.project_dir, "envs", "pastforward")
         os.makedirs(os.path.join(prefix, "bin"))
         Path(prefix, "bin", "snakemake").touch()
         versions = iter([(9, 9, 0), (9, 26, 1)])
-        with unittest.mock.patch.object(cli.install, "_env_prefix", return_value=prefix), unittest.mock.patch.object(
-            cli.install, "_tool_version", side_effect=lambda *a: next(versions)
-        ), unittest.mock.patch.object(cli.install.subprocess, "call", return_value=0) as call, contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(cli.install._snakemake_exe("conda"), os.path.join(prefix, "bin", "snakemake"))
-        self.assertEqual(call.call_args[0][0][:5], ["conda", "install", "-y", "-n", "pastforward"])
+        with (
+            unittest.mock.patch.object(cli.install, "_env_prefix", return_value=prefix),
+            unittest.mock.patch.object(
+                cli.install, "_tool_version", side_effect=lambda *a: next(versions)
+            ),
+            unittest.mock.patch.object(
+                cli.install.subprocess, "call", return_value=0
+            ) as call,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            self.assertEqual(
+                cli.install._snakemake_exe("conda"),
+                os.path.join(prefix, "bin", "snakemake"),
+            )
+        self.assertEqual(
+            call.call_args[0][0][:5], ["conda", "install", "-y", "-n", "pastforward"]
+        )
 
     def test_failed_upgrade_stops(self):
         prefix = os.path.join(self.project_dir, "envs", "pastforward")
         os.makedirs(os.path.join(prefix, "bin"))
         Path(prefix, "bin", "snakemake").touch()
-        with unittest.mock.patch.object(cli.install, "_env_prefix", return_value=prefix), unittest.mock.patch.object(
-            cli.install, "_tool_version", return_value=(9, 9, 0)
-        ), unittest.mock.patch.object(cli.install.subprocess, "call", return_value=1), contextlib.redirect_stdout(
-            io.StringIO()
-        ), self.assertRaises(SystemExit) as cm:
+        with (
+            unittest.mock.patch.object(cli.install, "_env_prefix", return_value=prefix),
+            unittest.mock.patch.object(
+                cli.install, "_tool_version", return_value=(9, 9, 0)
+            ),
+            unittest.mock.patch.object(cli.install.subprocess, "call", return_value=1),
+            contextlib.redirect_stdout(io.StringIO()),
+            self.assertRaises(SystemExit) as cm,
+        ):
             cli.install._snakemake_exe("conda")
         self.assertIn("could not get snakemake>=9.26.1", str(cm.exception.code))
 
     def test_without_config_stops_before_building_tools(self):
-        with unittest.mock.patch.object(cli.install, "_conda_exe", return_value="/opt/conda/bin/conda"), unittest.mock.patch.object(
-            cli.install, "_tool_version", return_value=(25, 1, 0)
-        ), unittest.mock.patch.object(cli.install, "_snakemake_exe", return_value="/opt/conda/envs/pastforward/bin/snakemake"), unittest.mock.patch.object(
-            cli.install.subprocess, "call"
-        ) as call, contextlib.redirect_stdout(io.StringIO()) as out:
+        with (
+            unittest.mock.patch.object(
+                cli.install, "_conda_exe", return_value="/opt/conda/bin/conda"
+            ),
+            unittest.mock.patch.object(
+                cli.install, "_tool_version", return_value=(25, 1, 0)
+            ),
+            unittest.mock.patch.object(
+                cli.install,
+                "_snakemake_exe",
+                return_value="/opt/conda/envs/pastforward/bin/snakemake",
+            ),
+            unittest.mock.patch.object(cli.install.subprocess, "call") as call,
+            contextlib.redirect_stdout(io.StringIO()) as out,
+        ):
             cli.main(["install"])
         call.assert_not_called()
         self.assertIn("No config/config.yaml yet", out.getvalue())
-        self.assertIn("cp config/min_config_sample.yaml config/config.yaml", out.getvalue())
+        self.assertIn(
+            "cp config/min_config_sample.yaml config/config.yaml", out.getvalue()
+        )
         self.assertIn("tools create-species", out.getvalue())
 
     def test_with_config_builds_envs_with_snakemake_on_path(self):
         Path("config/config.yaml").touch()
         sm = "/opt/conda/envs/pastforward/bin/snakemake"
-        with unittest.mock.patch.object(cli.install, "_conda_exe", return_value="/opt/conda/bin/conda"), unittest.mock.patch.object(
-            cli.install, "_tool_version", return_value=(25, 1, 0)
-        ), unittest.mock.patch.object(cli.install, "_snakemake_exe", return_value=sm), unittest.mock.patch.object(
-            cli.install.subprocess, "call", return_value=0
-        ) as call, contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit) as cm:
+        with (
+            unittest.mock.patch.object(
+                cli.install, "_conda_exe", return_value="/opt/conda/bin/conda"
+            ),
+            unittest.mock.patch.object(
+                cli.install, "_tool_version", return_value=(25, 1, 0)
+            ),
+            unittest.mock.patch.object(cli.install, "_snakemake_exe", return_value=sm),
+            unittest.mock.patch.object(
+                cli.install.subprocess, "call", return_value=0
+            ) as call,
+            contextlib.redirect_stdout(io.StringIO()) as out,
+            self.assertRaises(SystemExit) as cm,
+        ):
             cli.main(["install", "--conda-prefix", "/x"])
         self.assertEqual(cm.exception.code, 0)
         self.assertIn("Next steps:", out.getvalue())
@@ -1307,12 +1595,19 @@ class InstallTestCase(unittest.TestCase):
         self.assertEqual(cmd[0], sm)
         self.assertIn("--conda-create-envs-only", cmd)
         self.assertEqual(cmd[-2:], ["--conda-prefix", "/x"])
-        self.assertTrue(call.call_args[1]["env"]["PATH"].startswith("/opt/conda/envs/pastforward/bin" + os.pathsep))
+        self.assertTrue(
+            call.call_args[1]["env"]["PATH"].startswith(
+                "/opt/conda/envs/pastforward/bin" + os.pathsep
+            )
+        )
 
 
 class MainDispatchTestCase(unittest.TestCase):
     def test_unknown_command_suggests_the_closest_one(self):
-        with contextlib.redirect_stderr(io.StringIO()) as err, self.assertRaises(SystemExit):
+        with (
+            contextlib.redirect_stderr(io.StringIO()) as err,
+            self.assertRaises(SystemExit),
+        ):
             cli.main(["stauts"])
         self.assertIn("Did you mean `status`?", err.getvalue())
 
@@ -1390,8 +1685,11 @@ class QuipsTestCase(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             log = Path(tmp, "run.log")
-            with unittest.mock.patch("subprocess.Popen", FakeProc), contextlib.redirect_stdout(io.StringIO()), \
-                    contextlib.redirect_stderr(io.StringIO()) as err:
+            with (
+                unittest.mock.patch("subprocess.Popen", FakeProc),
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()) as err,
+            ):
                 code = cli.run._run_foreground(["snakemake"], log, resumable=True)
             self.assertEqual(code, 130)
             self.assertEqual(log.read_text(), "Job started\nShutting down\n")
@@ -1399,11 +1697,13 @@ class QuipsTestCase(unittest.TestCase):
         self.assertIn("./pastForward resume", err.getvalue())
 
     def test_die_with_quip_still_exits_1(self):
-        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as ctx:
+        with (
+            contextlib.redirect_stderr(io.StringIO()),
+            self.assertRaises(SystemExit) as ctx,
+        ):
             cli.common._die("boom", quip="typo")
         self.assertEqual(ctx.exception.code, 1)
 
 
 if __name__ == "__main__":
     unittest.main()
-

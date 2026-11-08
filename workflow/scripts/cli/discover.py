@@ -1,4 +1,5 @@
 """check, preview: run the pipeline's discovery code in-process, no Snakemake needed."""
+
 import io
 import logging
 import re
@@ -32,7 +33,13 @@ DETECTED_SPECIES_RE = re.compile(r"^\[.*?Detected species", re.MULTILINE)
 CHECK_LINE_RULES = [
     (re.compile(r"error|missing", re.IGNORECASE), RED),
     (re.compile(r"warning", re.IGNORECASE), YELLOW),
-    (re.compile(r"\[SKIPPED|ignored \(\d+\)|\(none found\)|not found\)|\(none provided", re.IGNORECASE), DIM),
+    (
+        re.compile(
+            r"\[SKIPPED|ignored \(\d+\)|\(none found\)|not found\)|\(none provided",
+            re.IGNORECASE,
+        ),
+        DIM,
+    ),
     (re.compile(r"^- .+\[.+\]\s*$"), CYAN),
     (re.compile(r"^    [A-Za-z].*:\s*$|^    [A-Za-z].*\(\d+\):$"), CYAN),
 ]
@@ -42,7 +49,9 @@ def _configfiles_only(argv, command):
     # check/preview run in-process, so there is no Snakemake left to pass other flags on to.
     rest = _strip_configfile_args(argv)
     if rest:
-        _die(f"pastForward {command}: unknown argument(s): {' '.join(rest)}. Only --configfile <file> [...] is accepted.")
+        _die(
+            f"pastForward {command}: unknown argument(s): {' '.join(rest)}. Only --configfile <file> [...] is accepted."
+        )
     return _configfiles_from_args(argv)
 
 
@@ -55,7 +64,9 @@ def _capture_pipeline_log(include_check, configfiles=()):
     include_check=False calls get_expected_outputs_from_pipeline() (the Requesting/Skipping
     lines). Neither needs Snakemake: no DAG, no conda envs, no directory lock.
     """
-    _ensure_project_root(require_snakemake=False, require_config=True, configfiles=configfiles)
+    _ensure_project_root(
+        require_snakemake=False, require_config=True, configfiles=configfiles
+    )
     sys.path.insert(0, "workflow")
     try:
         from scripts.config_compat import apply_config_key_aliases
@@ -93,7 +104,9 @@ def _capture_pipeline_log(include_check, configfiles=()):
 
 
 def cmd_check(argv):
-    text = _capture_pipeline_log(include_check=True, configfiles=_configfiles_only(argv, "check"))
+    text = _capture_pipeline_log(
+        include_check=True, configfiles=_configfiles_only(argv, "check")
+    )
     m = DETECTED_SPECIES_RE.search(text)
     if not m:
         _die("pastForward: no species found — check the config.", quip="no_species")
@@ -106,17 +119,26 @@ def cmd_check(argv):
             block.append(line)
         else:
             break
-    print("\n".join(_colorize(line, CHECK_LINE_RULES) for line in "\n".join(block).strip().splitlines()))
+    print(
+        "\n".join(
+            _colorize(line, CHECK_LINE_RULES)
+            for line in "\n".join(block).strip().splitlines()
+        )
+    )
 
 
 def cmd_preview(argv):
-    text = _capture_pipeline_log(include_check=False, configfiles=_configfiles_only(argv, "preview"))
+    text = _capture_pipeline_log(
+        include_check=False, configfiles=_configfiles_only(argv, "preview")
+    )
     skipped_species = re.findall(r"Skipping species '(.+?)' \(execute: false\)", text)
     existing = re.findall(r"- Skipping: (.+)", text)
     requested = re.findall(r"- Requesting: (.+)", text)
 
     if skipped_species:
-        print(_color(YELLOW, f"Skipped species ({len(skipped_species)}, execute: false):"))
+        print(
+            _color(YELLOW, f"Skipped species ({len(skipped_species)}, execute: false):")
+        )
         for s in skipped_species:
             print(_color(DIM, f"  - {s}"))
         print()
@@ -129,4 +151,9 @@ def cmd_preview(argv):
     for f in requested:
         print(f"  - {f}")
     if not requested:
-        print(_color(DIM, "  (none — check the config, or run `./pastForward check` to see what was discovered)"))
+        print(
+            _color(
+                DIM,
+                "  (none — check the config, or run `./pastForward check` to see what was discovered)",
+            )
+        )

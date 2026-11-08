@@ -20,6 +20,7 @@ and the schema stay covered by the test suite).
 
 Not a test module itself - has no tests of its own.
 """
+
 import os
 from types import SimpleNamespace
 
@@ -32,10 +33,18 @@ _SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 # Mirrors the include: order in workflow/Snakefile.
 _SOURCE_FILES = [
     "file_manager.py",
-    os.path.join("expected_output", "expected_output_manager_reveal_module_processing.py"),
-    os.path.join("expected_output", "expected_output_manager_read_module_processing.py"),
-    os.path.join("expected_output", "expected_output_manager_reference_module_processing.py"),
-    os.path.join("expected_output", "expected_output_manager_summary_module_processing.py"),
+    os.path.join(
+        "expected_output", "expected_output_manager_reveal_module_processing.py"
+    ),
+    os.path.join(
+        "expected_output", "expected_output_manager_read_module_processing.py"
+    ),
+    os.path.join(
+        "expected_output", "expected_output_manager_reference_module_processing.py"
+    ),
+    os.path.join(
+        "expected_output", "expected_output_manager_summary_module_processing.py"
+    ),
     "expected_output_manager.py",
 ]
 
@@ -51,14 +60,20 @@ def load_pipeline_namespace(config, include_check=False):
     """
     apply_config_key_aliases(config)
     validate_config(config)
-    namespace = {"config": config, "index_archives": index_archives, "index_mapper": index_mapper}
+    namespace = {
+        "config": config,
+        "index_archives": index_archives,
+        "index_mapper": index_mapper,
+    }
     sources = list(_SOURCE_FILES)
     if include_check:
         # check.py skips its scan when Snakemake runs it in a spawned subprocess. Outside
         # Snakemake there is no parent process to have already printed it, so a stub whose
         # exec_mode is never ExecMode.SUBPROCESS makes it always run.
         namespace["workflow"] = SimpleNamespace(exec_mode=None)
-        sources.insert(1, "check.py")  # right after file_manager.py, as in the Snakefile
+        sources.insert(
+            1, "check.py"
+        )  # right after file_manager.py, as in the Snakefile
     for relpath in sources:
         path = os.path.join(_SCRIPTS_DIR, relpath)
         with open(path) as f:

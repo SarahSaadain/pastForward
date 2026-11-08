@@ -5,7 +5,9 @@ def get_fastq_read_count(fastq_file):
     """Count reads in a FASTQ file (handles gzipped files). Each read is 4 lines."""
     opener = igzip.open if fastq_file.endswith(".gz") else open
     with opener(fastq_file, "rb") as f:
-        newlines = sum(chunk.count(b"\n") for chunk in iter(lambda: f.read(1 << 20), b""))
+        newlines = sum(
+            chunk.count(b"\n") for chunk in iter(lambda: f.read(1 << 20), b"")
+        )
     # Round up so a file without a trailing newline still counts its last read
     return (newlines + 3) // 4
 

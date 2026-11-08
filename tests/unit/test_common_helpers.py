@@ -10,6 +10,7 @@ Run with either:
     python3 tests/unit/test_common_helpers.py
     python3 -m unittest tests.test_common_helpers -v          (from the repo root)
 """
+
 import logging
 import os
 import sys
@@ -55,7 +56,10 @@ class MapperExtraTest(unittest.TestCase):
         self.assertEqual(self.extra({"mapper_extra_params": " "}, "minimap2"), "-ax sr")
 
     def test_set_value_wins(self):
-        self.assertEqual(self.extra({"mapper_extra_params": "-ax map-ont"}, "minimap2"), "-ax map-ont")
+        self.assertEqual(
+            self.extra({"mapper_extra_params": "-ax map-ont"}, "minimap2"),
+            "-ax map-ont",
+        )
 
 
 class ScgMapperAndExtraTest(unittest.TestCase):
@@ -71,11 +75,15 @@ class ScgMapperAndExtraTest(unittest.TestCase):
 
     def test_same_mapper_borrows_flags(self):
         mapping = {"mapper": "minimap2", "mapper_extra_params": "-ax sr -k 15"}
-        self.assertEqual(self.pick({"mapper": "minimap2"}, mapping), ("minimap2", "-ax sr -k 15"))
+        self.assertEqual(
+            self.pick({"mapper": "minimap2"}, mapping), ("minimap2", "-ax sr -k 15")
+        )
 
     def test_other_mapper_does_not_borrow_flags(self):
         mapping = {"mapper": "bwa-aln", "mapper_extra_params": "-n 0.04"}
-        self.assertEqual(self.pick({"mapper": "minimap2"}, mapping), ("minimap2", "-ax sr"))
+        self.assertEqual(
+            self.pick({"mapper": "minimap2"}, mapping), ("minimap2", "-ax sr")
+        )
 
     def test_own_flags_win(self):
         mapping = {"mapper": "minimap2", "mapper_extra_params": "-ax sr -k 15"}
@@ -84,7 +92,9 @@ class ScgMapperAndExtraTest(unittest.TestCase):
 
     def test_empty_flags_fall_back_to_default(self):
         mapping = {"mapper": "minimap2", "mapper_extra_params": ""}
-        self.assertEqual(self.pick({"mapper_extra_params": ""}, mapping), ("minimap2", "-ax sr"))
+        self.assertEqual(
+            self.pick({"mapper_extra_params": ""}, mapping), ("minimap2", "-ax sr")
+        )
 
 
 if __name__ == "__main__":

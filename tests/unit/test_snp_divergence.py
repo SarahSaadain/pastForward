@@ -12,6 +12,7 @@ Pure Python, stdlib only, no Snakemake/conda required. Run with either:
     python3 tests/unit/test_snp_divergence.py
     python3 -m unittest tests.test_snp_divergence -v          (from the repo root)
 """
+
 import csv
 import os
 import shutil
@@ -81,7 +82,9 @@ class BuildRegionsTests(SnpDivergenceTestCase):
         )
         bed = self.path("regions.bed")
 
-        selected_bases = build_regions_bed(fai, bed, target_bases=1000000, min_contig_length=1000)
+        selected_bases = build_regions_bed(
+            fai, bed, target_bases=1000000, min_contig_length=1000
+        )
 
         rows = self.read_bed(bed)
         self.assertEqual([row[0] for row in rows], ["big", "mid"])
@@ -175,8 +178,7 @@ class ParseStatsTests(SnpDivergenceTestCase):
     def test_bcftools_without_psc_falls_back_to_sn_snp_count(self):
         stats = self.write(
             "a.bcftools_stats.txt",
-            "# This file was produced by bcftools stats\n"
-            "SN\t0\tnumber of SNPs:\t7\n",
+            "# This file was produced by bcftools stats\nSN\t0\tnumber of SNPs:\t7\n",
         )
 
         parsed = parse_bcftools_stats(stats)

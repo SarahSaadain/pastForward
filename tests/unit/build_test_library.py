@@ -13,13 +13,16 @@ test_expected_output_manager.py (which build/discard their own copies per test) 
 is for manual poking, and is regenerated from scratch every time it's built, including once
 per test suite run (see test_expected_output_manager.py's setUpModule).
 """
+
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pf_test_library import materialize_reference_library  # noqa: E402
 
-DEFAULT_TARGET = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "pf_test_library")
+DEFAULT_TARGET = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "fixtures", "pf_test_library"
+)
 
 if __name__ == "__main__":
     target = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_TARGET

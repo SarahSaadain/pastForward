@@ -12,6 +12,7 @@ ct_5p_pos1 and ga_3p_pos1 come from mapDamage run on the deduplicated (or sorted
 never the rescaled one. Rescaling removes the damage signal this table measures, so do not
 "fix" the mapDamage input to the rescaled BAM.
 """
+
 import csv
 import json
 import os
@@ -168,10 +169,15 @@ def parse_qualimap(path):
     with open(os.path.join(path, "genome_results.txt")) as f:
         text = f.read()
     depth = re.search(r"mean coverageData = ([\d.,]+)X", text)
-    breadth = re.search(r"There is a ([\d.,]+)% of reference with a coverageData >= 1X", text)
+    breadth = re.search(
+        r"There is a ([\d.,]+)% of reference with a coverageData >= 1X", text
+    )
     if not depth or not breadth:
         raise ValueError("no coverage lines")
-    return {"mean_depth": _locale_number(depth.group(1)), "breadth_percent": _locale_number(breadth.group(1))}
+    return {
+        "mean_depth": _locale_number(depth.group(1)),
+        "breadth_percent": _locale_number(breadth.group(1)),
+    }
 
 
 PARSERS = {
@@ -214,7 +220,10 @@ def summarize_individual(individual, n_samples, files, thresholds):
         try:
             row.update(PARSERS[group](path))
         except (OSError, ValueError, KeyError, StopIteration, IndexError) as e:
-            print(f"{individual}: could not read {group} file {path}: {type(e).__name__} {e}", file=sys.stderr)
+            print(
+                f"{individual}: could not read {group} file {path}: {type(e).__name__} {e}",
+                file=sys.stderr,
+            )
             missing.append(group)
     reasons = threshold_reasons(row, thresholds)
     if reasons:
@@ -223,7 +232,9 @@ def summarize_individual(individual, n_samples, files, thresholds):
         row["verdict"] = VERDICT_NO_DATA
     else:
         row["verdict"] = VERDICT_OK
-    row["verdict_reason"] = ";".join(reasons + [f"missing_{group}" for group in missing])
+    row["verdict_reason"] = ";".join(
+        reasons + [f"missing_{group}" for group in missing]
+    )
     return row
 
 
@@ -235,18 +246,26 @@ def _cell(column, value):
     return str(value)
 
 
-def create_authenticity_summary(individuals, n_samples, inputs, threshold_overrides, output_path):
+def create_authenticity_summary(
+    individuals, n_samples, inputs, threshold_overrides, output_path
+):
     thresholds = {**DEFAULT_THRESHOLDS, **threshold_overrides}
     rows = []
     for index, individual in enumerate(individuals):
-        files = {group: (paths[index] if paths else None) for group, paths in inputs.items()}
-        rows.append(summarize_individual(individual, n_samples[index], files, thresholds))
+        files = {
+            group: (paths[index] if paths else None) for group, paths in inputs.items()
+        }
+        rows.append(
+            summarize_individual(individual, n_samples[index], files, thresholds)
+        )
     with open(output_path, "w") as out:
         out.write("\t".join(COLUMNS) + "\n")
         for row in sorted(rows, key=lambda r: r["individual"]):
             out.write("\t".join(_cell(c, row.get(c)) for c in COLUMNS) + "\n")
     flagged = [row["individual"] for row in rows if row["verdict"] != VERDICT_OK]
-    print(f"{len(flagged)} of {len(rows)} individual(s) not ok: {', '.join(flagged) or 'none'}")
+    print(
+        f"{len(flagged)} of {len(rows)} individual(s) not ok: {', '.join(flagged) or 'none'}"
+    )
 
 
 if __name__ == "__main__":

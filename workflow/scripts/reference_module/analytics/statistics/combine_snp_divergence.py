@@ -192,7 +192,8 @@ def flag_outliers(records, outlier_zscore, min_callable_bases):
     usable = [
         record
         for record in records
-        if record["callable_bases"] > 0 and record["callable_bases"] >= min_callable_bases
+        if record["callable_bases"] > 0
+        and record["callable_bases"] >= min_callable_bases
     ]
 
     if len(usable) < MIN_COHORT_SIZE:
@@ -314,12 +315,18 @@ def combine_snp_divergence(
 
     records.sort(key=lambda record: record["individual"])
 
-    _write_csv(combined_file_path, COMBINED_COLUMNS, records, {"divergence_rate": ".8f"})
+    _write_csv(
+        combined_file_path, COMBINED_COLUMNS, records, {"divergence_rate": ".8f"}
+    )
     _write_csv(detailed_file_path, DETAILED_COLUMNS, records, {})
 
-    flagged = [record["individual"] for record in records if record["status"] == STATUS_OUTLIER]
+    flagged = [
+        record["individual"] for record in records if record["status"] == STATUS_OUTLIER
+    ]
     if flagged:
-        print(f"Flagged {len(flagged)} individual(s) as divergence outliers: {', '.join(flagged)}")
+        print(
+            f"Flagged {len(flagged)} individual(s) as divergence outliers: {', '.join(flagged)}"
+        )
     else:
         print("No individual was flagged as a divergence outlier.")
 

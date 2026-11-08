@@ -8,7 +8,11 @@ if "logger" not in globals():
 
 
 def create_contig_clusters(
-    contigs_path, cluster_folder, cores=1, min_contigs_per_cluster=1, max_contigs_per_cluster=500
+    contigs_path,
+    cluster_folder,
+    cores=1,
+    min_contigs_per_cluster=1,
+    max_contigs_per_cluster=500,
 ):
     logger.info("Starting contig clustering for deduplication...")
 
@@ -64,10 +68,7 @@ def create_contig_clusters(
         group_contigs = contigs[start:end]
 
         # 1-based contig indexing in filename
-        group_file = os.path.join(
-            cluster_folder,
-            f"cluster_{start + 1}_{end}.bed"
-        )
+        group_file = os.path.join(cluster_folder, f"cluster_{start + 1}_{end}.bed")
 
         logger.info(
             f"Writing contig cluster file: {group_file} "

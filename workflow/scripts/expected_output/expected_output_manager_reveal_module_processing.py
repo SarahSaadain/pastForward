@@ -1,11 +1,13 @@
-
 import logging
 
 
 def get_expected_output_reveal_module_processing(species):
     all_inputs = []
 
-    if config.get("pipeline", {}).get("reveal_module", {}).get("execute", True) == False:
+    if (
+        config.get("pipeline", {}).get("reveal_module", {}).get("execute", True)
+        == False
+    ):
         logging.info(f"Skipping REVEAL processing for {species}. Disabled in config.")
         return []
 
@@ -18,8 +20,12 @@ def get_expected_output_reveal_module_processing(species):
     # exists.  This supports "only create SCGs" workflows (no feature libraries
     # required) as well as the full REVEAL pipeline.
     if scg_sel_active and should_auto_determine_scg(species):
-        all_inputs.append(f"{species}/results/reveal_module/scg/{species}_scg_ranked.tsv")
-        all_inputs.append(f"{species}/results/reveal_module/scg/{species}_scg_ranked.json")
+        all_inputs.append(
+            f"{species}/results/reveal_module/scg/{species}_scg_ranked.tsv"
+        )
+        all_inputs.append(
+            f"{species}/results/reveal_module/scg/{species}_scg_ranked.json"
+        )
 
     # gzip copy of the SCG library mapping index (the index itself is temp(), see pack_index.smk).
     # Only the SCG selector maps to it, and only when it has to rank SCGs itself.
@@ -34,8 +40,7 @@ def get_expected_output_reveal_module_processing(species):
         feature_libraries = get_feature_library_ids_for_species(species)
     except Exception:
         logging.warning(
-            f"No feature libraries found for {species}. "
-            f"Skipping REVEAL analysis."
+            f"No feature libraries found for {species}. Skipping REVEAL analysis."
         )
         return all_inputs  # may still contain SCG ranking outputs
 
@@ -56,9 +61,15 @@ def get_expected_output_reveal_module_processing(species):
     analysis_settings = reveal_cfg.get("analysis", {}).get("settings", {})
     individual_plots_mode = visualization_settings.get("individual_plots", "skip")
     comparison_plots_mode = visualization_settings.get("comparison_plots", "plot")
-    coverage_analysis_active = analysis_active and analysis_settings.get("coverage_analysis", True)
-    snp_analysis_active = analysis_active and analysis_settings.get("snp_analysis", False)
-    indel_analysis_active = analysis_active and analysis_settings.get("indel_analysis", False)
+    coverage_analysis_active = analysis_active and analysis_settings.get(
+        "coverage_analysis", True
+    )
+    snp_analysis_active = analysis_active and analysis_settings.get(
+        "snp_analysis", False
+    )
+    indel_analysis_active = analysis_active and analysis_settings.get(
+        "indel_analysis", False
+    )
 
     individuals = get_individuals_for_species(species)
 
@@ -83,14 +94,17 @@ def get_expected_output_reveal_module_processing(species):
         and coverage_analysis_active
         and has_multiple_individuals
     ):
-        all_inputs.append(f"{species}/results/reveal_module/{species}_reveal_coverage_comparison.tsv")
+        all_inputs.append(
+            f"{species}/results/reveal_module/{species}_reveal_coverage_comparison.tsv"
+        )
 
-    keep_mapped_bam = reveal_cfg.get("mapping", {}).get("settings", {}).get("keep_mapped_bam", False)
+    keep_mapped_bam = (
+        reveal_cfg.get("mapping", {}).get("settings", {}).get("keep_mapped_bam", False)
+    )
 
     dyn_mapper = index_mapper(config, "reveal_module")
 
     for feature_library in feature_libraries:
-
         all_inputs += index_archives(
             f"{species}/processed/reveal_module/{feature_library}/library/{feature_library}_and_scg.suffixed.fasta",
             dyn_mapper,
@@ -106,7 +120,6 @@ def get_expected_output_reveal_module_processing(species):
                 )
 
         if reveal_cfg.get("visualization", {}).get("execute", True):
-
             if coverage_analysis_active and has_multiple_individuals:
                 # Species-level coverage stats
                 all_inputs.append(

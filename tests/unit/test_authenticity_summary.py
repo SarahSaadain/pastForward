@@ -8,6 +8,7 @@ The fixture files below copy the real format of each pipeline output (values tak
 historical Dmel individual). Pure Python, stdlib only, no Snakemake/conda required. Run with:
     python3 tests/unit/test_authenticity_summary.py
 """
+
 import csv
 import json
 import os
@@ -31,7 +32,15 @@ MAPQ\t0\t10
 MAPQ\t30\t30
 """
 ENDOGENOUS = "filename,individual,mapped_reads,total_reads,proportion\nx.stats,IND1,49717344,120870205,41.1328\n"
-DEDUP = {"metrics": {"total_reads": 100, "mapped_reads": 100, "total_removed": 13, "dup_rate": "0.1329", "clusterfactor": "1.1532"}}
+DEDUP = {
+    "metrics": {
+        "total_reads": 100,
+        "mapped_reads": 100,
+        "total_removed": 13,
+        "dup_rate": "0.1329",
+        "clusterfactor": "1.1532",
+    }
+}
 CT5P = "pos\t5pC>T\n1\t0.0470795730502949\n2\t0.0347458409646485\n"
 GA3P = "pos\t3pG>A\n1\t0.0500993852904526\n2\t0.00419414291790686\n"
 # Two strands: lengths 40 (+3, -1), 50 (+2), 60 (-4) -> 10 reads, median 50, mean 50.
@@ -75,15 +84,25 @@ class AuthenticitySummaryTestCase(unittest.TestCase):
 
     def full_inputs(self, individual="IND1", **overrides):
         files = {
-            "stats": STATS, "endogenous": ENDOGENOUS, "dedup": DEDUP, "ct5p": CT5P,
-            "ga3p": GA3P, "lengths": LENGTHS, "coverage": COVERAGE,
+            "stats": STATS,
+            "endogenous": ENDOGENOUS,
+            "dedup": DEDUP,
+            "ct5p": CT5P,
+            "ga3p": GA3P,
+            "lengths": LENGTHS,
+            "coverage": COVERAGE,
         }
         files.update(overrides)
-        return {key: [self.write(f"{individual}.{key}", content)] for key, content in files.items()}
+        return {
+            key: [self.write(f"{individual}.{key}", content)]
+            for key, content in files.items()
+        }
 
     def run_table(self, inputs, individuals=("IND1",), thresholds=None, n_samples=None):
         n_samples = n_samples or [1] * len(individuals)
-        create_authenticity_summary(list(individuals), n_samples, inputs, thresholds or {}, self.output)
+        create_authenticity_summary(
+            list(individuals), n_samples, inputs, thresholds or {}, self.output
+        )
         with open(self.output) as f:
             return list(csv.DictReader(f, delimiter="\t"))
 
@@ -116,30 +135,43 @@ class TestStepsSwitchedOff(AuthenticitySummaryTestCase):
         self.write("IND1_qualimap/genome_results.txt", QUALIMAP)
         inputs = dict(self.full_inputs(), coverage=[], qualimap=[folder])
         row = self.run_table(inputs)[0]
-        self.assertEqual((row["mean_depth"], row["breadth_percent"]), ("1234.5678", "87.6500"))
+        self.assertEqual(
+            (row["mean_depth"], row["breadth_percent"]), ("1234.5678", "87.6500")
+        )
         self.assertEqual(row["verdict"], "ok")
 
     def test_qualimap_numbers_in_any_locale(self):
         cases = (
-            ("9.9856", "87.2", "9.9856", "87.2000"),          # en, no separators
+            ("9.9856", "87.2", "9.9856", "87.2000"),  # en, no separators
             ("1,234.5678", "87.65", "1234.5678", "87.6500"),  # en thousands
-            ("9,9856", "87,2", "9.9856", "87.2000"),          # de decimal comma
+            ("9,9856", "87,2", "9.9856", "87.2000"),  # de decimal comma
             ("1.234,5678", "93,69", "1234.5678", "93.6900"),  # de thousands and decimal
         )
         for depth, breadth, want_depth, want_breadth in cases:
             with self.subTest(depth=depth):
                 folder = tempfile.mkdtemp(dir=self.tmp_dir)
                 with open(os.path.join(folder, "genome_results.txt"), "w") as f:
-                    f.write(f"     mean coverageData = {depth}X\n     There is a {breadth}% of reference with a coverageData >= 1X\n")
-                row = self.run_table(dict(self.full_inputs(), coverage=[], qualimap=[folder]))[0]
-                self.assertEqual((row["mean_depth"], row["breadth_percent"]), (want_depth, want_breadth))
+                    f.write(
+                        f"     mean coverageData = {depth}X\n     There is a {breadth}% of reference with a coverageData >= 1X\n"
+                    )
+                row = self.run_table(
+                    dict(self.full_inputs(), coverage=[], qualimap=[folder])
+                )[0]
+                self.assertEqual(
+                    (row["mean_depth"], row["breadth_percent"]),
+                    (want_depth, want_breadth),
+                )
 
     def test_qualimap_without_coverage_lines_is_no_data(self):
         folder = os.path.join(self.tmp_dir, "IND1_qualimap")
         os.makedirs(folder)
         self.write("IND1_qualimap/genome_results.txt", ">>>>>>> Globals\n")
-        row = self.run_table(dict(self.full_inputs(), coverage=[], qualimap=[folder]))[0]
-        self.assertEqual((row["verdict"], row["verdict_reason"]), ("no_data", "missing_qualimap"))
+        row = self.run_table(dict(self.full_inputs(), coverage=[], qualimap=[folder]))[
+            0
+        ]
+        self.assertEqual(
+            (row["verdict"], row["verdict_reason"]), ("no_data", "missing_qualimap")
+        )
 
     def test_empty_groups_give_na_but_stay_ok(self):
         # Dedup, mapDamage and coverage off: their groups arrive as empty lists.
@@ -147,7 +179,14 @@ class TestStepsSwitchedOff(AuthenticitySummaryTestCase):
         for group in ("dedup", "ct5p", "ga3p", "lengths", "coverage"):
             inputs[group] = []
         row = self.run_table(inputs)[0]
-        for column in ("duplicate_rate", "cluster_factor", "median_mapped_length", "ct_5p_pos1", "mean_depth", "breadth_percent"):
+        for column in (
+            "duplicate_rate",
+            "cluster_factor",
+            "median_mapped_length",
+            "ct_5p_pos1",
+            "mean_depth",
+            "breadth_percent",
+        ):
             self.assertEqual(row[column], "NA", column)
         self.assertEqual(row["endogenous_percent"], "41.1328")
         self.assertEqual((row["verdict"], row["verdict_reason"]), ("ok", ""))
@@ -165,30 +204,42 @@ class TestMissingFiles(AuthenticitySummaryTestCase):
         os.remove(inputs["ct5p"][0])
         row = self.run_table(inputs)[0]
         self.assertEqual(row["ct_5p_pos1"], "NA")
-        self.assertEqual((row["verdict"], row["verdict_reason"]), ("no_data", "missing_ct5p"))
+        self.assertEqual(
+            (row["verdict"], row["verdict_reason"]), ("no_data", "missing_ct5p")
+        )
 
     def test_empty_file_gives_no_data(self):
         row = self.run_table(self.full_inputs(lengths=""))[0]
-        self.assertEqual((row["verdict"], row["verdict_reason"]), ("no_data", "missing_lengths"))
+        self.assertEqual(
+            (row["verdict"], row["verdict_reason"]), ("no_data", "missing_lengths")
+        )
 
     def test_one_incomplete_individual_does_not_block_others(self):
         good = self.full_inputs("IND1")
         bad = self.full_inputs("IND2", endogenous="")
         inputs = {group: good[group] + bad[group] for group in good}
         rows = self.run_table(inputs, individuals=("IND1", "IND2"))
-        self.assertEqual([(r["individual"], r["verdict"]) for r in rows], [("IND1", "ok"), ("IND2", "no_data")])
+        self.assertEqual(
+            [(r["individual"], r["verdict"]) for r in rows],
+            [("IND1", "ok"), ("IND2", "no_data")],
+        )
 
 
 class TestThresholds(AuthenticitySummaryTestCase):
     def test_low_damage_is_check_with_reason(self):
         # A modern control: 0.4% C-to-T at position 1.
         row = self.run_table(self.full_inputs(ct5p="pos\t5pC>T\n1\t0.0037\n"))[0]
-        self.assertEqual((row["verdict"], row["verdict_reason"]), ("check", "ct_5p_pos1<0.01"))
+        self.assertEqual(
+            (row["verdict"], row["verdict_reason"]), ("check", "ct_5p_pos1<0.01")
+        )
 
     def test_every_threshold_named(self):
         thresholds = {
-            "min_endogenous_percent": 50, "min_ct_5p_pos1": 0.1, "min_median_mapped_length": 60,
-            "max_duplicate_rate": 0.1, "min_mean_depth": 10,
+            "min_endogenous_percent": 50,
+            "min_ct_5p_pos1": 0.1,
+            "min_median_mapped_length": 60,
+            "max_duplicate_rate": 0.1,
+            "min_mean_depth": 10,
         }
         row = self.run_table(self.full_inputs(), thresholds=thresholds)[0]
         self.assertEqual(row["verdict"], "check")
@@ -199,14 +250,20 @@ class TestThresholds(AuthenticitySummaryTestCase):
 
     def test_partial_override_keeps_other_defaults(self):
         # Only the depth threshold set in config: the 1% damage default still applies.
-        row = self.run_table(self.full_inputs(ct5p="pos\t5pC>T\n1\t0.0037\n"), thresholds={"min_mean_depth": 10})[0]
+        row = self.run_table(
+            self.full_inputs(ct5p="pos\t5pC>T\n1\t0.0037\n"),
+            thresholds={"min_mean_depth": 10},
+        )[0]
         self.assertEqual(row["verdict_reason"], "ct_5p_pos1<0.01;mean_depth<10")
 
     def test_check_wins_over_missing_and_both_reasons_kept(self):
         inputs = self.full_inputs(ct5p="pos\t5pC>T\n1\t0.0037\n")
         os.remove(inputs["coverage"][0])
         row = self.run_table(inputs)[0]
-        self.assertEqual((row["verdict"], row["verdict_reason"]), ("check", "ct_5p_pos1<0.01;missing_coverage"))
+        self.assertEqual(
+            (row["verdict"], row["verdict_reason"]),
+            ("check", "ct_5p_pos1<0.01;missing_coverage"),
+        )
 
 
 if __name__ == "__main__":

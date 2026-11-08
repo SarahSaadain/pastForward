@@ -9,6 +9,7 @@ Run with either:
     python3 tests/unit/test_config_compat.py
     python3 -m unittest tests.test_config_compat -v          (from the repo root)
 """
+
 import os
 import sys
 import unittest
@@ -16,7 +17,9 @@ import unittest
 sys.path.insert(
     0,
     os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "workflow", "scripts"
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "workflow",
+        "scripts",
     ),
 )
 
@@ -50,14 +53,18 @@ class TestApplyConfigKeyAliases(unittest.TestCase):
         }
         apply_config_key_aliases(config)
         self.assertEqual(
-            config["pipeline"]["read_module"], {"taxonomic_screening": {"execute": True}}
+            config["pipeline"]["read_module"],
+            {"taxonomic_screening": {"execute": True}},
         )
 
     def test_config_without_the_deprecated_key_is_untouched(self):
-        config = {"pipeline": {"read_module": {"taxonomic_screening": {"execute": True}}}}
+        config = {
+            "pipeline": {"read_module": {"taxonomic_screening": {"execute": True}}}
+        }
         self.assertEqual(apply_config_key_aliases(config), [])
         self.assertEqual(
-            config, {"pipeline": {"read_module": {"taxonomic_screening": {"execute": True}}}}
+            config,
+            {"pipeline": {"read_module": {"taxonomic_screening": {"execute": True}}}},
         )
 
     def test_missing_or_non_dict_parents_do_not_raise(self):

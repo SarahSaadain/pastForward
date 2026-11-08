@@ -19,6 +19,7 @@ on any "-"-looking token - like a genuine snakemake flag, e.g. --forceall - that
 before the parser has committed to consuming positionals. Splitting on the command name
 ourselves sidesteps that entirely.
 """
+
 import difflib
 import sys
 import textwrap
@@ -79,7 +80,11 @@ SECTIONS = {
             "Show expected output files for the current config, including skipped ones. Takes "
             "--configfile like `check`.",
         ),
-        "dryrun": (cmd_dryrun, "[snakemake-args...]", "Run `snakemake --dryrun` in the foreground."),
+        "dryrun": (
+            cmd_dryrun,
+            "[snakemake-args...]",
+            "Run `snakemake --dryrun` in the foreground.",
+        ),
     },
     "Run the pipeline": {
         "run": (
@@ -165,8 +170,12 @@ SECTIONS = {
     },
 }
 
-COMMANDS = {name: spec[0] for commands in SECTIONS.values() for name, spec in commands.items()}
-USAGE = {name: spec[1:] for commands in SECTIONS.values() for name, spec in commands.items()}
+COMMANDS = {
+    name: spec[0] for commands in SECTIONS.values() for name, spec in commands.items()
+}
+USAGE = {
+    name: spec[1:] for commands in SECTIONS.values() for name, spec in commands.items()
+}
 
 HELP_INDENT = 32
 HELP_WIDTH = 80
@@ -186,7 +195,11 @@ def _print_usage(name, args, description):
 
 
 def _print_help():
-    print(_color(CYAN, "pastForward — CLI wrapper around the pastForward Snakemake pipeline."))
+    print(
+        _color(
+            CYAN, "pastForward — CLI wrapper around the pastForward Snakemake pipeline."
+        )
+    )
     print()
     print(_color(CYAN, "Usage: ./pastForward <command> [args...]"))
     for section, commands in SECTIONS.items():
@@ -196,7 +209,9 @@ def _print_help():
             _print_usage(name, args, description)
     print()
     print("Run from a project root: the folder containing workflow/ and config/.")
-    print("Logs for `run`/`dryrun`/`touch` are written to logs/<command>_<timestamp>.log.")
+    print(
+        "Logs for `run`/`dryrun`/`touch` are written to logs/<command>_<timestamp>.log."
+    )
     print("Set PASTFORWARD_QUIET=1 to hide the CLI's little jokes.")
 
 
@@ -209,8 +224,15 @@ def main(argv=None):
     func = COMMANDS.get(command)
     if func is None:
         close = difflib.get_close_matches(command, COMMANDS, n=1)
-        hint = f" Did you mean `{close[0]}`?" if close else " Run ./pastForward --help for the list."
-        _die(f"pastForward: unknown command '{command}'.{hint}", quip="typo" if close else None)
+        hint = (
+            f" Did you mean `{close[0]}`?"
+            if close
+            else " Run ./pastForward --help for the list."
+        )
+        _die(
+            f"pastForward: unknown command '{command}'.{hint}",
+            quip="typo" if close else None,
+        )
     # `--help` after a command shows that command's entry. Without this it would reach the
     # command itself: `run --help` failed on the missing --cores, `check --help` on the argument.
     # `tools` prints its own, longer help.
