@@ -3,7 +3,7 @@
 # Included by map_reads_to_reference.smk when pipeline.reference_module.mapping.settings.mapper picks it.
 # Needs `_ref_mapper_extra` from the including file. To add a mapper: copy this file, add the name
 # to the `mapper` enum in workflow/schemas/config.schema.yaml, and to _SUFFIXES in
-# workflow/scripts/index_compression.py (the other mapping steps still pick their mapper in their own .smk).
+# workflow/scripts/index_compression.py. The REVEAL steps have their own mappers/ folders.
 ####################################################
 
 
