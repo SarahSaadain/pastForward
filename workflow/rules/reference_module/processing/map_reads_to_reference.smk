@@ -5,97 +5,10 @@ _ref_settings = _setting("reference_module", "mapping", "settings", default={})
 _ref_mapper = _ref_settings.get("mapper", "bwa-mem2")
 _ref_mapper_extra = _mapper_extra(_ref_settings, _ref_mapper)
 
-if _ref_mapper == "minimap2":
 
-    rule map_reads_to_reference_minimap2:
-        input:
-            query=["{species}/results/read_module/reads_merged/{individual}.fastq.gz"],
-            target="{species}/processed/reference_module/{reference}/reference/{reference}.mmi",
-        output:
-            temp(
-                "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_unsorted.bam"
-            ),
-        log:
-            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}.bam.log",
-        threads: 15
-        params:
-            extra=_ref_mapper_extra,
-            sorting="none",
-        wrapper:
-            f"{WRAPPER_VERSION}/bio/minimap2/aligner"
-
-elif _ref_mapper == "bwa-aln":
-
-    # bwa-aln
-    rule align_reads_to_reference_bwa_aln:
-        input:
-            fastq="{species}/results/read_module/reads_merged/{individual}.fastq.gz",
-            idx=multiext(
-                "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-                ".amb",
-                ".ann",
-                ".bwt",
-                ".pac",
-                ".sa",
-            ),
-        output:
-            temp(
-                "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}.sai"
-            ),
-        log:
-            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_bwa_aln.log",
-        threads: 10
-        params:
-            extra=_ref_mapper_extra,
-        wrapper:
-            f"{WRAPPER_VERSION}/bio/bwa/aln"
-
-    rule map_reads_to_reference_bwa_aln:
-        input:
-            fastq="{species}/results/read_module/reads_merged/{individual}.fastq.gz",
-            sai="{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}.sai",
-            idx=multiext(
-                "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-                ".amb",
-                ".ann",
-                ".bwt",
-                ".pac",
-                ".sa",
-            ),
-        output:
-            temp(
-                "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_unsorted.bam"
-            ),
-        log:
-            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}.bam.log",
-        threads: 1
-        wrapper:
-            f"{WRAPPER_VERSION}/bio/bwa/samse"
-
-else:
-
-    rule map_reads_to_reference_bwa_mem2:
-        input:
-            reads=["{species}/results/read_module/reads_merged/{individual}.fastq.gz"],
-            idx=multiext(
-                "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-                ".0123",
-                ".amb",
-                ".ann",
-                ".bwt.2bit.64",
-                ".pac",
-            ),
-        output:
-            temp(
-                "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_unsorted.bam"
-            ),
-        log:
-            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}.bam.log",
-        threads: 15
-        params:
-            extra=_ref_mapper_extra,
-        wrapper:
-            f"{WRAPPER_VERSION}/bio/bwa-mem2/mem"
+# One file per mapper in mappers/ holds its index rule and its mapping rule(s).
+# Name = mapper with "-" as "_" (bwa-mem2 -> bwa_mem2.smk).
+include: f"mappers/{_ref_mapper.replace('-', '_')}.smk"
 
 
 # keep_bam: the sorted BAM and its index stay in processed/ (no temp) so a later step never

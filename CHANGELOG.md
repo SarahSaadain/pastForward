@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **One file per reference mapper**: the bwa-mem2, bwa-aln and minimap2 index and mapping rules of the reference module moved from `if/elif` chains into `workflow/rules/reference_module/processing/mappers/<mapper>.smk`. No behaviour change, the job graph is identical. Adding a mapper to this step is a new file in that folder.
 - **Faster read discovery**: read files are listed once per species per run instead of once per sample. A dry run with 300 samples dropped from 48 s to about 33 s.
 - **ECMSD `cov_threshold` default lowered to 5**: was 25. Low-coverage samples, typical for ancient DNA, kept fewer references. Set `tools.ecmsd.settings.cov_threshold` to keep the old value. Existing projects rerun ECMSD only if the config sets no value and the rule reruns for another reason
 - **Faster BAM splitting for deduplication**: each contig cluster reads only its own contigs through the BAM index, instead of scanning the whole BAM. Output is the same.

@@ -1,11 +1,6 @@
 ####################################################
 # Snakemake rules
 ####################################################
-_ref_mapper = _setting(
-    "reference_module", "mapping", "settings", "mapper", default="bwa-mem2"
-)
-
-
 rule standardize_reference_extension_to_fa:
     input:
         ref=_standardize_reference_extension_to_fa_ref_path,
@@ -21,73 +16,7 @@ rule standardize_reference_extension_to_fa:
         "../../../scripts/reference_module/processing/standardize_reference_extension_to_fa.py"
 
 
-if _ref_mapper == "minimap2":
-
-    rule index_reference_for_mapping_minimap2:
-        input:
-            target="{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-        output:
-            temp(
-                "{species}/processed/reference_module/{reference}/reference/{reference}.mmi"
-            ),
-        log:
-            "{species}/processed/reference_module/{reference}/index/{reference}_minimap2_index.log",
-        cache: True
-        resources:
-            mem_mb=16000,
-        message:
-            "Indexing reference {wildcards.reference} with minimap2"
-        wrapper:
-            f"{WRAPPER_VERSION}/bio/minimap2/index"
-
-elif _ref_mapper == "bwa-aln":
-
-    # bwa-aln
-    rule index_reference_for_mapping_bwa_aln:
-        input:
-            "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-        output:
-            temp(
-                multiext(
-                    "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-                    ".amb",
-                    ".ann",
-                    ".bwt",
-                    ".pac",
-                    ".sa",
-                )
-            ),
-        log:
-            "{species}/processed/reference_module/{reference}/index/{reference}_bwa_aln_index.log",
-        cache: True
-        message:
-            "Indexing reference {wildcards.reference} with BWA (for BWA ALN)"
-        wrapper:
-            f"{WRAPPER_VERSION}/bio/bwa/index"
-
-else:
-
-    rule index_reference_for_mapping_bwa_mem2:
-        input:
-            "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-        output:
-            temp(
-                multiext(
-                    "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-                    ".0123",
-                    ".amb",
-                    ".ann",
-                    ".bwt.2bit.64",
-                    ".pac",
-                )
-            ),
-        log:
-            "{species}/processed/reference_module/{reference}/index/{reference}_bwa_mem2_index.log",
-        cache: True
-        message:
-            "Indexing reference {wildcards.reference} with BWA-MEM2"
-        wrapper:
-            f"{WRAPPER_VERSION}/bio/bwa-mem2/index"
+# The mapper-specific index rule lives in mappers/<mapper>.smk (included by map_reads_to_reference.smk).
 
 
 rule index_reference_with_samtools:
