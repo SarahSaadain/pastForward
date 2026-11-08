@@ -9,7 +9,6 @@ pastForward runs on two free tools:
 * **Conda** installs and manages all the other software the pipeline needs.
 * **Snakemake** runs the pipeline itself and can be installed using conda. Version **9.26.1** or newer is required.
 
-
 ## Step 1: Install Conda
 
 If you don't already have conda, install [Miniforge](https://github.com/conda-forge/miniforge). Follow the instructions for your operating system.
@@ -97,7 +96,7 @@ For reads, `./pastForward tools link-reads --source /path/to/reads --species Dme
 If you'd rather keep some or all of a species' data elsewhere (a different disk, a shared network drive, or a folder outside the project entirely), set one or more of the following optional settings under `species.<key>` in `config.yaml`. If you don't set any of these, nothing changes from the default behavior described above.
 
 | Setting | Overrides |
-|---|---|
+| --- | --- |
 | `species_dir` | The whole species root. Must contain the same `input/{read_module,reference_module,reveal_module/{scg,feature_library,competition}}`, `processed/`, `results/` layout as a normal species folder. Used as the default target for every setting below. |
 | `reads_dir` | `<species>/input/read_module/` |
 | `reference_dir` | `<species>/input/reference_module/` |

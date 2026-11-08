@@ -13,7 +13,6 @@ pastForward analyzes raw ancient and historical DNA from a sequencing facility. 
 
 pastForward is built on [Snakemake](https://snakemake.github.io).
 
-
 > **Note:** pastForward uses two purpose-built tools: [REVEAL](https://github.com/SarahSaadain/REVEAL) for transposable element and genomic feature dynamics, and [ECMSD](https://github.com/capoony/ECMSD) for contamination screening against a curated mitochondrial database. See their READMEs for details on each tool.
 
 ## Workflow Overview
@@ -128,4 +127,4 @@ These reports summarize reads before and after trimming, taxonomic screening, co
 
 If you use pastForward in your research, please cite:
 
-> Saadain, S., Kapun, M., & Kofler, R. (2026). pastForward: a Snakemake pipeline for ancient and historical DNA with eukaryote-wide taxonomic screening and tracking of copy-number variation. *bioRxiv*. https://doi.org/10.64898/2026.08.07.743613
+> Saadain, S., Kapun, M., & Kofler, R. (2026). pastForward: a Snakemake pipeline for ancient and historical DNA with eukaryote-wide taxonomic screening and tracking of copy-number variation. *bioRxiv*. <https://doi.org/10.64898/2026.08.07.743613>

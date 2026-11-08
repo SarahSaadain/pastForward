@@ -23,7 +23,7 @@ Version 2.0.0 renamed every pipeline stage, restructured the config, and moved t
 Start from a fresh config instead of patching your old one key by key. Open [config/config_designer.html](../config/config_designer.html) in your browser, or copy `config/min_config_sample.yaml` to `config/config.yaml`, then carry over the settings you had changed. Use this table to find where each of them went:
 
 | 1.x key | 2.x key |
-|---|---|
+| --- | --- |
 | `pipeline.raw_reads_processing` | `pipeline.read_module` |
 | `pipeline.reference_processing` | `pipeline.reference_module` |
 | `pipeline.dynamics` | `pipeline.reveal_module` |
@@ -53,7 +53,7 @@ Read filenames themselves did not change, so your files can keep their names. 2.
 Output paths changed too. The important ones:
 
 | 1.x location | 2.x location |
-|---|---|
+| --- | --- |
 | `{species}/results/{reference}/...` | `{species}/results/reference_module/{reference}/...` |
 | `{species}/processed/{reference}/mapped/*_final.bam` | `{species}/results/reference_module/{reference}/mapped/` |
 | `{species}/results/contamination_analysis/` | `{species}/results/read_module/taxonomic_screening/` |

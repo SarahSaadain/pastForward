@@ -1,4 +1,5 @@
 # pastForward aDNA/hDNA Pipeline: Process Overview
+
 This document describes the processing logic of the pastForward aDNA/hDNA Pipeline across its three main modules: raw read processing, reference processing, and REVEAL processing. A fourth module handles summary reporting across all results. All pipeline behaviour is controlled through `config/config.yaml`.
 
 ![Pipeline Overview](img/pf_pipeline_process.svg)
@@ -64,7 +65,7 @@ Before mapping can begin, the reference genome is standardised to a `.fa` extens
 The merged per-individual reads are mapped to the reference using a configurable mapper, set via `pipeline.reference_module.mapping.settings.mapper` (default `bwa-mem3`). Seven mappers are supported: **bwa-aln** (classic seed-and-extend, recommended for ultra short aDNA/hDNA reads (<70 bp). Generates the most accurate alignments, but can be very slow), **bwa-mem2** (faster aligner, designed for reads from about 70 bp, but performs also well on shorter reads), **bwa-mem3** (maintained successor of bwa-mem2, faster, bwa-mem2 alignments plus bug fixes, with a `--compat` mode for exact legacy output), **minibwa** (the designated successor of bwa-mem for short reads, faster than bwa-mem2, different algorithm), **bowtie** (short reads under about 50 bp), **bowtie2** (reads over about 50 bp) and **minimap2** (versatile aligner, uses the `-ax sr` preset for short reads over 100 bp). Suggested mappers by read length, following the recommendations of their authors:
 
 | Read length | Suggested mappers |
-|---|---|
+| --- | --- |
 | under 50 bp | bowtie, bwa-aln |
 | 50-70 bp | bwa-aln, bowtie2 |
 | 70-100 bp | bwa-mem2, bwa-mem3, minibwa, bwa-aln, bowtie2 |

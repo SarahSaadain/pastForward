@@ -25,7 +25,7 @@ BUSCO is run against the species reference genome using the configured lineage d
 Two length filters are applied at this stage:
 
 | Parameter | Default | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `min_length_scg` | 4,000 bp | Exclude genes too short to yield reliable coverage estimates |
 | `max_length_scg` | 8,000 bp | Exclude very long genes that increase mapping runtime without benefit |
 
@@ -38,7 +38,7 @@ The result is a FASTA library (`{species}/processed/reveal_module/scg/{species}_
 Per-individual merged reads (`reads_merged/{individual}.fastq.gz`) are mapped to the SCG library. After removing unmapped reads, the following statistics are computed per SCG per individual using `pysam.count_coverage()`:
 
 | Metric | Description |
-|---|---|
+| --- | --- |
 | **Min depth** | Minimum read depth at any position |
 | **Average depth** | Mean read depth across all positions |
 | **Median depth** | Median read depth across all positions |
@@ -62,13 +62,13 @@ Individuals in a dataset are rarely sequenced to the same depth. Comparing raw d
 
 Before scoring, each individual's sequencing depth is accounted for by computing a **per-individual baseline**, the median depth across all candidate SCGs for that individual:
 
-```
+```text
 baseline_i = median(scg_median_depth for all SCGs, individual i)
 ```
 
 Each SCG's depth is then expressed as a **depth ratio** relative to that baseline:
 
-```
+```text
 depth_ratio_i = scg_median_depth_i / baseline_i
 ```
 
@@ -88,7 +88,7 @@ Mean breadth across all individuals. A gene that is not reliably covered along i
 
 Penalises uneven depth within a gene. `max_variation` is computed in normalised space: each individual's peak depth is first divided by that individual's baseline, and the worst such value across individuals is divided by the mean depth ratio:
 
-```
+```text
 max_variation         = max(max_depth_i / baseline_i) / mean_depth_ratio
 score_depth_variation = exp(−max_variation × 0.15)
 ```
@@ -111,7 +111,7 @@ Example of a microsatellite in a BUSCO gene that would be downranked by this cri
 
 Penalises SCGs whose normalised depth deviates from the expected value of **1.0**. After per-individual normalisation, true SCGs cluster at 1.0 by construction, and multi-copy genes sit above it. The MAD of all SCGs' `mean_depth_ratio` values, computed relative to 1.0, calibrates the scale of the penalty:
 
-```
+```text
 depth_deviation         = |mean_depth_ratio − 1.0| / (MAD_ratio + ε)
 score_depth_consistency = exp(−depth_deviation / 4)
 ```
@@ -124,7 +124,7 @@ SCGs that are consistently over-represented relative to the bulk are likely not 
 
 ### Final score
 
-```
+```text
 score = score_breadth + score_depth_variation + score_depth_consistency
 ```
 
@@ -135,7 +135,7 @@ score = score_breadth + score_depth_variation + score_depth_consistency
 ## Outputs
 
 | Path | Description |
-|---|---|
+| --- | --- |
 | `{species}/results/reveal_module/scg/{species}_scg_ranked.tsv` | Full ranked table with all scoring components. The `mean_depth_ratio` column is the per-individual-normalised depth (1.0 = expected SCG level). |
 | `{species}/results/reveal_module/scg/{species}_scg_ranked.json` | Detailed JSON with per-individual raw stats, per-individual baselines, depth ratios, and scoring breakdown. `global_stats.individual_baselines` records each sample's normalisation baseline. |
 | `{species}/results/reveal_module/scg/{species}_relevant_scg.fasta` | Top-ranked SCG sequences passed to the REVEAL mapping step |

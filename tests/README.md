@@ -1,6 +1,6 @@
 # Tests
 
-```
+```text
 tests/
   unit/          fast pure-Python tests, no Snakemake or conda. Plus their helpers
                  (pf_test_library.py, build_test_library.py) and fixtures/

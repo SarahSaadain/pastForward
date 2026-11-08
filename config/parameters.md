@@ -38,7 +38,7 @@ Only the steps that list `execute` on this page accept it. `mapping`, `sequence_
 ### Global Pipeline Settings
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `pipeline.global.skip_existing_files` | `false` | When true, output files that already exist are not requested from Snakemake, so they are never re-computed. This also means changed input files do not propagate to existing downstream outputs, which can leave results inconsistent. Keep it `false` to use Snakemake's normal re-run behaviour. |
 
 ### Stage: `read_module`
@@ -52,7 +52,7 @@ Quality checking, adapter removal, quality filtering, merging, taxonomic screeni
 Controls FastQC + MultiQC quality reports at each processing stage and read count visualisation. Individual stages are toggled via `settings`.
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `settings.multiqc_raw_reads` | on | FastQC/MultiQC on raw reads. |
 | `settings.multiqc_trimmed_reads` | on | FastQC/MultiQC on adapter-trimmed reads. |
 | `settings.multiqc_quality_filtered_reads` | on | FastQC/MultiQC on quality-filtered reads. |
@@ -62,7 +62,7 @@ Controls FastQC + MultiQC quality reports at each processing stage and read coun
 #### `adapter_removal`
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `settings.min_quality` | `0` | Minimum base quality score for adapter trimming. |
 | `settings.min_length` | `0` | Minimum read length after adapter removal. |
 | `settings.poly_x_min_len` | `5` | Minimum length to trigger poly-X tail trimming. |
@@ -77,7 +77,7 @@ Controls FastQC + MultiQC quality reports at each processing stage and read coun
 #### `quality_filtering`
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `settings.min_quality` | `15` | Minimum base quality score for quality filtering. |
 | `settings.min_length` | `30` | Minimum read length after quality filtering. |
 | `settings.unqualified_percent_limit` | `40` | Max percentage of unqualified bases allowed in a read. |
@@ -96,7 +96,7 @@ reference database, and the resulting taxon proportions are used to judge how mu
 **ECMSD** maps reads against a curated mitochondrial reference database.
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `tools.ecmsd.settings.version_source` | `conda` | Where to get the ECMSD binary. `conda` uses the bioconda-packaged `ecmsd=1.*` release (`workflow/envs/ecmsd.yaml`); `latest_release` always side-loads the newest tagged release from [capoony/ECMSD](https://github.com/capoony/ECMSD) (`ecmsd_git_release.yaml`); `dev` **(experimental)** side-loads the tip of ECMSD's `development` branch, unreleased and untested (`ecmsd_git_development.yaml`). Each value has its own conda env, so switching it builds or reuses that env automatically. Picking up a newer release/commit on an already-built unpinned env still needs a manual rebuild, see [FAQ.md](FAQ.md). |
 | `tools.ecmsd.settings.database` | — | Path to the ECMSD database folder. If omitted, the database is at `resources/ecmsd_database`. A missing or partly built database is built once at this path via `ECMSD --create-db`, before any sample is screened. |
 | `tools.ecmsd.settings.cov_threshold` | `5` | Minimum % of reference covered by reads to retain it. |
@@ -107,7 +107,7 @@ reference database, and the resulting taxon proportions are used to judge how mu
 **Centrifuge** does k-mer-based taxonomic classification against a user-provided database.
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `tools.centrifuge.settings.include_human_taxid` | `false` | When true, the human taxid is included in the Centrifuge analysis. |
 | `tools.centrifuge.settings.index` | — | Optional path to the Centrifuge index prefix. If omitted, the default index will be downloaded automatically. |
 | `tools.centrifuge.settings.conda_env` | — | Optional path to a custom conda environment for Centrifuge. |
@@ -121,7 +121,7 @@ Mapping, deduplication, damage analysis, and coverage. Runs per individual per r
 Merged per-individual reads are mapped to the reference genome. Mapping always runs when Reference Processing is enabled.
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `settings.mapper` | `bwa-mem3` | Mapper to use. Options: `bwa-aln` (classic seed-and-extend, reads up to 100 bp), `bwa-mem2` (reads from ~70 bp), `bwa-mem3` (default, maintained, faster successor of bwa-mem2; `--compat=bwa-mem` or `--compat=bwa-mem2` in `mapper_extra_params` gives exact legacy output), `minibwa` (successor of bwa-mem for short reads, faster than bwa-mem2, alignments differ), `bowtie` (reads under ~50 bp), `bowtie2` (reads over ~50 bp), `minimap2` (versatile, uses `-ax sr` preset for short reads over 100 bp). See the read-length table in `docs/FAQ.md`. |
 | `settings.mapper_extra_params` | — | Optional extra parameters passed directly to the mapper. If not set or empty (`""`), the mapper defaults apply: bwa-aln `-n 0.01 -k 2 -l 1024 -o 2` (Oliva et al. 2021), minimap2 `-ax sr`, bwa-mem2, bwa-mem3, minibwa, bowtie and bowtie2 none. When you set flags for minimap2, include `-ax sr` (or another `-a` preset): without `-a` minimap2 writes PAF, not SAM. |
 | `settings.keep_bam` | `false` | When `true`, the sorted BAM and its index (`{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam[.bai]`) are no longer deleted, and are also written to `{species}/results/reference_module/{reference}/mapped/`. The results file is a hard link when both folders are on the same disk (no extra space) and a copy otherwise (double space). Because the processed file persists, adding a later step never remaps. Switching it on for a finished project remaps once, see the [FAQ](../docs/FAQ.md). |
@@ -133,7 +133,7 @@ Removes PCR and sequencing duplicates using DeDup. Default: **on**.
 Uses a [modified DeDup fork](https://github.com/SarahSaadain/DeDup) for performance improvements over upstream DeDup ([benchmark comparison repo](https://github.com/SarahSaadain/DeDup_comparison_fork)).
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `settings.min_contigs_per_cluster` | `1` | Minimum number of contigs grouped into a cluster. Small contigs below this count are merged together before deduplication. |
 | `settings.max_contigs_per_cluster` | `500` | Maximum number of contigs grouped per deduplication cluster. Lower values use less memory but increase runtime. Reduce (e.g. to 100) only for large, highly fragmented reference genomes. |
 | `settings.mem_mb` | `20000` | Memory (MB) for DeDup's JVM heap (`-Xms`/`-Xmx`), also requested from the cluster scheduler as `resources.mem_mb`. Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources. |
@@ -144,13 +144,13 @@ Uses a [modified DeDup fork](https://github.com/SarahSaadain/DeDup) for performa
 Optionally removes or extracts reads that did not map to the reference. Default: **off**.
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `settings.action` | `keep` | What to do with unmapped reads: `keep` retains them in the final BAM (default, must be changed explicitly), `remove` writes a mapped-reads-only BAM, `extract_fastq` writes unmapped reads to a compressed FASTQ, `extract_fasta` writes unmapped reads to a compressed FASTA. |
 
 #### Other `reference_module` steps
 
 | Step | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `damage_rescaling` | on | Profiles cytosine deamination and rescales base quality scores using mapDamage2. |
 | `damage_rescaling.settings.keep_bam` | `false` | Same as `mapping.settings.keep_bam`, for the rescaled BAM (`{individual}_{reference}_sorted_dedupped_rescaled.bam[.bai]`). Has no effect when damage rescaling is off. Without filtering of unmapped reads it holds the same data as `_final.bam`. |
 | `analysis` | on | Computes coverage breadth and mean depth; runs Qualimap and Preseq. Endogenous content data always generated. |
@@ -185,7 +185,7 @@ Each method writes its own set of files, with the method in the filename: `{refe
 The `status` column of `{reference}_combined_snp_divergence_{method}.csv` holds one of four values:
 
 | Status | Meaning |
-|---|---|
+| --- | --- |
 | `ok` | Scored against the cohort and not an outlier. |
 | `outlier` | Scored against the cohort with a modified z-score above `snp_divergence_outlier_zscore`. Check the reference genome, cross-species contamination, and whether the individual is mislabeled. |
 | `insufficient_data` | Fewer callable bases than `snp_divergence_min_callable_bases`. The individual is not scored and does not affect the cohort median. |
@@ -194,7 +194,7 @@ The `status` column of `{reference}_combined_snp_divergence_{method}.csv` holds 
 The `verdict` column of `{reference}_authenticity.tsv` holds one of three values. `verdict_reason` lists every threshold that fired (e.g. `duplicate_rate>0.5`) and every file that could not be read (e.g. `missing_ct5p`).
 
 | Verdict | Meaning |
-|---|---|
+| --- | --- |
 | `ok` | No threshold fired and every expected file was read. |
 | `check` | At least one threshold fired. Look at the individual. It is not a failure: a low-damage individual can be a deliberate modern control. |
 | `no_data` | No threshold fired, but a file from a switched-on step was empty or unreadable. |
@@ -212,7 +212,7 @@ TE and genomic feature abundance analysis. Maps to a combined SCG + feature libr
 Place feature libraries in `{species}/input/reveal_module/feature_library/` and, optionally, a pre-built SCG FASTA in `{species}/input/reveal_module/scg/`. If no SCG FASTA is provided and `scg_selector.execute` is `true`, SCGs are determined automatically via BUSCO (requires a lineage configured per species). To use competitive mapping, place a single competition FASTA in `{species}/input/reveal_module/competition/`.
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `settings.version_source` | `conda` | Where to get the REVEAL toolkit. `conda` takes REVEAL from the bioconda package `reveal-tools=1.*` (`reveal.yaml`). `latest_release` side-loads the newest tagged release from [SarahSaadain/REVEAL](https://github.com/SarahSaadain/REVEAL) instead (`reveal_git_release.yaml`). `dev` **(experimental)** side-loads the tip of REVEAL's `develop` branch, unreleased and untested (`reveal_git_development.yaml`). Each value has its own conda env, so switching it builds or reuses that env automatically. Picking up a newer release/commit on an already-built unpinned `latest_release`/`dev` env still needs a manual rebuild, see [FAQ.md](FAQ.md). |
 
 #### `scg_selector`
@@ -222,7 +222,7 @@ Automatically identifies single-copy genes (SCGs) from the reference genome usin
 Can also be used standalone (without feature libraries) to produce an SCG ranking table as the sole output.
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `execute` | `true` | Enable SCG auto-determination when no user-provided FASTA is present. |
 | `settings.mapper` | *(inherits from `reveal_module.mapping.settings.mapper`)* | Mapper for reads-to-SCG-library mapping. Uncomment to override. Options: `bwa-mem2`, `bwa-mem3`, `minibwa`, `bowtie`, `bowtie2`, `bwa-aln`, `minimap2`. |
 | `settings.mapper_extra_params` | *(inherits from `reveal_module.mapping.settings.mapper_extra_params` when both steps use the same mapper)* | Optional extra parameters for the mapper. If not set or empty, the value from `reveal_module.mapping` is used, but only when both steps use the same mapper. Otherwise the mapper-specific defaults apply (bwa-aln: `-n 0.01 -k 2 -l 1024 -o 2`, minimap2: `-ax sr`, bwa-mem2, bwa-mem3, minibwa, bowtie and bowtie2: none). |
@@ -235,14 +235,14 @@ Can also be used standalone (without feature libraries) to produce an SCG rankin
 **Per-species SCG settings** (directly under `species.<key>`):
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `lineage` | — | **Required** for SCG auto-determination. BUSCO lineage database name (e.g. `drosophilidae_odb12`). Browse available lineages at [busco.ezlab.org](https://busco.ezlab.org/). |
 | `scg_reference` | auto-detect | Path to the reference genome to use for BUSCO. Required when multiple FASTA files exist in `{species}/input/reference_module/`; if only one is present it is auto-detected and logged. |
 
 #### `mapping`
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `settings.mapper` | `bwa-mem3` | Mapper for feature-library mapping. Same options as `reference_module.mapping`. |
 | `settings.mapper_extra_params` | — | Optional extra parameters passed directly to the mapper. Same defaults and minimap2 `-a` rule as `reference_module.mapping`. |
 | `settings.keep_mapped_bam` | `false` | When `true`, the filtered sorted BAM and its index (`{species}/processed/reveal_module/{feature_library}/mapped/{individual}_{feature_library}_and_scg.sorted.bam[.bai]`) are kept as permanent outputs and explicitly requested by the pipeline. When `false` (default), they are marked as temporary and deleted after REVEAL consumes them. Set to `true` to inspect the mapped BAM or to run the mapping step independently of REVEAL. |
@@ -258,13 +258,13 @@ To use competitive mapping, place exactly one FASTA file in `{species}/input/rev
 Competition sequences are internally suffixed with `_comp` to distinguish them from SCG (`_scg`) and feature library (`_fle`) sequences.
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `settings.competitive_mapping` | `false` | When `true`, the FASTA in `{species}/input/reveal_module/competition/` is included in the combined reference. Reads mapping to `_comp` sequences are filtered out after mapping. |
 
 #### Other `reveal_module` steps
 
 | Step / Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `visualization` | on | Generates SO profiles (per-position coverage, SNP, and indel information) normalised into a REVEAL directory structure for per-individual TE occupancy plots and a faceted species-level comparison plot. |
 | `analysis` | on | Produces coverage/SNP/indel stats and comparisons per `analysis.settings.*` below. |
 | `analysis.settings.coverage_analysis` | `true` | When `true`, produce per-individual and species-level coverage stats, comparisons, and plots. |
@@ -289,7 +289,7 @@ Competition sequences are internally suffixed with `_comp` to distinguish them f
 Consolidates all QC outputs into MultiQC HTML reports.
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `settings.individual_multiqc` | on | Generate a per-individual MultiQC summary report (all references, one individual). |
 | `settings.species_multiqc` | on | Generate a per-species MultiQC summary report (all individuals, all references). |
 
@@ -298,7 +298,7 @@ Consolidates all QC outputs into MultiQC HTML reports.
 Each entry under `species:` in the config corresponds to a species folder in the pipeline root. The key must match the folder name exactly.
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `execute` | `true` | Whether to process this species. Set to `false` to skip all pipeline stages for this species without removing it from the config. Skipped species are listed in the startup preview log. |
 | `name` | — | Human-readable species name used in reports. |
 | `individuals` | *(all discovered)* | Optional list of individual IDs to process. Each ID must match the part of a read filename before the first `_` (e.g. `IND001` from `IND001_L001_R1.fastq.gz`). If omitted, all individuals discovered in `{species}/input/read_module/` are used. An error is raised if any listed ID is not found on disk. |

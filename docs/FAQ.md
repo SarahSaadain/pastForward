@@ -38,7 +38,7 @@ Place them in `<species>/input/read_module/`. pastForward expects compressed FAS
 **Q: What read file format does pastForward expect?**
 Reads must be compressed FASTQ (`.fastq.gz`). The filename must follow the convention:
 
-```
+```text
 <Individual>_[<FreeText>_]<ReadNumber>[_<FreeText>].fastq.gz
 ```
 
@@ -64,6 +64,7 @@ The recommended approach is to place files directly in the species folder. pastF
 
 **Q: I have a lot of data. Can I symlink to it instead of copying?**
 Yes, at two levels:
+
 - **Per file**: place a symlink in the expected location under `<species>/input/`, named according to pastForward's naming convention. The file it points to keeps its own name and can live anywhere on disk, including outside the project folder entirely. pastForward detects and uses symlinked files directly without copying.
 - **Per folder**: point an entire category (or the whole species) at a location outside the project via `species.<key>.reads_dir`, `reference_dir`, `species_dir`, etc. in `config.yaml`. See "Can I store a species' data outside the project directory?" below.
 
@@ -140,22 +141,24 @@ When `pipeline.global.skip_existing_files: true`, pastForward drops every output
 It defaults to `false`, which leaves Snakemake's normal re-run logic in charge: only what actually changed is recomputed. Turn it on only to resume an interrupted run without reprocessing completed steps, and only when you know the inputs have not changed. pastForward logs a warning on every run in which the option is enabled.
 
 **Q: I added new samples but they are not showing up in the reports. What do I do?**
-If you added new samples after the first run and your summary reports are not updating, it may be because pastForward is skipping existing files. 
+If you added new samples after the first run and your summary reports are not updating, it may be because pastForward is skipping existing files.
 
 To fix this, you can either:
+
 1. Re-run pastForward without `skip_existing_files: true` to regenerate all outputs and include the new samples in the reports.
 2. Manually delete the existing summary report files so that pastForward regenerates them with the new samples included
 
-You can see the skipped files in pastForward log (use a dry run to check). 
+You can see the skipped files in pastForward log (use a dry run to check).
 
 **Q: How can I validate that my input files are correctly formatted and will be processed by pastForward?**
 Run these from the project root:
+
 ```bash
 ./pastForward check     # what the config finds on disk: species, individuals, references, and badly named reads
 ./pastForward dryrun    # full Snakemake dry run
 ```
 
-At the beginning of each run, pastForward performs an input validation step that checks for the presence and correct formatting of all required input files. It will print a summary of the detected files and any issues found. 
+At the beginning of each run, pastForward performs an input validation step that checks for the presence and correct formatting of all required input files. It will print a summary of the detected files and any issues found.
 
 Additionally, it will print all the files that will be requested by pastForward based on the current config. You can review this list to ensure that all your input files are correctly detected and will be processed as expected.
 
@@ -165,7 +168,7 @@ Lastly, you can also see the rules that will be executed and their inputs/output
 Yes. Put the adapter sequence itself into the config under `pipeline.read_module.adapter_removal.settings.adapters_sequences.[r1|r2]`. It is passed straight to fastp as `--adapter_sequence` (and `--adapter_sequence_r2` for read 2). If you leave them out, fastp tries to auto-detect the adapters from the read data.
 
 **Q: Can I provide already pre-processed reads?**
-Yes. If you have already pre-processed reads (e.g., adapter-trimmed and quality-filtered) and want to skip the raw reads processing step, you can place your pre-processed FASTQ files in the expected location under `<species>/input/read_module/` with the correct naming convention. 
+Yes. If you have already pre-processed reads (e.g., adapter-trimmed and quality-filtered) and want to skip the raw reads processing step, you can place your pre-processed FASTQ files in the expected location under `<species>/input/read_module/` with the correct naming convention.
 
 To skip the adapter removal and quality filtering steps, set the `execute` flag to `false` for those steps in the config:
 
@@ -176,9 +179,9 @@ pipeline:
       execute: false
     quality_filtering:
       execute: false
-``` 
+```
 
-This way, pastForward will use your pre-processed reads directly for downstream steps without attempting to re-process them. 
+This way, pastForward will use your pre-processed reads directly for downstream steps without attempting to re-process them.
 
 **Q: My reads are already merged (e.g. already adapter removed, quality filtered, and combined per individual). Can I add them?**
 Yes. pastForward runs all the read_module steps by default, but if your data has already been through some of them, disable those steps in the config so they are not applied twice. Place your prepared FASTQ files under `<species>/input/read_module/`, still following pastForward's [read file naming convention](../config/README.md#naming-your-read-files), and set `execute: false` for whichever steps you've already applied (see "Can I provide already pre-processed reads?" above for the adapter removal and quality filtering example).
@@ -240,7 +243,7 @@ For example, if you initially ran pastForward with taxonomic screening disabled 
 Most `execute: false` toggles only affect their own step's output. A handful of settings decide which file becomes a step's permanent result, out of a chain of intermediate files that get deleted once nothing else needs them. The pipeline always writes the same result filename (`_final.bam`, `_trimmed_final.fastq.gz`, `_quality_filtered_final.fastq.gz`) no matter which steps ran, but the config decides which upstream file gets copied there. Change one of these settings after a completed run, and Snakemake notices the copy rule now points at a different file. That file was already cleaned up once it was no longer needed, so the whole chain behind it has to be regenerated, for every individual or sample that uses it, not just the new ones.
 
 | Setting | Picks between | Regenerating means re-running |
-|---|---|---|
+| --- | --- | --- |
 | `pipeline.reference_module.damage_rescaling.execute` | rescaled BAM vs. deduplicated/sorted BAM | mapping → deduplication (if enabled) → damage analysis/rescaling, for every individual on that reference |
 | `pipeline.reference_module.deduplication.execute` | deduplicated BAM vs. sorted BAM | mapping → deduplication, for every individual on that reference |
 | `pipeline.reference_module.filter_unmapped_reads.execute` with `settings.action: remove` | mapped-only BAM vs. whatever the two settings above would have picked | mapping → deduplication → damage analysis, for every individual on that reference |
@@ -276,6 +279,7 @@ If none of these are set for a species, nothing on disk is touched beyond what p
 ## Running pastForward
 
 **Q: What is the recommended command to run pastForward?**
+
 ```bash
 ./pastForward run --cores <N>
 ```
@@ -292,6 +296,7 @@ It adds `--software-deployment-method conda`, `--keep-going` and `--rerun-trigge
 ```
 
 **Q: How do I do a dry run to see what would be executed without actually running anything?**
+
 ```bash
 ./pastForward dryrun
 ```
@@ -429,7 +434,7 @@ To continue later, run `./pastForward resume --cores <N>`. If it reports a lock,
 Pick by read length. The ranges follow what each mapper's authors recommend (bwa and minimap2 READMEs, bowtie and bowtie2 manuals). None of these tools was written for aDNA, so the table is a starting point, not a rule.
 
 | Mapper | Authors' suggested read length | Source |
-|---|---|---|
+| --- | --- | --- |
 | bowtie | under ~50 bp (made for 25-50 nt, accepts up to 1024) | bowtie manual |
 | bowtie2 | over ~50 bp (faster and more sensitive than bowtie there) | bowtie2 manual |
 | bwa-aln | up to 100 bp, best under ~70 bp | bwa README and FAQ |
@@ -441,13 +446,14 @@ Pick by read length. The ranges follow what each mapper's authors recommend (bwa
 Suggested mappers by read length:
 
 | Read length | Suggested mappers |
-|---|---|
+| --- | --- |
 | under 50 bp | bowtie, bwa-aln |
 | 50-70 bp | bwa-aln, bowtie2 |
 | 70-100 bp | bwa-mem2, bwa-mem3, minibwa, bwa-aln, bowtie2 |
 | over 100 bp | bwa-mem2, bwa-mem3, minibwa, minimap2, bowtie2 |
 
 Notes per mapper:
+
 - **bwa-aln**: recommended for very short aDNA/hDNA reads (<70 bp). Generates the most accurate alignments, but can be very slow. That is why bwa-mem3 is the default mapper, as it is much faster and still performs well on short reads.
 - **bwa-mem2**: faster, designed for reads above 70 bp, but performs well on shorter reads too. Gives the exact legacy bwa-mem output.
 - **bwa-mem3**: the default. Maintained successor of bwa-mem2 ([fg-labs/bwa-mem3](https://github.com/fg-labs/bwa-mem3)), faster. In its default mode it gives the bwa-mem2 alignments plus bug fixes and two extra tags (`MQ`, `HN`). For records identical to bwa-mem or bwa-mem2 use its compatibility mode (`mapper_extra_params: "--compat=bwa-mem"` or `"--compat=bwa-mem2"`). Its index uses the same file names as bwa-mem2 but is not compatible, so when you switch between the two, delete the old `.fa.*` (or `.fasta.*`) index files and their `.gz` archives in `processed/`.
@@ -551,10 +557,12 @@ The feature library is a many-genomic-copies-to-one-consensus reference: reads f
 
 **Q: I set `version_source` to `latest_release` or `dev`, but pastForward is still using the old version. Why?**
 The `latest_release`/`dev` builds of REVEAL and ECMSD are installed by a conda post-deploy script that runs exactly once, right when their conda environment is first created. It has no way to notice a config change on later runs, so it never re-checks GitHub on its own. Switching `version_source` itself (e.g. `conda` to `latest_release`) points the rule at a different env file, and Snakemake builds that env fresh on its own, so you do not have to do anything by hand. But staying on the same unpinned `version_source` while wanting to pick up a newer release/commit needs that one environment force-rebuilt:
+
 ```bash
 ./pastForward doctor --rebuild-envs ecmsd_git_release   # or: ecmsd_git_development, reveal_git_release, reveal_git_development
 ./pastForward doctor --rebuild-envs                      # rebuilds every conda env, not just these
 ```
+
 `--rebuild-envs` deletes that environment's folder under `.snakemake/conda/` and runs `snakemake --software-deployment-method conda --conda-create-envs-only` to recreate it, the same as `snakemake --cores <N> --software-deployment-method conda --conda-create-envs-only --conda-cleanup-envs` by hand. It refuses to start while a tracked run is still active, since that run may be using the environments. `./pastForward doctor` on its own lists every conda environment the pipeline uses and whether each is built, without changing anything.
 
 The install-once behavior is on purpose: it keeps a pipeline run reproducible even when `version_source` is a moving target, at the cost of not updating mid-project.
@@ -564,6 +572,7 @@ The install-once behavior is on purpose: it keeps a pipeline run reproducible ev
 ## Reports
 
 **Q: Where are the MultiQC reports?**
+
 - Per-individual: `{species}/results/summary/individual_level/{individual}_multiqc.html`
 - Per-species: `{species}/results/summary/species_level/{species}_multiqc.overall.html`
 
@@ -600,13 +609,17 @@ This is a known limitation of the Centrifuge bioconda package, not a config issu
 Workaround: force conda to resolve Intel (`osx-64`) packages and let macOS run them through Rosetta 2.
 
 1. Install Rosetta 2 if you haven't already:
+
    ```bash
    softwareupdate --install-rosetta --agree-to-license
    ```
+
 2. Before running the pipeline, tell conda to use the Intel subdir:
+
    ```bash
    export CONDA_SUBDIR=osx-64
    ```
+
    This applies to every conda environment Snakemake creates in that shell session, not just Centrifuge's, so the whole pipeline runs under Rosetta emulation for that run.
 3. If a Centrifuge env was already partially created under `osx-arm64`, clear it out first by removing the `.snakemake` folder in the project directory, then re-run with `--software-deployment-method conda` as usual.
 
