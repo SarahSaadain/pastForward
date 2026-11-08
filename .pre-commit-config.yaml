@@ -1,0 +1,20 @@
+# Optional: `pip install pre-commit && pre-commit install` formats and lints on every commit.
+# Uses the tools already on PATH (snakefmt needs shfmt too), same versions as CI.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: ruff format
+        language: system
+        types: [python]
+      - id: ruff-check
+        name: ruff check
+        entry: ruff check
+        language: system
+        types: [python]
+      - id: snakefmt
+        name: snakefmt
+        entry: snakefmt
+        language: system
+        files: (\.smk|^workflow/Snakefile)$

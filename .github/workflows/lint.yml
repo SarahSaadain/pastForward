@@ -68,3 +68,6 @@ jobs:
 
       - name: ruff check
         run: ruff check .
+
+      - name: ruff format check
+        run: ruff format --check .

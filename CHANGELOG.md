@@ -78,7 +78,7 @@ All notable changes to this project will be documented in this file.
 ### CI / Maintenance
 
 - **snakefmt in CI**: a new `snakefmt` job in `lint.yml` runs `snakefmt --check workflow` (snakefmt 2.0.3, shfmt 3.14.1, both pinned). All 75 files pass today.
-- **ruff in CI**: a new `ruff` job in `lint.yml` runs `ruff check .` (ruff 0.17.4, config in `ruff.toml`: pyflakes plus pycodestyle errors, `F821` and `E712` off on purpose). Fixed the findings it raised: 3 f-strings without placeholders, 2 ambiguous variable names, 2 lambda assignments in a test. No formatter check, `ruff format` would rewrite 65 of 85 files.
+- **ruff in CI**: a new `ruff` job in `lint.yml` runs `ruff check .` (ruff 0.17.4, config in `ruff.toml`: pyflakes plus pycodestyle errors, `F821` and `E712` off on purpose). Fixed the findings it raised: 3 f-strings without placeholders, 2 ambiguous variable names, 2 lambda assignments in a test. The job also runs `ruff format --check .`; all Python was reformatted once with `ruff format`. A new `.pre-commit-config.yaml` (ruff format, ruff check, snakefmt) formats and lints on every commit once `pre-commit install` was run.
 - **README badges** for the Zenodo DOI (concept DOI, always resolves to the latest release) and the Lint workflow (Snakemake lint + unit tests, `main`).
 - **Test data run in CI**: a new GitHub Actions job (`test-data.yml`) runs the whole pipeline on `tests/integration/synthetic_project/` and then `tests/integration/test_synthetic_run.py`. Conda envs are cached.
 - **Unit tests that need Snakemake moved**: the 8 CLI tests that call `snakemake` are now in `tests/integration/test_cli_snakemake.py` and skip when `snakemake` is not on PATH. The rest run with only pyyaml, jsonschema and pandas.
