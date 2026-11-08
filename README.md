@@ -72,6 +72,8 @@ For a new project, run these in order:
 
 ./pastForward tools                         # list the setup helper tools
 ./pastForward tools create-species Dmel     # make Dmel's input folders and print a config snippet for it
+./pastForward tools link-reference -d /data/dmel.fna -s Dmel  # same for a reference FASTA (or a folder of them)
+./pastForward tools link-feature-library -d /data/te.fa -c /data/comp.fa  # feature library, optional competition FASTA
 ./pastForward tools link-reads --source /data/run1 --species Dmel  # symlink every read file in /data/run1 into Dmel's read folder
 ```
 
@@ -84,6 +86,8 @@ For a new project, run these in order:
 `tools create-species <species> [<species> ...]` sets up a new species. It creates the species folder with all its `input/` subfolders in the project root and prints a `species:` block you can paste into `config/config.yaml`. Folders that already exist are left alone, so it is safe to run again. `processed/` and `results/` are not created, since the pipeline makes those itself. See [Add a Species](config/README.md#add-a-species).
 
 `tools link-reads --source <folder> --species <species>` brings in reads that already live somewhere else. The short forms are `-d` and `-s`, so `-d /data/run1 -s Dmel` works too, in either order. Every `*.fastq.gz` and `*.fq.gz` file directly inside the source folder gets a symlink in `<species>/input/read_module/`. Each link points to the file's absolute path and keeps its original name, so the names must already follow the [raw read naming convention](config/README.md#naming-your-read-files). Files whose names don't follow it are still linked, but listed in a warning, with the reason the pipeline would ignore or reject each one. Subfolders and hidden files are not searched. A file that is already in the read folder under the same name is left alone, so it is safe to run again. The species folder must exist, so run `create-species` first.
+
+`tools link-reference` and `tools link-feature-library` work the same way for FASTA files (`*.fna`, `*.fasta`, `*.fa`). The source can be one file or a folder. `link-feature-library` also takes `--competition`/`-c <fasta>`, which is linked into `<species>/input/reveal_module/competition/`. That folder may hold only one FASTA, so a second, different file is refused. In all three tools `--species`/`-s` can be left out when the project has only one species. With several species it is required.
 
 Each `run`/`dryrun`/`touch` writes a timestamped log to `logs/` in your project folder. `status` reads the most recent `run` back out of there.
 

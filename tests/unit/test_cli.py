@@ -1375,6 +1375,101 @@ class ToolsTestCase(unittest.TestCase):
                 cli.main(["tools", "link-reads", *argv])
         self.assertEqual(list(Path("Dmel/input/read_module").iterdir()), [])
 
+    def _fasta_source(self, *names):
+        source = Path(tempfile.mkdtemp(prefix="pf_test_cli_fa_"))
+        self.addCleanup(shutil.rmtree, source, ignore_errors=True)
+        for name in names:
+            (source / name).write_text(">x\n")
+        return source
+
+    def test_link_reference_and_feature_library_default_to_the_only_species(self):
+        self._run(["Dmel"])
+        src = self._fasta_source("ref.fna", "notes.txt", "lib.fa", "comp.fasta")
+        with contextlib.redirect_stdout(io.StringIO()):
+            cli.main(["tools", "link-reference", "-d", str(src)])
+            cli.main(
+                ["tools", "link-reference", "-d", str(src / "ref.fna")]
+            )  # file, rerun
+            cli.main(
+                [
+                    "tools",
+                    "link-feature-library",
+                    "-d",
+                    str(src / "lib.fa"),
+                    "-c",
+                    str(src / "comp.fasta"),
+                ]
+            )
+
+        def names(sub):
+            return sorted(p.name for p in Path("Dmel/input", sub).iterdir())
+
+        self.assertEqual(names("reference_module"), ["comp.fasta", "lib.fa", "ref.fna"])
+        self.assertEqual(names("reveal_module/feature_library"), ["lib.fa"])
+        self.assertEqual(names("reveal_module/competition"), ["comp.fasta"])
+
+    def test_link_tools_need_species_flag_with_several_species(self):
+        self._run(["Dmel", "Dsim"])
+        src = self._fasta_source("ref.fna")
+        with self.assertRaises(SystemExit), contextlib.redirect_stdout(io.StringIO()):
+            cli.main(["tools", "link-reference", "-d", str(src)])
+        with contextlib.redirect_stdout(io.StringIO()):
+            cli.main(["tools", "link-reference", "-d", str(src), "-s", "Dsim"])
+        self.assertTrue(Path("Dsim/input/reference_module/ref.fna").is_symlink())
+        self.assertEqual(list(Path("Dmel/input/reference_module").iterdir()), [])
+
+    def test_link_feature_library_refuses_a_second_competition_file(self):
+        self._run(["Dmel"])
+        src = self._fasta_source("lib.fa", "a.fa", "b.fa")
+        with contextlib.redirect_stdout(io.StringIO()):
+            cli.main(
+                [
+                    "tools",
+                    "link-feature-library",
+                    "-d",
+                    str(src / "lib.fa"),
+                    "-c",
+                    str(src / "a.fa"),
+                ]
+            )
+        with self.assertRaises(SystemExit), contextlib.redirect_stdout(io.StringIO()):
+            cli.main(
+                [
+                    "tools",
+                    "link-feature-library",
+                    "-d",
+                    str(src / "lib.fa"),
+                    "-c",
+                    str(src / "b.fa"),
+                ]
+            )
+
+    def test_link_fasta_tools_reject_bad_arguments(self):
+        src = self._fasta_source("ref.fna")
+        empty = self._fasta_source("notes.txt")
+        for tool, argv in [
+            ("link-reference", ["-d", str(src)]),  # no species folder yet
+            ("link-reference", []),  # no source
+            ("link-reference", ["-d", "/no/such/file.fa"]),
+            ("link-reference", ["-d", str(empty)]),  # no FASTA inside
+            ("link-feature-library", ["-d", str(src), "-c"]),  # flag without value
+            ("link-feature-library", ["-d", str(src), "-c", str(empty)]),
+        ]:
+            with (
+                self.subTest(tool=tool, argv=argv),
+                self.assertRaises(SystemExit),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                cli.main(["tools", tool, *argv])
+
+    def test_species_guess_ignores_reserved_folder_names(self):
+        self._run(["Dmel"])
+        (Path("docs") / "input").mkdir(parents=True)
+        src = self._fasta_source("ref.fna")
+        with contextlib.redirect_stdout(io.StringIO()):
+            cli.main(["tools", "link-reference", "-d", str(src)])
+        self.assertTrue(Path("Dmel/input/reference_module/ref.fna").is_symlink())
+
     def test_unknown_tool_exits(self):
         with self.assertRaises(SystemExit), contextlib.redirect_stdout(io.StringIO()):
             cli.main(["tools", "nonsense"])

@@ -63,6 +63,8 @@ SECTIONS = {
             "Helper tools for setting up a project. `tools create-species <species> ...` makes "
             "a species' input folders and prints a config snippet for it. `tools link-reads "
             "-d <folder> -s <species>` symlinks a folder of reads into a species' read folder. "
+            "`tools link-reference` and `tools link-feature-library` (optional `-c <competition>`) "
+            "do the same for FASTA files. `-s` can be left out with only one species. "
             "Run `./pastForward tools` for details.",
         ),
     },

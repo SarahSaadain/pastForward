@@ -89,6 +89,8 @@ If your files are large, shared with other tools, or already live somewhere else
 
 For reads, `./pastForward tools link-reads --source /path/to/reads --species Dmel` makes those symlinks for you. It links every `*.fastq.gz` and `*.fq.gz` file in that folder into `Dmel/input/read_module/`, keeping the original file names. It warns about any name that doesn't follow the convention below, so you can rename those links.
 
+The same works for FASTA files. `./pastForward tools link-reference --source /path/to/genome.fna` links a reference (or every FASTA in a folder) into `<species>/input/reference_module/`. `./pastForward tools link-feature-library --source /path/to/te.fa --competition /path/to/competition.fa` links a feature library into `<species>/input/reveal_module/feature_library/`, and the optional `--competition` file into `<species>/input/reveal_module/competition/` (only one competition FASTA is allowed). In all three tools `--species` can be left out when the project has only one species.
+
 #### Storing Species Data Elsewhere
 
 > This is an optional, advanced feature. Skip this section if your data lives inside the project folder as shown above. That's the default, and most people don't need to change it.

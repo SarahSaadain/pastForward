@@ -247,6 +247,10 @@ def cmd_install(argv):
                     "./pastForward tools link-reads -d <folder> -s <species>",
                     "link your reads into the species' read folder",
                 ),
+                (
+                    "./pastForward tools link-reference -d <fasta>",
+                    "link your reference genome (also: link-feature-library)",
+                ),
                 ("./pastForward check", "what the config finds on disk"),
                 ("./pastForward dryrun", "what a run would do"),
                 ("./pastForward run --cores <N>", "start the pipeline"),
