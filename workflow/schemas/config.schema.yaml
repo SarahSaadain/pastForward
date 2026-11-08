@@ -313,7 +313,7 @@ properties:
 
 $defs:
   version_source: {enum: [conda, latest_release, dev]}
-  mapper: {enum: [bwa-aln, bwa-mem2, minimap2]}
+  mapper: {enum: [bwa-aln, bwa-mem2, bwa-mem3, minibwa, bowtie, bowtie2, minimap2]}
   plot_mode: {enum: [plot, plotable_only, skip]}
   # Empty or null means "use all discovered" (see _get_species_config_list in file_manager.py).
   # Items must be strings: an unquoted numeric ID never matches the discovered string ID.

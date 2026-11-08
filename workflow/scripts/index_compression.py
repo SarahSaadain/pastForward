@@ -13,14 +13,18 @@ import shutil
 import subprocess
 from pathlib import Path
 
-# bwa-aln (.bwt .sa), bwa-mem2 (.0123 .bwt.2bit.64) and minimap2 (.mmi) index files.
+# bwa-aln (.bwt .sa), bwa-mem2 (.0123 .bwt.2bit.64), minibwa (.l2b .mbw), bowtie (.ebwt), bowtie2 (.bt2) and minimap2 (.mmi) index files.
 # Also the wildcard_constraint of the pack_index rule.
-INDEX_REGEX = r".+(?:\.(?:fa|fasta)\.(?:0123|amb|ann|bwt\.2bit\.64|bwt|pac|sa)|\.mmi)"
+INDEX_REGEX = r".+(?:\.(?:fa|fasta)\.(?:0123|amb|ann|bwt\.2bit\.64|bwt|pac|sa|l2b|mbw|(?:rev\.)?[1-4]\.(?:ebwt|bt2))|\.mmi)"
 _INDEX = re.compile(INDEX_REGEX + r"\.gz$")
 
 _SUFFIXES = {
     "bwa-aln": (".amb", ".ann", ".bwt", ".pac", ".sa"),
     "bwa-mem2": (".0123", ".amb", ".ann", ".bwt.2bit.64", ".pac"),
+    "bwa-mem3": (".amb", ".ann", ".bwt.2bit.64", ".pac"),
+    "minibwa": (".l2b", ".mbw"),
+    "bowtie": tuple(f".{n}.ebwt" for n in ("1", "2", "3", "4", "rev.1", "rev.2")),
+    "bowtie2": tuple(f".{n}.bt2" for n in ("1", "2", "3", "4", "rev.1", "rev.2")),
 }
 
 # Folders that hold mapping indexes: reference, SCG library, feature library.
@@ -54,7 +58,7 @@ def mapper(config: dict, module: str, step: str = "mapping") -> str:
     mod = (config.get("pipeline") or {}).get(module) or {}
     own = ((mod.get(step) or {}).get("settings") or {}).get("mapper")
     if own or step == "mapping":
-        return own or "bwa-mem2"
+        return own or "bwa-mem3"
     return mapper(config, module)
 
 

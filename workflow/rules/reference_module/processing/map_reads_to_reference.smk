@@ -2,7 +2,7 @@
 # Snakemake rules
 ####################################################
 _ref_settings = _setting("reference_module", "mapping", "settings", default={})
-_ref_mapper = _ref_settings.get("mapper", "bwa-mem2")
+_ref_mapper = _ref_settings.get("mapper", "bwa-mem3")
 _ref_mapper_extra = _mapper_extra(_ref_settings, _ref_mapper)
 
 

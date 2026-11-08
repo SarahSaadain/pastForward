@@ -1,5 +1,6 @@
 import gzip
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -9,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "workflow"))
 from scripts.index_compression import (
+    INDEX_REGEX,
     index_archives,
     is_dryrun,
     mapper,
@@ -88,6 +90,12 @@ class IndexCompressionTest(unittest.TestCase):
         self.assertEqual(index_archives("a.fa", "minimap2", mmi="a.mmi"), ["a.mmi.gz"])
         self.assertIn("a.fa.sa.gz", index_archives("a.fa", "bwa-aln"))
         self.assertIn("a.fa.0123.gz", index_archives("a.fa", "bwa-mem2"))
+        self.assertNotIn("a.fa.0123.gz", index_archives("a.fa", "bwa-mem3"))
+        self.assertIn("a.fa.pac.gz", index_archives("a.fa", "bwa-mem3"))
+        self.assertEqual(index_archives("a.fa", "minibwa"), ["a.fa.l2b.gz", "a.fa.mbw.gz"])
+        self.assertIn("a.fa.rev.2.bt2.gz", index_archives("a.fa", "bowtie2"))
+        self.assertIn("a.fa.4.ebwt.gz", index_archives("a.fa", "bowtie"))
+        self.assertTrue(re.fullmatch(INDEX_REGEX + r"\.gz", "x/a.fa.rev.1.bt2.gz"))
 
     def test_dryrun_detection(self):
         for argv in (["--dryrun"], ["--dry-run"], ["-n"], ["-np"], ["-nq"], ["-pn"]):
@@ -97,7 +105,7 @@ class IndexCompressionTest(unittest.TestCase):
 
     def test_mapper_lookup_and_fallback(self):
         cfg = {"pipeline": {"reveal_module": {"mapping": {"settings": {"mapper": "minimap2"}}}}}
-        self.assertEqual(mapper({}, "reference_module"), "bwa-mem2")
+        self.assertEqual(mapper({}, "reference_module"), "bwa-mem3")
         self.assertEqual(mapper(cfg, "reveal_module"), "minimap2")
         self.assertEqual(mapper(cfg, "reveal_module", "scg_selector"), "minimap2")
 

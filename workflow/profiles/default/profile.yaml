@@ -165,6 +165,10 @@ set-resources:
     mem_mb: 16000
   map_reads_to_scg_library_bwa_mem2:
     mem_mb: 16000
+  map_reads_to_scg_feature_library_bwa_mem3:
+    mem_mb: 16000
+  map_reads_to_scg_library_bwa_mem3:
+    mem_mb: 16000
   remove_unmapped_reads_to_scg_feature_library:
     mem_mb: 200
   remove_unmapped_reads_and_filter_by_mapq_from_scg_bam:
@@ -197,6 +201,8 @@ set-resources:
   # --- reference_module: mapping to a reference, sorting, damage analysis ---
   map_reads_to_reference_bwa_mem2:
     mem_mb: 16000
+  map_reads_to_reference_bwa_mem3:
+    mem_mb: 16000
   sort_mapped_reads_bam:
     mem_mb: 9000
   sort_mapped_dedupped_reads_bam:
@@ -208,6 +214,8 @@ set-resources:
 
   # --- reveal_module: feature library index and species-level plots ---
   index_library_for_mapping_bwa_mem2:
+    mem_mb: 4000
+  index_library_for_mapping_bwa_mem3:
     mem_mb: 4000
   run_visualization_plots_of_species:
     mem_mb: 1000

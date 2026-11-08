@@ -298,8 +298,8 @@ class TestScgSelectorDefaults(ExpectedOutputManagerTestCase):
         ns = self.load(config)
         outputs = ns["get_expected_output_reveal_module_processing"]("NoLib")
         # The gzip copies of the SCG library's mapping index are requested too (pack_index rule).
-        archives = [o for o in outputs if o.endswith(".gz")]
-        self.assertEqual(len(archives), 5)
+        archives = [o for o in outputs if o.endswith(".gz")]  # bwa-mem3 index: 4 files
+        self.assertEqual(len(archives), 4)
         self.assertTrue(all("NoLib/processed/reveal_module/scg/NoLib_scg_library.fasta." in o for o in archives))
         self.assertEqual(
             sorted(o for o in outputs if not o.endswith(".gz")),

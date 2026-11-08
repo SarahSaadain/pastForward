@@ -63,7 +63,7 @@ class ScgMapperAndExtraTest(unittest.TestCase):
         self.pick = load()["_scg_mapper_and_extra"]
 
     def test_defaults(self):
-        self.assertEqual(self.pick({}, {}), ("bwa-mem2", ""))
+        self.assertEqual(self.pick({}, {}), ("bwa-mem3", ""))
 
     def test_inherits_mapper_and_flags_from_mapping(self):
         mapping = {"mapper": "bwa-aln", "mapper_extra_params": "-n 0.04"}

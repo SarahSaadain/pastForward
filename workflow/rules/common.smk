@@ -46,7 +46,7 @@ def _mapper_extra(settings, mapper):
 
 def _scg_mapper_and_extra(scg_settings, mapping_settings):
     """Mapper and extra flags for SCG mapping. Unset values come from the mapping step."""
-    mapping_mapper = mapping_settings.get("mapper", "bwa-mem2")
+    mapping_mapper = mapping_settings.get("mapper", "bwa-mem3")
     mapper = scg_settings.get("mapper") or mapping_mapper
     # Borrow the mapping step's flags only when both steps use the same mapper.
     # Flags for one mapper break another (bwa-aln flags handed to minimap2).

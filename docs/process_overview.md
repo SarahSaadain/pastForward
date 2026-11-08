@@ -61,7 +61,16 @@ Before mapping can begin, the reference genome is standardised to a `.fa` extens
 
 ### Read Mapping
 
-The merged per-individual reads are mapped to the reference using a configurable mapper, set via `pipeline.reference_module.mapping.settings.mapper` (default `bwa-mem2`). Three mappers are supported: **bwa-aln** (classic seed-and-extend, recommended for ultra short aDNA/hDNA reads (<70 bp). Generates the most accurate alignments, but can be very slow), **bwa-mem2** (faster aligner, designed for reads around 70 bp, but performs also well on shorter reads), and **minimap2** (versatile aligner, uses the `-ax sr` preset for short reads around 100 bp). Additional mapper flags can be supplied via `settings.mapper_extra_params`. For `bwa-aln`, the pipeline defaults to `-n 0.01 -k 2 -l 1024 -o 2` (Oliva et al. 2021) if no custom parameters are provided.
+The merged per-individual reads are mapped to the reference using a configurable mapper, set via `pipeline.reference_module.mapping.settings.mapper` (default `bwa-mem3`). Seven mappers are supported: **bwa-aln** (classic seed-and-extend, recommended for ultra short aDNA/hDNA reads (<70 bp). Generates the most accurate alignments, but can be very slow), **bwa-mem2** (faster aligner, designed for reads from about 70 bp, but performs also well on shorter reads), **bwa-mem3** (maintained successor of bwa-mem2, faster, bwa-mem2 alignments plus bug fixes, with a `--compat` mode for exact legacy output), **minibwa** (the designated successor of bwa-mem for short reads, faster than bwa-mem2, different algorithm), **bowtie** (short reads under about 50 bp), **bowtie2** (reads over about 50 bp) and **minimap2** (versatile aligner, uses the `-ax sr` preset for short reads over 100 bp). Suggested mappers by read length, following the recommendations of their authors:
+
+| Read length | Suggested mappers |
+|---|---|
+| under 50 bp | bowtie, bwa-aln |
+| 50-70 bp | bwa-aln, bowtie2 |
+| 70-100 bp | bwa-mem2, bwa-mem3, minibwa, bwa-aln, bowtie2 |
+| over 100 bp | bwa-mem2, bwa-mem3, minibwa, minimap2, bowtie2 |
+
+See `docs/FAQ.md` for the per-mapper limits. Additional mapper flags can be supplied via `settings.mapper_extra_params`. For `bwa-aln`, the pipeline defaults to `-n 0.01 -k 2 -l 1024 -o 2` (Oliva et al. 2021) if no custom parameters are provided.
 
 The resulting alignments are immediately sorted by coordinate and indexed. The unsorted BAM is discarded to save disk space. At this point the sorted BAM represents all mapped reads including duplicates, and is used as-is for library complexity estimation before any duplicate removal or damage rescaling.
 
@@ -139,7 +148,7 @@ Before mapping, sequence headers in both libraries are standardised and suffixed
 
 ### Mapping to the Combined Library
 
-Merged per-individual reads (from Module 1) are mapped to the combined SCG + TE library using a configurable mapper, set via `pipeline.reveal_module.mapping.settings.mapper` (default `bwa-mem2`). The same three options are available as in reference processing: **bwa-aln**, **bwa-mem2**, and **minimap2**. Additional flags can be supplied via `settings.mapper_extra_params`. After conversion from SAM to BAM, unmapped reads are immediately discarded to reduce file sizes. The filtered BAM is then sorted and indexed. Intermediate files are cleaned up automatically.
+Merged per-individual reads (from Module 1) are mapped to the combined SCG + TE library using a configurable mapper, set via `pipeline.reveal_module.mapping.settings.mapper` (default `bwa-mem3`). The same options are available as in reference processing: **bwa-aln**, **bwa-mem2**, **bwa-mem3**, **minibwa**, **bowtie**, **bowtie2** and **minimap2**. Additional flags can be supplied via `settings.mapper_extra_params`. After conversion from SAM to BAM, unmapped reads are immediately discarded to reduce file sizes. The filtered BAM is then sorted and indexed. Intermediate files are cleaned up automatically.
 
 ### Normalisation
 

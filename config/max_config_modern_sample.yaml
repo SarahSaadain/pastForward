@@ -211,11 +211,15 @@ pipeline:
 
     mapping:
       settings:
-        # Options: "bwa-aln", "bwa-mem2" (default), or "minimap2"
+        # Options: "bwa-aln", "bwa-mem2", "bwa-mem3" (default), "minibwa", "bowtie", "bowtie2" or "minimap2"
         # bwa-aln: classic seed-and-extend, relatively slow
-        # bwa-mem2: standard, faster modern reimplementation of bwa-mem
+        # bwa-mem2: faster modern reimplementation of bwa-mem
+        # bwa-mem3: default, maintained, faster successor of bwa-mem2 (bwa-mem2 alignments plus fixes, no .0123 index file; "--compat=bwa-mem" in mapper_extra_params for exact bwa-mem output)
+        # minibwa: successor of bwa-mem, about twice as fast as bwa-mem2 (index: .l2b + .mbw)
+        # bowtie: reads under ~50 bp, no gapped alignment
+        # bowtie2: reads over ~50 bp, gapped and local alignment
         # minimap2: fast versatile aligner, uses preset "-ax sr" for short reads
-        mapper: "bwa-mem2"
+        mapper: "bwa-mem3"
         # Optional: extra parameters passed directly to the mapper
         # For bwa-aln, defaults to "-n 0.01 -k 2 -l 1024 -o 2" (Oliva et al. 2021, 10.1093/bib/bbab076)
         # For minimap2, defaults to "-ax sr"
@@ -373,7 +377,7 @@ pipeline:
       execute: true
       settings:
         # Mapper for SCG library mapping. Defaults to pipeline.reveal_module.mapping.settings.mapper.
-        # Uncomment to override. Options: "bwa-mem2", "bwa-aln", "minimap2"
+        # Uncomment to override. Options: "bwa-aln", "bwa-mem2", "bwa-mem3", "minibwa", "bowtie", "bowtie2", "minimap2"
         #mapper: "minimap2"
         # Extra parameters passed directly to the mapper.
         # Defaults to pipeline.reveal_module.mapping.settings.mapper_extra_params if set (not empty)
@@ -397,11 +401,15 @@ pipeline:
 
     mapping:
       settings:
-        # Options: "bwa-mem2" (default), "bwa-aln" or "minimap2"
+        # Options: "bwa-aln", "bwa-mem2", "bwa-mem3" (default), "minibwa", "bowtie", "bowtie2" or "minimap2"
         # bwa-aln: classic seed-and-extend, relatively slow
-        # bwa-mem2: default, faster modern reimplementation of bwa-mem
+        # bwa-mem2: faster modern reimplementation of bwa-mem
+        # bwa-mem3: default, maintained, faster successor of bwa-mem2 (bwa-mem2 alignments plus fixes, no .0123 index file; "--compat=bwa-mem" in mapper_extra_params for exact bwa-mem output)
+        # minibwa: successor of bwa-mem, about twice as fast as bwa-mem2 (index: .l2b + .mbw)
+        # bowtie: reads under ~50 bp, no gapped alignment
+        # bowtie2: reads over ~50 bp, gapped and local alignment
         # minimap2: fast versatile aligner, uses preset "-ax sr" for short reads
-        mapper: "bwa-mem2"
+        mapper: "bwa-mem3"
         # Optional: extra parameters passed directly to the mapper
         # For bwa-aln, defaults to "-n 0.01 -k 2 -l 1024 -o 2" (Oliva et al. 2021, 10.1093/bib/bbab076)
         # For minimap2, defaults to "-ax sr". Empty ("") also uses these defaults.

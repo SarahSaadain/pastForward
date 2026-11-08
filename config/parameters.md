@@ -122,8 +122,8 @@ Merged per-individual reads are mapped to the reference genome. Mapping always r
 
 | Setting | Default | Description |
 |---|---|---|
-| `settings.mapper` | `bwa-mem2` | Mapper to use. Options: `bwa-aln` (classic seed-and-extend), `bwa-mem2` (default), `minimap2` (versatile, uses `-ax sr` preset for short reads). |
-| `settings.mapper_extra_params` | — | Optional extra parameters passed directly to the mapper. If not set or empty (`""`), the mapper defaults apply: bwa-aln `-n 0.01 -k 2 -l 1024 -o 2` (Oliva et al. 2021), minimap2 `-ax sr`, bwa-mem2 none. When you set flags for minimap2, include `-ax sr` (or another `-a` preset): without `-a` minimap2 writes PAF, not SAM. |
+| `settings.mapper` | `bwa-mem3` | Mapper to use. Options: `bwa-aln` (classic seed-and-extend, reads up to 100 bp), `bwa-mem2` (reads from ~70 bp), `bwa-mem3` (default, maintained, faster successor of bwa-mem2; `--compat=bwa-mem` or `--compat=bwa-mem2` in `mapper_extra_params` gives exact legacy output), `minibwa` (successor of bwa-mem for short reads, faster than bwa-mem2, alignments differ), `bowtie` (reads under ~50 bp), `bowtie2` (reads over ~50 bp), `minimap2` (versatile, uses `-ax sr` preset for short reads over 100 bp). See the read-length table in `docs/FAQ.md`. |
+| `settings.mapper_extra_params` | — | Optional extra parameters passed directly to the mapper. If not set or empty (`""`), the mapper defaults apply: bwa-aln `-n 0.01 -k 2 -l 1024 -o 2` (Oliva et al. 2021), minimap2 `-ax sr`, bwa-mem2, bwa-mem3, minibwa, bowtie and bowtie2 none. When you set flags for minimap2, include `-ax sr` (or another `-a` preset): without `-a` minimap2 writes PAF, not SAM. |
 | `settings.keep_bam` | `false` | When `true`, the sorted BAM and its index (`{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam[.bai]`) are no longer deleted, and are also written to `{species}/results/reference_module/{reference}/mapped/`. The results file is a hard link when both folders are on the same disk (no extra space) and a copy otherwise (double space). Because the processed file persists, adding a later step never remaps. Switching it on for a finished project remaps once, see the [FAQ](../docs/FAQ.md). |
 
 #### `deduplication`
@@ -224,8 +224,8 @@ Can also be used standalone (without feature libraries) to produce an SCG rankin
 | Setting | Default | Description |
 |---|---|---|
 | `execute` | `true` | Enable SCG auto-determination when no user-provided FASTA is present. |
-| `settings.mapper` | *(inherits from `reveal_module.mapping.settings.mapper`)* | Mapper for reads-to-SCG-library mapping. Uncomment to override. Options: `bwa-mem2`, `bwa-aln`, `minimap2`. |
-| `settings.mapper_extra_params` | *(inherits from `reveal_module.mapping.settings.mapper_extra_params` when both steps use the same mapper)* | Optional extra parameters for the mapper. If not set or empty, the value from `reveal_module.mapping` is used, but only when both steps use the same mapper. Otherwise the mapper-specific defaults apply (bwa-aln: `-n 0.01 -k 2 -l 1024 -o 2`, minimap2: `-ax sr`, bwa-mem2: none). |
+| `settings.mapper` | *(inherits from `reveal_module.mapping.settings.mapper`)* | Mapper for reads-to-SCG-library mapping. Uncomment to override. Options: `bwa-mem2`, `bwa-mem3`, `minibwa`, `bowtie`, `bowtie2`, `bwa-aln`, `minimap2`. |
+| `settings.mapper_extra_params` | *(inherits from `reveal_module.mapping.settings.mapper_extra_params` when both steps use the same mapper)* | Optional extra parameters for the mapper. If not set or empty, the value from `reveal_module.mapping` is used, but only when both steps use the same mapper. Otherwise the mapper-specific defaults apply (bwa-aln: `-n 0.01 -k 2 -l 1024 -o 2`, minimap2: `-ax sr`, bwa-mem2, bwa-mem3, minibwa, bowtie and bowtie2: none). |
 | `settings.num_top_scgs` | `20` | Number of top-ranked SCGs to retain as normalisers. |
 | `settings.min_length_scg` | `4000` | Minimum SCG sequence length in bp to include from BUSCO results. |
 | `settings.max_length_scg` | `8000` | Maximum SCG sequence length in bp to include from BUSCO results. |
@@ -243,7 +243,7 @@ Can also be used standalone (without feature libraries) to produce an SCG rankin
 
 | Setting | Default | Description |
 |---|---|---|
-| `settings.mapper` | `bwa-mem2` | Mapper for feature-library mapping. Same options as `reference_module.mapping`. |
+| `settings.mapper` | `bwa-mem3` | Mapper for feature-library mapping. Same options as `reference_module.mapping`. |
 | `settings.mapper_extra_params` | — | Optional extra parameters passed directly to the mapper. Same defaults and minimap2 `-a` rule as `reference_module.mapping`. |
 | `settings.keep_mapped_bam` | `false` | When `true`, the filtered sorted BAM and its index (`{species}/processed/reveal_module/{feature_library}/mapped/{individual}_{feature_library}_and_scg.sorted.bam[.bai]`) are kept as permanent outputs and explicitly requested by the pipeline. When `false` (default), they are marked as temporary and deleted after REVEAL consumes them. Set to `true` to inspect the mapped BAM or to run the mapping step independently of REVEAL. |
 | `settings.min_mapq_scg` | `0` | Minimum mapping quality applied selectively to SCG sequences (`_scg` suffix) in the combined library BAM. Reads mapping to SCG references with MAPQ below this value are removed after mapping. Feature library reads are not affected. Set to `0` (default) to disable. |

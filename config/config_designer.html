@@ -880,14 +880,18 @@
               coordinate-sorted and indexed. The unsorted BAM is discarded to save disk space.
               The <strong>pre-dedup sorted BAM</strong> is used for <strong>Preseq</strong> library complexity estimation
               &mdash; running Preseq after deduplication would remove the duplication information it requires, producing invalid estimates.
-              <div class="when-hint"><span class="def-pill on">Default: ON</span>Mapping always runs when Reference Processing is enabled — it is the core step that all downstream analyses depend on. Choose your mapper based on your data: <strong>bwa-aln</strong> for typical short aDNA reads (&lt;70 bp), <strong>bwa-mem2</strong> for longer reads or speed, <strong>minimap2</strong> for highly divergent references.</div>
+              <div class="when-hint"><span class="def-pill on">Default: ON</span>Mapping always runs when Reference Processing is enabled — it is the core step that all downstream analyses depend on. Choose your mapper based on your data: <strong>bowtie</strong> for reads under 50 bp, <strong>bwa-aln</strong> for typical short aDNA reads (&lt;70 bp), <strong>bwa-mem2</strong>, <strong>bwa-mem3</strong> or <strong>minibwa</strong> from about 70 bp, <strong>bowtie2</strong> from about 50 bp, <strong>minimap2</strong> above 100 bp or for highly divergent references.</div>
             </div>
             <div class="subsection-body open">
               <div class="field">
                 <label>Mapper</label>
                 <select id="rp_mapper" onchange="mapperInfo('rp_mapper','rp_minfo'); render()">
                   <option value="bwa-aln">bwa-aln</option>
-                  <option value="bwa-mem2" selected>bwa-mem2</option>
+                  <option value="bwa-mem2">bwa-mem2</option>
+                  <option value="bwa-mem3" selected>bwa-mem3</option>
+                  <option value="minibwa">minibwa</option>
+                  <option value="bowtie">bowtie</option>
+                  <option value="bowtie2">bowtie2</option>
                   <option value="minimap2">minimap2</option>
                 </select>
                 <div class="mapper-info" id="rp_minfo">Classic seed-and-extend, well-suited for short aDNA reads.</div>
@@ -1270,6 +1274,10 @@
                   <option value="" selected>inherit from REVEAL mapper</option>
                   <option value="bwa-aln">bwa-aln</option>
                   <option value="bwa-mem2">bwa-mem2</option>
+                  <option value="bwa-mem3">bwa-mem3</option>
+                  <option value="minibwa">minibwa</option>
+                  <option value="bowtie">bowtie</option>
+                  <option value="bowtie2">bowtie2</option>
                   <option value="minimap2">minimap2</option>
                 </select>
                 <div class="mapper-info" id="scg_minfo">Uses the same mapper as the REVEAL feature-library mapping by default.</div>
@@ -1333,14 +1341,18 @@
               TE/feature sequences (suffixed <code>_fle</code>) and single-copy gene sequences (suffixed <code>_scg</code>).
               Unmapped reads are discarded immediately after conversion from SAM to BAM to reduce file sizes.
               Multiple feature libraries per species are supported &mdash; each produces an independent set of results.
-              <div class="when-hint"><span class="def-pill on">Default: ON</span>Mapping always runs when REVEAL is enabled. Use <strong>bwa-aln</strong> for typical short aDNA fragments; switch to <strong>bwa-mem2</strong> for longer reads or higher throughput. The combined SCG + TE library is indexed automatically.</div>
+              <div class="when-hint"><span class="def-pill on">Default: ON</span>Mapping always runs when REVEAL is enabled. Use <strong>bwa-aln</strong> for typical short aDNA fragments; the default <strong>bwa-mem3</strong> suits reads from about 70 bp. The combined SCG + TE library is indexed automatically.</div>
             </div>
             <div class="subsection-body open">
               <div class="field">
                 <label>Mapper</label>
                 <select id="rv_mapper" onchange="mapperInfo('rv_mapper','rv_minfo'); render()">
                   <option value="bwa-aln">bwa-aln</option>
-                  <option value="bwa-mem2" selected>bwa-mem2</option>
+                  <option value="bwa-mem2">bwa-mem2</option>
+                  <option value="bwa-mem3" selected>bwa-mem3</option>
+                  <option value="minibwa">minibwa</option>
+                  <option value="bowtie">bowtie</option>
+                  <option value="bowtie2">bowtie2</option>
                   <option value="minimap2">minimap2</option>
                 </select>
                 <div class="mapper-info" id="rv_minfo">Classic seed-and-extend, well-suited for short aDNA reads.</div>
@@ -1622,6 +1634,10 @@ function optToggle(cbId, bodyId, hdrId) {
 const MAPPER_DESC = {
   'bwa-aln':  'Classic seed-and-extend, well-suited for short aDNA reads (Oliva et al. 2021).',
   'bwa-mem2': 'Faster modern reimplementation of bwa-mem; good for longer reads.',
+  'bwa-mem3': 'Maintained, faster successor of bwa-mem2 (bwa-mem2 alignments plus fixes; --compat for exact legacy output). Reads from about 70 bp.',
+  'minibwa':  'Successor of bwa-mem for short reads by Heng Li, about twice as fast as bwa-mem2 (new algorithm, alignments differ). Reads from about 70 bp.',
+  'bowtie':   'Original bowtie, no gapped alignment. For short reads under about 50 bp.',
+  'bowtie2':  'Gapped and local alignment. For reads over about 50 bp.',
   'minimap2': 'Fast versatile aligner — uses preset "-ax sr" for short reads.'
 };
 function mapperInfo(selId, infoId) {
@@ -2284,7 +2300,7 @@ function resetDefaults() {
       },
       reference_module: {
         execute: true,
-        mapping: { settings: { mapper: 'bwa-mem2' } },
+        mapping: { settings: { mapper: 'bwa-mem3' } },
         deduplication: { execute: true, settings: { min_contigs_per_cluster: 1, max_contigs_per_cluster: 500 } },
         damage_rescaling: { execute: true },
         filter_unmapped_reads: { execute: false, settings: { action: 'keep' } },
@@ -2293,7 +2309,7 @@ function resetDefaults() {
       reveal_module: {
         execute: true,
         scg_selector: { execute: true, settings: { num_top_scgs: 20, min_length_scg: 4000, max_length_scg: 8000 } },
-        mapping: { settings: { mapper: 'bwa-mem2' } },
+        mapping: { settings: { mapper: 'bwa-mem3' } },
         analysis: { execute: true, settings: { coverage_analysis: true, snp_analysis: false, indel_analysis: false } },
         sequence_overview: { settings: { mapping_quality_threshold: 5, minimum_count_snp: 5, minimum_frequency_snp: 0.1, minimum_count_indel: 3, minimum_frequency_indel: 0.01 } },
         normalization: { settings: { end_distance: 100, exclude_quantile: 25 } },

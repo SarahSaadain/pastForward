@@ -208,7 +208,7 @@ pastForward checks `config.yaml` against [workflow/schemas/config.schema.yaml](.
 
 - **An unknown key**, usually a typo. Before this check, a misspelled key was silently ignored, so `exectue: false` ran the step anyway. The error names the closest valid key: `unknown key 'exectue' (did you mean 'execute'?)`.
 - **A wrong type**, e.g. `execute: "false"` in quotes, which is a string and not a boolean, or `individuals: IND001` instead of a list.
-- **A value that is not one of the options**, e.g. `mapper: bwa` instead of `bwa-mem2`.
+- **A value that is not one of the options**, e.g. `mapper: bwa` instead of `bwa-mem3`.
 
 Two cases surprise people:
 
@@ -426,8 +426,34 @@ To continue later, run `./pastForward resume --cores <N>`. If it reports a lock,
 ## Read Mapping
 
 **Q: Which mapper should I use for my data?**
-- **bwa-aln**: recommended for very short aDNA/hDNA reads (<70 bp). Generates the most accurate alignments, but can be very slow. That is why bwa-mem2 is the default mapper, as it is much faster and still performs well on short reads.
-- **bwa-mem2**: the default. Faster, designed for reads above 70 bp, but performs well on shorter reads too.
+Pick by read length. The ranges follow what each mapper's authors recommend (bwa and minimap2 READMEs, bowtie and bowtie2 manuals). None of these tools was written for aDNA, so the table is a starting point, not a rule.
+
+| Mapper | Authors' suggested read length | Source |
+|---|---|---|
+| bowtie | under ~50 bp (made for 25-50 nt, accepts up to 1024) | bowtie manual |
+| bowtie2 | over ~50 bp (faster and more sensitive than bowtie there) | bowtie2 manual |
+| bwa-aln | up to 100 bp, best under ~70 bp | bwa README and FAQ |
+| bwa-mem2 | ~70 bp and up | bwa README (same as bwa-mem) |
+| bwa-mem3 | ~70 bp and up | bwa README (same as bwa-mem) |
+| minibwa | ~70 bp and up (named bwa-mem replacement for short reads) | bwa README |
+| minimap2 (`-ax sr`) | over 100 bp | minimap2 README |
+
+Suggested mappers by read length:
+
+| Read length | Suggested mappers |
+|---|---|
+| under 50 bp | bowtie, bwa-aln |
+| 50-70 bp | bwa-aln, bowtie2 |
+| 70-100 bp | bwa-mem2, bwa-mem3, minibwa, bwa-aln, bowtie2 |
+| over 100 bp | bwa-mem2, bwa-mem3, minibwa, minimap2, bowtie2 |
+
+Notes per mapper:
+- **bwa-aln**: recommended for very short aDNA/hDNA reads (<70 bp). Generates the most accurate alignments, but can be very slow. That is why bwa-mem3 is the default mapper, as it is much faster and still performs well on short reads.
+- **bwa-mem2**: faster, designed for reads above 70 bp, but performs well on shorter reads too. Gives the exact legacy bwa-mem output.
+- **bwa-mem3**: the default. Maintained successor of bwa-mem2 ([fg-labs/bwa-mem3](https://github.com/fg-labs/bwa-mem3)), faster. In its default mode it gives the bwa-mem2 alignments plus bug fixes and two extra tags (`MQ`, `HN`). For records identical to bwa-mem or bwa-mem2 use its compatibility mode (`mapper_extra_params: "--compat=bwa-mem"` or `"--compat=bwa-mem2"`). Its index uses the same file names as bwa-mem2 but is not compatible, so when you switch between the two, delete the old `.fa.*` (or `.fasta.*`) index files and their `.gz` archives in `processed/`.
+- **minibwa**: the successor of bwa-mem by Heng Li ([lh3/minibwa](https://github.com/lh3/minibwa)). The bwa README says bwa-mem "will be replaced by minibwa for short reads". About twice as fast as bwa-mem2, but the algorithm differs, so alignments are not identical. Short reads and accurate long reads, no alternate contigs in the reference. Index is `.l2b` + `.mbw`, so switching mapper needs no index cleanup. Needs SSE4.2 (x86) or NEON (ARM).
+- **bowtie**: the original bowtie 1. No gapped alignment, so use it for short reads only. Index is `.ebwt` files. Genomes over about 4 Gb are not supported.
+- **bowtie2**: gapped and local alignment, for reads over ~50 bp. Index is `.bt2` files.
 - **minimap2**: versatile, and uses the `-ax sr` preset for short reads. If you want a "quick and dirty" mapping to check your data, minimap2 is a good choice. However, it is not optimised for the specific challenges of aDNA/hDNA and may produce lower-quality alignments compared to bwa-aln or bwa-mem2.
 
 Set the mapper via `pipeline.reference_module.mapping.settings.mapper`.
