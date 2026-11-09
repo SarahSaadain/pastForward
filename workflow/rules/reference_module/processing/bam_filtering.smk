@@ -20,7 +20,7 @@ rule filter_bam_by_mapq_and_length:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_filtered.log",
     threads: 4
     params:
-        extra=_bam_filter_extra(),
+        extra=_bam_filter_extra(_filter_remove),
     message:
         "Filtering BAM by MAPQ and read length for {wildcards.individual} mapped to {wildcards.reference}."
     wrapper:

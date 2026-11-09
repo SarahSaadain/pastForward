@@ -41,6 +41,52 @@ class DedupEnabledTest(unittest.TestCase):
         self.assertFalse(ns["_dedup_enabled"]())
 
 
+def DR(**kw):
+    return {"reference_module": {"damage_rescaling": {"settings": kw}}}
+
+
+class MapdamageExtraTest(unittest.TestCase):
+    def test_default_empty(self):
+        self.assertEqual(load()["_mapdamage_extra"](), "")
+
+    def test_flags(self):
+        ns = load(
+            DR(
+                downsample=0.5,
+                rescale_seqlength=20,
+                rescale_length_5p=15,
+                rescale_length_3p=10,
+            )
+        )
+        self.assertEqual(
+            ns["_mapdamage_extra"](),
+            "--downsample 0.5 --seq-length 20 --rescale-length-5p 15 --rescale-length-3p 10",
+        )
+
+    def test_rescale_length_above_default_seqlength_raises(self):
+        with self.assertRaises(ValueError):
+            load(DR(rescale_length_5p=13))["_mapdamage_extra"]()
+
+    def test_rescale_length_above_seqlength_raises(self):
+        with self.assertRaises(ValueError):
+            load(DR(rescale_seqlength=20, rescale_length_3p=30))["_mapdamage_extra"]()
+
+
+class BamFilterExtraTest(unittest.TestCase):
+    def cfg(self, **kw):
+        return {"reference_module": {"bam_filtering": {"settings": kw}}}
+
+    def test_default_empty(self):
+        self.assertEqual(load()["_bam_filter_extra"](), "")
+
+    def test_mapq_and_length(self):
+        ns = load(self.cfg(min_mapq=20, min_read_length=35))
+        self.assertEqual(ns["_bam_filter_extra"](), "-q 20 -e 'length(seq)>=35'")
+
+    def test_remove_unmapped_adds_flag(self):
+        self.assertEqual(load()["_bam_filter_extra"](True), "-F 4")
+
+
 class MapperExtraTest(unittest.TestCase):
     def setUp(self):
         self.extra = load()["_mapper_extra"]

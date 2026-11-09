@@ -587,6 +587,7 @@ def _ecmsd_database_input(wildcards):
     return [ancient(f) for f in files]
 
 
+# shortcut: 0 means "mapDamage default", so "--rescale-length-5p 0" (no rescaling at that end) cannot be set; use null if needed.
 def _mapdamage_extra():
     flags = {
         "downsample": "--downsample",
@@ -626,14 +627,14 @@ def _mapdamage_extra():
     return " ".join(f"{flag} {value}" for flag, value in values)
 
 
-def _bam_filter_extra():
+def _bam_filter_extra(remove_unmapped=False):
     min_mapq = _setting(
         "reference_module", "bam_filtering", "settings", "min_mapq", default=0
     )
     min_len = _setting(
         "reference_module", "bam_filtering", "settings", "min_read_length", default=0
     )
-    flags = ["-F 4"] if _filter_remove else []
+    flags = ["-F 4"] if remove_unmapped else []
     if min_mapq:
         flags.append(f"-q {min_mapq}")
     if min_len:

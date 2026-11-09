@@ -2370,6 +2370,7 @@ function resetDefaults() {
         deduplication: { execute: true, settings: { min_contigs_per_cluster: 1, max_contigs_per_cluster: 500 } },
         damage_rescaling: { execute: true },
         filter_unmapped_reads: { execute: false, settings: { action: 'keep' } },
+        bam_filtering: { execute: false, settings: { min_mapq: 0, min_read_length: 0 } },
         analysis: { execute: true, settings: { damage_analysis: true, coverage_analysis: true, create_plots: true, individual_multiqc: true, species_multiqc: true, preseq_complexitiy_curve: true, qualimap: true, samtools_stats: true, authenticity_summary: true, snp_divergence_check: false } }
       },
       reveal_module: {
