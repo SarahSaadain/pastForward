@@ -997,6 +997,18 @@
               <input type="number" id="dr_down" value="0" min="0" step="any" oninput="render()">
               <p class="hint">Default: 0 (all reads). Reads mapDamage uses for the damage tables, plots and model. Below 1 is a fraction of the reads, 1 or more is a number of reads. Faster on large BAMs. Rescaling still covers every read.</p>
             </div>
+            <div class="field">
+              <label class="lbl" for="dr_seqlen">Seq length (rescale_seqlength)</label>
+              <input type="number" id="dr_seqlen" value="0" min="0" step="1" oninput="render()">
+              <p class="hint">Default: 0 (mapDamage's 12). Bases from each read end used for the damage model.</p>
+            </div>
+            <div class="field">
+              <label class="lbl" for="dr_len5">Rescale length 5' (rescale_length_5p)</label>
+              <input type="number" id="dr_len5" value="0" min="0" step="1" oninput="render()">
+              <label class="lbl" for="dr_len3">Rescale length 3' (rescale_length_3p)</label>
+              <input type="number" id="dr_len3" value="0" min="0" step="1" oninput="render()">
+              <p class="hint">Default: 0 (same as seq length). Bases rescaled at each end. Must not exceed seq length (12 if unset).</p>
+            </div>
             </div><!-- /.adv-content -->
           </div>
 
@@ -1027,6 +1039,35 @@
                   <option value="extract_fastq">extract_fastq &mdash; unmapped reads to FASTQ.gz</option>
                   <option value="extract_fasta">extract_fasta &mdash; unmapped reads to FASTA.gz</option>
                 </select>
+              </div>
+            </div>
+            </div><!-- /.adv-content -->
+          </div>
+
+          <!-- BAM Filtering -->
+          <div class="subsection">
+            <div class="subsection-header clickable" onclick="toggleSub(this)">
+              <span class="sdot off" id="d_bf"></span>
+              <span class="subsection-title">BAM Filtering</span>
+              <label class="toggle" onclick="event.stopPropagation()">
+                <input type="checkbox" id="bf_exec" onchange="dot('bf_exec','d_bf'); render()">
+                <span class="slider"></span>
+              </label>
+              <span class="sub-chevron">&#9654;</span>
+            </div>
+            <div class="adv-content">
+            <div class="step-desc">
+              Keep only reads with enough mapping quality and length in the final BAM. Unmapped reads have MAPQ 0, so a MAPQ filter above 0 drops them.
+              <div class="when-hint"><span class="def-pill off">Default: OFF</span>Statistics still describe the unfiltered BAM.</div>
+            </div>
+            <div class="subsection-body open">
+              <div class="field">
+                <label class="lbl" for="bf_mapq">Min MAPQ (min_mapq)</label>
+                <input type="number" id="bf_mapq" value="0" min="0" step="1" oninput="render()">
+              </div>
+              <div class="field">
+                <label class="lbl" for="bf_len">Min read length, bp (min_read_length)</label>
+                <input type="number" id="bf_len" value="0" min="0" step="1" oninput="render()">
               </div>
             </div>
             </div><!-- /.adv-content -->
@@ -1872,16 +1913,25 @@ function buildYAML() {
   p(4, 'damage_rescaling:');
   kv(6, 'execute', gb('dr_exec'));
   const drDown = parseFloat(gv('dr_down')) || 0;
-  if (gb('dr_keep') || drDown > 0) {
+  const drInts = [['dr_seqlen','rescale_seqlength'],['dr_len5','rescale_length_5p'],['dr_len3','rescale_length_3p']]
+    .map(([id,k]) => [k, parseInt(gv(id)) || 0]).filter(([k,v]) => v > 0);
+  if (gb('dr_keep') || drDown > 0 || drInts.length) {
     p(6, 'settings:');
     if (gb('dr_keep')) kv(8, 'keep_bam', true);
     if (drDown > 0) kv(8, 'downsample', drDown);
+    drInts.forEach(([k,v]) => kv(8, k, v));
   }
   p(0, '');
   p(4, 'filter_unmapped_reads:');
   kv(6, 'execute', gb('fur_exec'));
   p(6, 'settings:');
   kv(8, 'action', gv('fur_action'));
+  p(0, '');
+  p(4, 'bam_filtering:');
+  kv(6, 'execute', gb('bf_exec'));
+  p(6, 'settings:');
+  kv(8, 'min_mapq', parseInt(gv('bf_mapq')) || 0);
+  kv(8, 'min_read_length', parseInt(gv('bf_len')) || 0);
   p(0, '');
   p(4, 'analysis:');
   kv(6, 'execute', gb('cov_exec'));
@@ -2183,6 +2233,11 @@ function populateForm(c) {
   sb('dr_exec',  (rp.damage_rescaling||{}).execute);              dot('dr_exec','d_dr');
   sb('dr_keep', ((rp.damage_rescaling||{}).settings||{}).keep_bam === true);
   sv('dr_down', ((rp.damage_rescaling||{}).settings||{}).downsample);
+  { const drs = (rp.damage_rescaling||{}).settings||{};
+    sv('dr_seqlen', drs.rescale_seqlength); sv('dr_len5', drs.rescale_length_5p); sv('dr_len3', drs.rescale_length_3p); }
+  { const bf = rp.bam_filtering||{};
+    sb('bf_exec', bf.execute); dot('bf_exec','d_bf');
+    sv('bf_mapq', (bf.settings||{}).min_mapq); sv('bf_len', (bf.settings||{}).min_read_length); }
   const fur = rp.filter_unmapped_reads||{};
   sb('fur_exec', fur.execute); dot('fur_exec','d_fur');
   sv('fur_action', (fur.settings||{}).action);

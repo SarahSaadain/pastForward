@@ -147,6 +147,15 @@ Optionally removes or extracts reads that did not map to the reference. Default:
 | --- | --- | --- |
 | `settings.action` | `keep` | What to do with unmapped reads: `keep` retains them in the final BAM (default, must be changed explicitly), `remove` writes a mapped-reads-only BAM, `extract_fastq` writes unmapped reads to a compressed FASTQ, `extract_fasta` writes unmapped reads to a compressed FASTA. |
 
+#### `bam_filtering`
+
+Optionally keeps only reads with enough mapping quality and length in the final BAM (`samtools view -q`, `-e 'length(seq)>=N'`). Default: **off**. Statistics (samtools stats, Qualimap) still describe the unfiltered BAM. Unmapped reads have MAPQ 0, so `min_mapq` above 0 removes them. With `filter_unmapped_reads` action `remove`, unmapped reads are removed even when `min_mapq` is 0. `extract_fastq`/`extract_fasta` still extract from the unfiltered BAM.
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `settings.min_mapq` | `0` | Keep reads with MAPQ >= this. `0` = no filter. |
+| `settings.min_read_length` | `0` | Keep reads of at least this many bp. `0` = no filter. |
+
 #### Other `reference_module` steps
 
 | Step | Default | Description |
@@ -154,6 +163,9 @@ Optionally removes or extracts reads that did not map to the reference. Default:
 | `damage_rescaling` | on | Profiles cytosine deamination and rescales base quality scores using mapDamage2. |
 | `damage_rescaling.settings.keep_bam` | `false` | Same as `mapping.settings.keep_bam`, for the rescaled BAM (`{individual}_{reference}_sorted_dedupped_rescaled.bam[.bai]`). Has no effect when damage rescaling is off. Without filtering of unmapped reads it holds the same data as `_final.bam`. |
 | `damage_rescaling.settings.downsample` | `0` | Reads mapDamage uses for its damage tables, plots and model (`-n`). `0` uses all reads. Below 1 is a fraction of the reads, 1 or more is a number of reads (PALEOMIX uses 100000). Saves time on large BAMs, since mapDamage counts every read on one core. Rescaling still covers every read, only the fitted correction comes from the subset. The damage and length columns of the authenticity table then come from the subset too. Changing it does not rerun finished individuals (the pipeline reruns on file times only). |
+| `damage_rescaling.settings.rescale_seqlength` | `0` | mapDamage `--seq-length`: bases from each read end used for the damage model. `0` leaves mapDamage's own default (12). |
+| `damage_rescaling.settings.rescale_length_5p` | `0` | mapDamage `--rescale-length-5p`: bases rescaled at the 5' end. `0` leaves mapDamage's default (same as `rescale_seqlength`). Must not exceed `rescale_seqlength` (12 if unset), or the run stops at startup. |
+| `damage_rescaling.settings.rescale_length_3p` | `0` | mapDamage `--rescale-length-3p`: same, for the 3' end. |
 | `analysis` | on | Computes coverage breadth and mean depth; runs Qualimap and Preseq. Endogenous content data always generated. |
 | `analysis.settings.damage_analysis` | on | Visualises damage patterns (mapDamage2) and includes them in the MultiQC report. |
 | `analysis.settings.coverage_analysis` | on | Run `samtools depth` and compute per-individual mean depth, max depth and breadth. Feeds the coverage plots, the coverage sections of the MultiQC reports (reference and summary module) and the authenticity depth and breadth columns. It reads the whole final BAM once; no per-base file is written. `false` drops all of these and keeps every other output. |

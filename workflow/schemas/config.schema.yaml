@@ -161,6 +161,20 @@ properties:
                 properties:
                   keep_bam: {type: boolean}
                   downsample: {type: number, minimum: 0}
+                  rescale_seqlength: {type: integer, minimum: 0}
+                  rescale_length_5p: {type: integer, minimum: 0}
+                  rescale_length_3p: {type: integer, minimum: 0}
+          bam_filtering:
+            type: object
+            additionalProperties: false
+            properties:
+              execute: {type: boolean}
+              settings:
+                type: object
+                additionalProperties: false
+                properties:
+                  min_mapq: {type: integer, minimum: 0}
+                  min_read_length: {type: integer, minimum: 0}
           filter_unmapped_reads:
             type: object
             additionalProperties: false

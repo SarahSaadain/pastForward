@@ -17,6 +17,8 @@ include: "reference_module/processing/analyze_damage_and_rescale_bam.smk"
 include: "reference_module/processing/get_final_bam.smk"
 # Optionally remove or extract unmapped reads after QC statistics are captured
 include: "reference_module/processing/filter_unmapped_reads.smk"
+# Optionally filter the final BAM by MAPQ and read length
+include: "reference_module/processing/bam_filtering.smk"
 # Determine coverage depth and breadth statistics
 include: "reference_module/analytics/determine_coverage_depth_breadth.smk"
 # Calculate additional mapping statistics using samtools

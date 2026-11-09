@@ -264,6 +264,21 @@ pipeline:
         # Optional: Reads mapDamage uses for the damage tables, plots and model (Default: 0 = all reads)
         # Below 1 is a fraction of the reads, 1 or more is a number of reads. Rescaling still covers every read.
         #downsample: 0
+        # Optional: mapDamage --seq-length, bases from each read end used for the model (Default: 0 = mapDamage's 12)
+        #rescale_seqlength: 12
+        # Optional: bases rescaled at the 5' / 3' end, at most rescale_seqlength (Default: 0 = same as rescale_seqlength)
+        #rescale_length_5p: 12
+        #rescale_length_3p: 12
+
+    bam_filtering:
+      # When true, the final BAM only keeps reads passing the filters below (Default: false)
+      # Unmapped reads have MAPQ 0, so any min_mapq above 0 drops them. QC statistics still use the unfiltered BAM.
+      execute: false
+      settings:
+        # Keep reads with mapping quality >= this (Default: 0 = off)
+        min_mapq: 0
+        # Keep reads at least this long in bp (Default: 0 = off)
+        min_read_length: 0
 
     filter_unmapped_reads:
       # When true, unmapped reads will be processed according to action (Default: false)

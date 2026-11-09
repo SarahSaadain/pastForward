@@ -585,3 +585,57 @@ def _ecmsd_database_input(wildcards):
         )
     # ancient(): newer database files alone do not rerun finished samples.
     return [ancient(f) for f in files]
+
+
+def _mapdamage_extra():
+    flags = {
+        "downsample": "--downsample",
+        "rescale_seqlength": "--seq-length",
+        "rescale_length_5p": "--rescale-length-5p",
+        "rescale_length_3p": "--rescale-length-3p",
+    }
+    values = (
+        (
+            flag,
+            _setting(
+                "reference_module", "damage_rescaling", "settings", key, default=0
+            ),
+        )
+        for key, flag in flags.items()
+    )
+    values = [(flag, value) for flag, value in values if value]
+    # mapDamage stops with an error when a rescale length is longer than --seq-length
+    seq_length = (
+        _setting(
+            "reference_module",
+            "damage_rescaling",
+            "settings",
+            "rescale_seqlength",
+            default=0,
+        )
+        or 12
+    )
+    for key in ("rescale_length_5p", "rescale_length_3p"):
+        length = _setting(
+            "reference_module", "damage_rescaling", "settings", key, default=0
+        )
+        if length > seq_length:
+            raise ValueError(
+                f"damage_rescaling.settings.{key} ({length}) must not exceed rescale_seqlength ({seq_length}; 12 when unset)."
+            )
+    return " ".join(f"{flag} {value}" for flag, value in values)
+
+
+def _bam_filter_extra():
+    min_mapq = _setting(
+        "reference_module", "bam_filtering", "settings", "min_mapq", default=0
+    )
+    min_len = _setting(
+        "reference_module", "bam_filtering", "settings", "min_read_length", default=0
+    )
+    flags = ["-F 4"] if _filter_remove else []
+    if min_mapq:
+        flags.append(f"-q {min_mapq}")
+    if min_len:
+        flags.append(f"-e 'length(seq)>={min_len}'")
+    return " ".join(flags)
