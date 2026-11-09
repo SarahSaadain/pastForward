@@ -160,6 +160,7 @@ properties:
                 additionalProperties: false
                 properties:
                   keep_bam: {type: boolean}
+                  downsample: {type: number, minimum: 0}
           filter_unmapped_reads:
             type: object
             additionalProperties: false

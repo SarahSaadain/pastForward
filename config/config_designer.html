@@ -992,6 +992,11 @@
               <label><input type="checkbox" id="dr_keep" onchange="render()"> Keep rescaled BAM (keep_bam)</label>
               <p class="hint">Default: off. Keeps the rescaled BAM and links (same disk) or copies (other disk) it to results/reference_module/&lt;reference&gt;/mapped/.</p>
             </div>
+            <div class="field">
+              <label class="lbl" for="dr_down">Downsample (downsample)</label>
+              <input type="number" id="dr_down" value="0" min="0" step="any" oninput="render()">
+              <p class="hint">Default: 0 (all reads). Reads mapDamage uses for the damage tables, plots and model. Below 1 is a fraction of the reads, 1 or more is a number of reads. Faster on large BAMs. Rescaling still covers every read.</p>
+            </div>
             </div><!-- /.adv-content -->
           </div>
 
@@ -1866,7 +1871,12 @@ function buildYAML() {
   p(0, '');
   p(4, 'damage_rescaling:');
   kv(6, 'execute', gb('dr_exec'));
-  if (gb('dr_keep')) { p(6, 'settings:'); kv(8, 'keep_bam', true); }
+  const drDown = parseFloat(gv('dr_down')) || 0;
+  if (gb('dr_keep') || drDown > 0) {
+    p(6, 'settings:');
+    if (gb('dr_keep')) kv(8, 'keep_bam', true);
+    if (drDown > 0) kv(8, 'downsample', drDown);
+  }
   p(0, '');
   p(4, 'filter_unmapped_reads:');
   kv(6, 'execute', gb('fur_exec'));
@@ -2172,6 +2182,7 @@ function populateForm(c) {
   sb('dedup_keep', (ded.settings||{}).keep_bam === true);
   sb('dr_exec',  (rp.damage_rescaling||{}).execute);              dot('dr_exec','d_dr');
   sb('dr_keep', ((rp.damage_rescaling||{}).settings||{}).keep_bam === true);
+  sv('dr_down', ((rp.damage_rescaling||{}).settings||{}).downsample);
   const fur = rp.filter_unmapped_reads||{};
   sb('fur_exec', fur.execute); dot('fur_exec','d_fur');
   sv('fur_action', (fur.settings||{}).action);

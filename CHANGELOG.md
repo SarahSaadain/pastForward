@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### New Features
 
+- **mapDamage downsampling**: `reference_module.damage_rescaling.settings.downsample` passes `-n` to mapDamage, so the damage tables, plots and model use a fraction (below 1) or a number (1 or more) of the reads. Rescaling still covers every read. Default `0` uses all reads, as before. mapDamage is the slowest step on large BAMs, because it counts every read on one core.
 - **Default mapper is now bwa-mem3** (was `bwa-mem2`) for the reference mapping, the SCG selector and the feature-library mapping. Alignments equal bwa-mem2's apart from bug fixes and two extra tags (`MQ`, `HN`). Set `mapper: "bwa-mem2"` for the old behaviour. The two indexes are not compatible. Existing projects that never set `mapper` rebuild the index and remap every individual once.
 - **bowtie and bowtie2 mappers**: `mapper: "bowtie"` and `mapper: "bowtie2"` work for the reference mapping, the SCG selector and the feature-library mapping. bowtie suits reads under about 50 bp, bowtie2 reads over about 50 bp. New envs `workflow/envs/bowtie.yaml` and `workflow/envs/bowtie2.yaml`.
 - **Mapper read-length table**: `docs/FAQ.md` and `docs/process_overview.md` list the read lengths each mapper's authors recommend and suggest mappers by read length. The config designer shows the same hints.

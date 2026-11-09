@@ -2,6 +2,12 @@
 # Snakemake rules
 ####################################################
 
+# mapDamage -n: 0 (default) = all reads, below 1 = fraction of reads, 1 or more = number of reads.
+# It only thins the reads used for the damage tables and the model. Rescaling still covers every read.
+_MAPDAMAGE_DOWNSAMPLE = _setting(
+    "reference_module", "damage_rescaling", "settings", "downsample", default=0
+)
+
 
 # Rule: Analyze DNA damage and rescale BAM using mapDamage2
 rule analyze_mapdamage_and_rescale_bam:
@@ -41,7 +47,8 @@ rule analyze_mapdamage_and_rescale_bam:
     log:
         "{species}/processed/reference_module/{reference}/analytics/{individual}/mapdamage/{individual}_{reference}.rule.log",
     params:
-        extra="",  # optional parameters for mapdamage2 (except -i, -r, -d, --rescale)
+        # optional parameters for mapdamage2 (except -i, -r, -d, --rescale)
+        extra=f"--downsample {_MAPDAMAGE_DOWNSAMPLE}" if _MAPDAMAGE_DOWNSAMPLE else "",
     message:
         "Analyze damage and rescale {input.bam}"
     wrapper:
