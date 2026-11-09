@@ -3,12 +3,8 @@ name: Test data run
 # Runs the whole pipeline on the synthetic test set in tests/integration/synthetic_project/ and checks its known answers
 # (tests/integration/test_synthetic_run.py). Conda envs are cached, keyed on the env files.
 
+# Manual only: too slow for every push. Start it from the Actions tab or with `gh workflow run test-data.yml`.
 on:
-  push:
-    branches:
-      - main
-      - develop
-  pull_request:
   workflow_dispatch:
 
 jobs:

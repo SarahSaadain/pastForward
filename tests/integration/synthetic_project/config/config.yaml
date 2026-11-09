@@ -41,6 +41,9 @@ pipeline:
     execute: true
     deduplication:
       execute: true
+      settings:
+        # The 20 GB default heap does not fit on a 16 GB CI runner.
+        mem_mb: 2000
     damage_rescaling:
       execute: true
     analysis:
