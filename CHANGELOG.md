@@ -49,6 +49,8 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **Random `get_final_bam` failure "Output ... has older modification time"**: `get_final_bam`, `keep_bam` and the rescaled-BAM step hard-linked the BAM index. Snakemake touches outputs after a job, so touching the linked index also made the input index newer than the output BAM, and the mtime check failed when the two touches fell in different clock ticks. The index (a few KB) is now copied; the BAM is still hard-linked.
+- **bwa-mem3 and minibwa envs did not solve** under strict channel priority (`htslib` / `libdeflate` conflict). `workflow/envs/bwa_mem3.yaml` and `minibwa.yaml` now list conda-forge before bioconda.
 - **MultiQC logo missing outside the project root**: the logo path is now found from the workflow folder, so runs with `snakemake --directory` show the logo too. Before, MultiQC logged "custom_logo path not found".
 - **Centrifuge taxon counts**: `{sample}_taxon_counts.tsv` no longer has a bogus `1 taxID` line from the Centrifuge header.
 - **Ctrl-C in a foreground run printed a Python traceback**: `run --fg`, `resume --fg`, `dryrun` and `touch` now keep logging Snakemake's shutdown, then print "Interrupted." (plus the resume command for `run`/`resume`).

@@ -130,5 +130,5 @@ rule move_rescaled_bam:
     shell:
         """
         ln -fL "{input.sorted_bam}" "{output.sorted_bam}" >"{log}" 2>&1 || cp "{input.sorted_bam}" "{output.sorted_bam}" >>"{log}" 2>&1
-        ln -fL "{input.bam_index}" "{output.bam_index}" >>"{log}" 2>&1 || cp "{input.bam_index}" "{output.bam_index}" >>"{log}" 2>&1
+        cp "{input.bam_index}" "{output.bam_index}" >>"{log}" 2>&1
         """

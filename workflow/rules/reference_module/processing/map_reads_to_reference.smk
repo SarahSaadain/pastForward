@@ -73,5 +73,5 @@ rule keep_bam:
     shell:
         """
         ln -f "{input.bam}" "{output.bam}" >"{log}" 2>&1 || cp -p "{input.bam}" "{output.bam}" >>"{log}" 2>&1
-        ln -f "{input.bai}" "{output.bai}" >>"{log}" 2>&1 || cp -p "{input.bai}" "{output.bai}" >>"{log}" 2>&1
+        cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
         """
