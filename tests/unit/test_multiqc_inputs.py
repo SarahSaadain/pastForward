@@ -347,6 +347,29 @@ class MultiqcInputsTestCase(unittest.TestCase):
         self.assertTrue(jsons[0].endswith("dedup_2/IND001_genome_cluster_2.dedup.json"))
         self.assertEqual(len(jsons), 2)
 
+    def test_rescale_merge_inputs_use_the_dedup_clusters_plus_unplaced_reads(self):
+        ns = self.load()
+        folder = os.path.join(self.project_dir, "clusters")
+        os.makedirs(folder)
+        for name in ("cluster_1.bed", "cluster_2.bed"):
+            open(os.path.join(folder, name), "w").close()
+        checkpoint = SimpleNamespace(
+            get=lambda **kw: SimpleNamespace(
+                output=SimpleNamespace(cluster_folder=folder)
+            )
+        )
+        ns["checkpoints"] = SimpleNamespace(dedup_create_all_contig_clusters=checkpoint)
+        wc = SimpleNamespace(species="Dmel", reference="genome", individual="IND001")
+        chunks = ns["rescale_merge_chunks_input"](wc)
+        self.assertEqual(
+            [os.path.basename(c) for c in chunks],
+            [
+                "IND001_genome_chunk_1_rescaled.bam",
+                "IND001_genome_chunk_2_rescaled.bam",
+                "IND001_genome_chunk_unplaced_rescaled.bam",
+            ],
+        )
+
     def test_fastp_adapter_flags(self):
         def flags(seqs, paired):
             ns = self.load(

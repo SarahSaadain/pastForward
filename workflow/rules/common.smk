@@ -448,6 +448,25 @@ def dedup_merge_split_jsons_input(wildcards):
     return json_files
 
 
+def _mapdamage_input_bam(wildcards):
+    """BAM that mapDamage reads: the deduplicated one if dedup runs, else the sorted one."""
+    stage = "sorted_dedupped" if _dedup_enabled() else "sorted"
+    return f"{wildcards.species}/processed/reference_module/{wildcards.reference}/mapped/{wildcards.individual}_{wildcards.reference}_{stage}.bam"
+
+
+def rescale_merge_chunks_input(wildcards):
+    """
+    Rescaled BAM of every chunk of one individual: one per dedup contig cluster, plus the
+    reads without a contig ('unplaced').
+    """
+    chunks = [*_dedup_cluster_ids(wildcards), "unplaced"]
+    return [
+        f"{wildcards.species}/processed/reference_module/{wildcards.reference}/analytics/"
+        f"{wildcards.individual}/mapdamage/split/{wildcards.individual}_{wildcards.reference}_chunk_{chunk}_rescaled.bam"
+        for chunk in chunks
+    ]
+
+
 def _standardize_reference_extension_to_fa_ref_path(wildcards):
     # Get the list of reference tuples (sanitized_name, full_path)
     # the full_path contains the original file path

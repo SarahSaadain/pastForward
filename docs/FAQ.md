@@ -506,6 +506,9 @@ A contig is never split, so the largest contig sets the lower bound for the slow
 **Q: Does the new clustering rerun deduplication on a finished project?**
 No. Clusters used to be built once per reference by contig count, which could put most of the reads in one cluster (on dm6, 2L, 2R, 3L and 3R together). They are now built per individual by read count, in `dedup_cluster/<individual>/clusters/`. Snakemake leaves finished outputs alone, so only new individuals, or deduplication that reruns for another reason, use the new clusters. The old `dedup_cluster/clusters/` and per-individual `dedup_<start>_<end>/` folders are no longer used and can be deleted. The old `min_contigs_per_cluster` and `max_contigs_per_cluster` settings are ignored with a warning.
 
+**Q: Why is mapDamage rescaling split into chunks?**
+Rescaling is single-core and was one of the slowest steps (48 min for a Dmel sample). mapDamage now fits its model once, then rescales the BAM in parallel chunks: one per deduplication contig cluster, plus the reads without a contig, merged afterwards. Each read is rescaled on its own, so the reads are the same as from one full rescale (checked on the synthetic project, and with a prototype on real Dmel samples). As with deduplication, the largest contig limits the speedup, to about 4 times on dm6. Finished projects do not rerun.
+
 **Q: What determines which BAM becomes the `_final.bam`?**
 pastForward follows a priority chain: rescaled BAM → deduplicated BAM → sorted BAM, using the most-processed available result based on which steps are enabled.
 
