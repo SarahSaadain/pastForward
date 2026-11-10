@@ -79,6 +79,9 @@ properties:
                 additionalProperties: false
                 properties:
                   min_quality: {type: integer}
+                  trim_low_quality: {type: boolean}
+                  trim_quality: {type: integer, minimum: 1, maximum: 41}
+                  trim_window_size: {type: integer, minimum: 1, maximum: 1000}
                   min_length: {type: integer}
                   unqualified_percent_limit: {type: number}
                   n_base_limit: {type: integer}

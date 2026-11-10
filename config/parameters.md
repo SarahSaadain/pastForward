@@ -78,7 +78,10 @@ Controls FastQC + MultiQC quality reports at each processing stage and read coun
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `settings.min_quality` | `15` | Minimum base quality score for quality filtering. |
+| `settings.min_quality` | `15` | Base quality that counts as "qualified". A read is dropped when more than `unqualified_percent_limit` of its bases are below it. This only **filters** reads, it does not trim bases. |
+| `settings.trim_low_quality` | `false` | When `true`, bases below `trim_quality` are trimmed from both read ends (fastp `--cut_front --cut_tail` with a window of 1), like AdapterRemoval `--trimqualities`. Trimming happens before the length and quality filters. Switching it reruns quality filtering and everything after it. |
+| `settings.trim_quality` | `2` | Quality threshold for `trim_low_quality`. Ignored when that is `false`. `2` is PALEOMIX's aDNA value. |
+| `settings.trim_window_size` | `1` | Window size for `trim_low_quality`. `1` trims base by base, like AdapterRemoval `--trimqualities`. A larger window trims until the window's mean quality reaches `trim_quality` (fastp's own default window is 4). Ignored when `trim_low_quality` is `false`. |
 | `settings.min_length` | `30` | Minimum read length after quality filtering. |
 | `settings.unqualified_percent_limit` | `40` | Max percentage of unqualified bases allowed in a read. |
 | `settings.n_base_limit` | `5` | Max number of N bases allowed in a read. |

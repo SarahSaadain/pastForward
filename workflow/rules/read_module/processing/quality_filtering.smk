@@ -3,6 +3,30 @@
 ####################################################
 
 
+# trim_low_quality: true trims bases below trim_quality from both read ends (window of trim_window_size bases, default 1 = per base),
+# like AdapterRemoval --trimqualities. false = no trimming, reads are only filtered.
+_trim_quality = int(
+    _setting("read_module", "quality_filtering", "settings", "trim_quality", default=2)
+)
+_trim_window = int(
+    _setting(
+        "read_module", "quality_filtering", "settings", "trim_window_size", default=1
+    )
+)
+_quality_trim_flags = (
+    f"--cut_front --cut_tail --cut_front_window_size {_trim_window} --cut_tail_window_size {_trim_window} "
+    f"--cut_front_mean_quality {_trim_quality} --cut_tail_mean_quality {_trim_quality} "
+    if _setting(
+        "read_module",
+        "quality_filtering",
+        "settings",
+        "trim_low_quality",
+        default=False,
+    )
+    else ""
+)
+
+
 # Rule: Quality filtering of reads using fastp
 rule filter_reads_by_quality:
     input:
@@ -24,6 +48,7 @@ rule filter_reads_by_quality:
     params:
         extra=(
             f"--disable_adapter_trimming "
+            f"{_quality_trim_flags}"
             f"--qualified_quality_phred {_setting('read_module', 'quality_filtering', 'settings', 'min_quality', default= '15')} "
             f"--length_required {_setting('read_module', 'quality_filtering', 'settings', 'min_length', default=30)} "
             f"--unqualified_percent_limit {_setting('read_module', 'quality_filtering', 'settings', 'unqualified_percent_limit', default=40)} "

@@ -675,6 +675,16 @@
                       <input type="number" id="qf_nbase" value="5" min="0" oninput="render()">
                       <p class="hint">Default: 5. Max number of N bases allowed in a read.</p>
                     </div>
+                    <div class="field">
+                      <label><input type="checkbox" id="qf_trim" onchange="render()"> Trim low-quality bases</label>
+                      <input type="number" id="qf_trimq" value="2" min="1" max="41" oninput="render()">
+                      <p class="hint">Default: off. When on, trims bases below this quality from both read ends, like AdapterRemoval --trimqualities. aDNA: ~2.</p>
+                    </div>
+                    <div class="field">
+                      <label>Trim Window Size</label>
+                      <input type="number" id="qf_trimw" value="1" min="1" max="1000" oninput="render()">
+                      <p class="hint">Default: 1 (per base, like AdapterRemoval). Larger = trim until the window mean reaches the quality.</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1866,6 +1876,9 @@ function buildYAML() {
   if (gb('qf_adv_en')) {
     kv(8, 'unqualified_percent_limit', gn('qf_unqual'));
     kv(8, 'n_base_limit', gn('qf_nbase'));
+    kv(8, 'trim_low_quality', gb('qf_trim'));
+    kv(8, 'trim_quality', gn('qf_trimq'));
+    kv(8, 'trim_window_size', gn('qf_trimw'));
   }
   if (gb('qf_keep')) kv(8, 'keep_reads', true);
   p(0, '');
@@ -2184,9 +2197,9 @@ function populateForm(c) {
   const qfs = qf.settings || {};
   sb('qf_exec', qf.execute); dot('qf_exec','d_qf');
   sv('qf_minq', qfs.min_quality); sv('qf_minl', qfs.min_length);
-  if (qfs.unqualified_percent_limit !== undefined || qfs.n_base_limit !== undefined) {
+  if (qfs.unqualified_percent_limit !== undefined || qfs.n_base_limit !== undefined || qfs.trim_low_quality !== undefined || qfs.trim_quality !== undefined || qfs.trim_window_size !== undefined) {
     setOpt('qf_adv_en','qf_adv_body','qf_adv_hdr', true);
-    sv('qf_unqual', qfs.unqualified_percent_limit); sv('qf_nbase', qfs.n_base_limit);
+    sv('qf_unqual', qfs.unqualified_percent_limit); sv('qf_nbase', qfs.n_base_limit); sv('qf_trimq', qfs.trim_quality); sv('qf_trimw', qfs.trim_window_size); sb('qf_trim', qfs.trim_low_quality);
   } else setOpt('qf_adv_en','qf_adv_body','qf_adv_hdr', false);
   sb('qf_keep', qfs.keep_reads === true);
   // `contamination` is the pre-rename name of `taxonomic_screening`; still loadable here,

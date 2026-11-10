@@ -136,6 +136,12 @@ pipeline:
       settings:
         # Minimum quality score for quality filtering
         min_quality: 30
+        # Optional: Trim low-quality bases from both read ends, like AdapterRemoval --trimqualities (Default: false, filter only)
+        #trim_low_quality: false
+        # Optional: Quality threshold for trim_low_quality (Default: 2)
+        #trim_quality: 2
+        # Optional: Window size for trim_low_quality, 1 = per base (Default: 1)
+        #trim_window_size: 1
         # Minimum length of reads after quality filtering
         min_length: 30
         # Optional: Max percentage of unqualified bases allowed in a read (Default: 40)
