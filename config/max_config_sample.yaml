@@ -264,9 +264,9 @@ pipeline:
         # Optional: Reads mapDamage uses for the damage tables, plots and model (Default: 0 = all reads)
         # Below 1 is a fraction of the reads, 1 or more is a number of reads. Rescaling still covers every read.
         #downsample: 0
-        # Optional: mapDamage --seq-length, bases from each read end used for the model (Default: 0 = mapDamage's 12)
+        # Optional: mapDamage --seq-length, bases from each read end used for the model (Default: 12)
         #rescale_seqlength: 12
-        # Optional: bases rescaled at the 5' / 3' end, at most rescale_seqlength (Default: 0 = same as rescale_seqlength)
+        # Optional: bases rescaled at the 5' / 3' end, at most rescale_seqlength, 0 = none at that end (Default: same as rescale_seqlength)
         #rescale_length_5p: 12
         #rescale_length_3p: 12
 

@@ -47,7 +47,16 @@ def DR(**kw):
 
 class MapdamageExtraTest(unittest.TestCase):
     def test_default_empty(self):
-        self.assertEqual(load()["_mapdamage_extra"](), "")
+        self.assertEqual(
+            load()["_mapdamage_extra"](),
+            "--seq-length 12 --rescale-length-5p 12 --rescale-length-3p 12",
+        )
+
+    def test_rescale_lengths_follow_seqlength(self):
+        self.assertEqual(
+            load(DR(rescale_seqlength=20))["_mapdamage_extra"](),
+            "--seq-length 20 --rescale-length-5p 20 --rescale-length-3p 20",
+        )
 
     def test_flags(self):
         ns = load(
@@ -61,6 +70,12 @@ class MapdamageExtraTest(unittest.TestCase):
         self.assertEqual(
             ns["_mapdamage_extra"](),
             "--downsample 0.5 --seq-length 20 --rescale-length-5p 15 --rescale-length-3p 10",
+        )
+
+    def test_zero_rescale_length_is_passed(self):
+        self.assertEqual(
+            load(DR(rescale_length_5p=0, rescale_length_3p=None))["_mapdamage_extra"](),
+            "--seq-length 12 --rescale-length-5p 0 --rescale-length-3p 12",
         )
 
     def test_rescale_length_above_default_seqlength_raises(self):

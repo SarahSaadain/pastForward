@@ -999,15 +999,15 @@
             </div>
             <div class="field">
               <label class="lbl" for="dr_seqlen">Seq length (rescale_seqlength)</label>
-              <input type="number" id="dr_seqlen" value="0" min="0" step="1" oninput="render()">
-              <p class="hint">Default: 0 (mapDamage's 12). Bases from each read end used for the damage model.</p>
+              <input type="number" id="dr_seqlen" value="" placeholder="12" min="1" step="1" oninput="render()">
+              <p class="hint">Default: 12 (leave empty). Bases from each read end used for the damage model.</p>
             </div>
             <div class="field">
               <label class="lbl" for="dr_len5">Rescale length 5' (rescale_length_5p)</label>
-              <input type="number" id="dr_len5" value="0" min="0" step="1" oninput="render()">
+              <input type="number" id="dr_len5" value="" placeholder="12" min="0" step="1" oninput="render()">
               <label class="lbl" for="dr_len3">Rescale length 3' (rescale_length_3p)</label>
-              <input type="number" id="dr_len3" value="0" min="0" step="1" oninput="render()">
-              <p class="hint">Default: 0 (same as seq length). Bases rescaled at each end. Must not exceed seq length (12 if unset).</p>
+              <input type="number" id="dr_len3" value="" placeholder="12" min="0" step="1" oninput="render()">
+              <p class="hint">Default: same as seq length (leave empty). Bases rescaled at each end. 0 = no rescaling at that end. Must not exceed seq length.</p>
             </div>
             </div><!-- /.adv-content -->
           </div>
@@ -1914,7 +1914,7 @@ function buildYAML() {
   kv(6, 'execute', gb('dr_exec'));
   const drDown = parseFloat(gv('dr_down')) || 0;
   const drInts = [['dr_seqlen','rescale_seqlength'],['dr_len5','rescale_length_5p'],['dr_len3','rescale_length_3p']]
-    .map(([id,k]) => [k, parseInt(gv(id)) || 0]).filter(([k,v]) => v > 0);
+    .map(([id,k]) => [k, parseInt(gv(id))]).filter(([k,v]) => !isNaN(v) && (k !== 'rescale_seqlength' || v > 0));
   if (gb('dr_keep') || drDown > 0 || drInts.length) {
     p(6, 'settings:');
     if (gb('dr_keep')) kv(8, 'keep_bam', true);

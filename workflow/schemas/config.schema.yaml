@@ -161,9 +161,9 @@ properties:
                 properties:
                   keep_bam: {type: boolean}
                   downsample: {type: number, minimum: 0}
-                  rescale_seqlength: {type: integer, minimum: 0}
-                  rescale_length_5p: {type: integer, minimum: 0}
-                  rescale_length_3p: {type: integer, minimum: 0}
+                  rescale_seqlength: {type: [integer, "null"], minimum: 1}
+                  rescale_length_5p: {type: [integer, "null"], minimum: 0}
+                  rescale_length_3p: {type: [integer, "null"], minimum: 0}
           bam_filtering:
             type: object
             additionalProperties: false

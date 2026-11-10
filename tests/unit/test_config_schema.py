@@ -99,6 +99,18 @@ class TestValidateConfig(unittest.TestCase):
     def test_empty_id_list_means_all(self):
         validate_config({"species": {"demo": {"individuals": None, "references": []}}})
 
+    def test_mapdamage_rescale_settings(self):
+        def cfg(**kw):
+            return {
+                "pipeline": {"reference_module": {"damage_rescaling": {"settings": kw}}}
+            }
+
+        validate_config(
+            cfg(rescale_length_5p=0, rescale_length_3p=None, rescale_seqlength=None)
+        )
+        with self.assertRaises(ConfigValidationError):
+            validate_config(cfg(rescale_seqlength=0))
+
 
 if __name__ == "__main__":
     unittest.main()

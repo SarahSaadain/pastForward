@@ -587,44 +587,30 @@ def _ecmsd_database_input(wildcards):
     return [ancient(f) for f in files]
 
 
-# shortcut: 0 means "mapDamage default", so "--rescale-length-5p 0" (no rescaling at that end) cannot be set; use null if needed.
+# Always passes --seq-length (default 12) and both rescale lengths (default: the seq length), as mapDamage would use them.
+# Unset or null = default. A rescale length of 0 is passed on: mapDamage then rescales nothing at that end.
 def _mapdamage_extra():
-    flags = {
-        "downsample": "--downsample",
-        "rescale_seqlength": "--seq-length",
-        "rescale_length_5p": "--rescale-length-5p",
-        "rescale_length_3p": "--rescale-length-3p",
-    }
-    values = (
-        (
-            flag,
-            _setting(
-                "reference_module", "damage_rescaling", "settings", key, default=0
-            ),
-        )
-        for key, flag in flags.items()
-    )
-    values = [(flag, value) for flag, value in values if value]
-    # mapDamage stops with an error when a rescale length is longer than --seq-length
-    seq_length = (
-        _setting(
-            "reference_module",
-            "damage_rescaling",
-            "settings",
-            "rescale_seqlength",
-            default=0,
-        )
-        or 12
-    )
-    for key in ("rescale_length_5p", "rescale_length_3p"):
-        length = _setting(
-            "reference_module", "damage_rescaling", "settings", key, default=0
-        )
+    def get(key, default=None):
+        value = _setting("reference_module", "damage_rescaling", "settings", key)
+        return default if value is None else value
+
+    seq_length = get("rescale_seqlength", 12)
+    parts = []
+    if get("downsample", 0):
+        parts.append(f"--downsample {get('downsample')}")
+    parts.append(f"--seq-length {seq_length}")
+    for key, flag in (
+        ("rescale_length_5p", "--rescale-length-5p"),
+        ("rescale_length_3p", "--rescale-length-3p"),
+    ):
+        length = get(key, seq_length)
+        # mapDamage stops with an error when a rescale length is longer than --seq-length
         if length > seq_length:
             raise ValueError(
-                f"damage_rescaling.settings.{key} ({length}) must not exceed rescale_seqlength ({seq_length}; 12 when unset)."
+                f"damage_rescaling.settings.{key} ({length}) must not exceed rescale_seqlength ({seq_length})."
             )
-    return " ".join(f"{flag} {value}" for flag, value in values)
+        parts.append(f"{flag} {length}")
+    return " ".join(parts)
 
 
 def _bam_filter_extra(remove_unmapped=False):
