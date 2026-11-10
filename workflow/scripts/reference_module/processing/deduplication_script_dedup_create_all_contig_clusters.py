@@ -40,23 +40,22 @@ def create_contig_clusters(idxstats_path, cluster_folder, cores=1):
     )
 
     if with_reads:
-        num_clusters = max(1, min(cores, len(with_reads)))
+        num_clusters = min(cores, len(with_reads))
         clusters = [[] for _ in range(num_clusters)]
-        load = [0] * num_clusters
         heap = [(0, i) for i in range(num_clusters)]  # (reads so far, cluster)
         # ties broken by idxstats order and cluster number, so every run gives the same result
         for contig in sorted(with_reads, key=lambda c: (-c[3], c[0])):
-            _, i = heapq.heappop(heap)
+            reads, i = heapq.heappop(heap)
             clusters[i].append(contig)
-            load[i] += contig[3]
-            heapq.heappush(heap, (load[i], i))
+            heapq.heappush(heap, (reads + contig[3], i))
     else:
         # no reads at all: one cluster with every contig, so dedup still runs once
-        clusters, load = [contigs], [0]
+        clusters = [contigs]
 
     os.makedirs(cluster_folder, exist_ok=True)
-    for i, (cluster, reads) in enumerate(zip(clusters, load), start=1):
+    for i, cluster in enumerate(clusters, start=1):
         group_file = os.path.join(cluster_folder, f"cluster_{i}.bed")
+        reads = sum(c[3] for c in cluster)
         logger.info(f"Writing {group_file}: {len(cluster)} contigs, {reads} reads")
         with open(group_file, "w") as out:
             out.writelines(
