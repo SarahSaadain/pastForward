@@ -946,22 +946,12 @@
               ancient and historical DNA and correctly handles merged single-stranded reads.
               If disabled, the sorted BAM from mapping is passed directly to subsequent steps.
               <br><br>
-              To manage memory on references with many contigs, contigs are grouped into clusters and each cluster is
-              deduplicated independently, then merged. The cluster size is configurable below.
+              To run in parallel, whole contigs are grouped into one cluster per core, balanced by reads per contig,
+              and each cluster is deduplicated independently, then merged.
               Each deduplication run produces a histogram and JSON statistics file that feed into MultiQC.
               <div class="when-hint"><span class="def-pill on">Default: ON</span>Leave on for most aDNA analyses — PCR duplicates inflate apparent read depth and bias variant calling. Turn off only if library complexity is very low (duplicate removal would leave too few reads) or if you specifically need the pre-dedup BAM for a downstream tool.</div>
             </div>
             <div class="subsection-body open">
-              <div class="field">
-                <label>Min Contigs per Cluster</label>
-                <input type="number" id="dedup_min" value="10" min="1" oninput="render()">
-                <p class="hint">Default: 10. Minimum number of contigs grouped into a cluster. Small contigs below this count are merged together before deduplication.</p>
-              </div>
-              <div class="field">
-                <label>Max Contigs per Cluster</label>
-                <input type="number" id="dedup_max" value="500" min="1" oninput="render()">
-                <p class="hint">Default: 500. Lower values use less memory per cluster but increase runtime due to more merge operations. Reduce (e.g. to 100) only if deduplication is failing on a large, fragmented reference genome.</p>
-              </div>
               <div class="field">
                 <label>Memory (MB)</label>
                 <input type="number" id="dedup_mem" value="20000" min="1" oninput="render()">
@@ -1918,8 +1908,6 @@ function buildYAML() {
   p(4, 'deduplication:');
   kv(6, 'execute', gb('dedup_exec'));
   p(6, 'settings:');
-  kv(8, 'min_contigs_per_cluster', gn('dedup_min'));
-  kv(8, 'max_contigs_per_cluster', gn('dedup_max'));
   kv(8, 'mem_mb', gn('dedup_mem'));
   if (gb('dedup_keep')) kv(8, 'keep_bam', true);
   p(0, '');
@@ -2239,8 +2227,6 @@ function populateForm(c) {
   sb('rp_keep', rpm.keep_bam === true);
   const ded = rp.deduplication || {};
   sb('dedup_exec', ded.execute); dot('dedup_exec','d_dedup');
-  sv('dedup_min', (ded.settings||{}).min_contigs_per_cluster);
-  sv('dedup_max', (ded.settings||{}).max_contigs_per_cluster);
   sv('dedup_mem', (ded.settings||{}).mem_mb);
   sb('dedup_keep', (ded.settings||{}).keep_bam === true);
   sb('dr_exec',  (rp.damage_rescaling||{}).execute);              dot('dr_exec','d_dr');
@@ -2380,7 +2366,7 @@ function resetDefaults() {
       reference_module: {
         execute: true,
         mapping: { settings: { mapper: 'bwa-mem3' } },
-        deduplication: { execute: true, settings: { min_contigs_per_cluster: 1, max_contigs_per_cluster: 500 } },
+        deduplication: { execute: true },
         damage_rescaling: { execute: true },
         filter_unmapped_reads: { execute: false, settings: { action: 'keep' } },
         bam_filtering: { execute: false, settings: { min_mapq: 0, min_read_length: 0 } },

@@ -67,6 +67,21 @@ class TestApplyConfigKeyAliases(unittest.TestCase):
             {"pipeline": {"read_module": {"taxonomic_screening": {"execute": True}}}},
         )
 
+    def test_removed_key_is_dropped_so_old_configs_still_validate(self):
+        settings = {
+            "min_contigs_per_cluster": 1,
+            "max_contigs_per_cluster": 500,
+            "mem_mb": 9,
+        }
+        config = {
+            "pipeline": {"reference_module": {"deduplication": {"settings": settings}}}
+        }
+        with self.assertLogs(level="WARNING") as logs:
+            applied = apply_config_key_aliases(config)
+        self.assertEqual(settings, {"mem_mb": 9})
+        self.assertEqual(applied, [])
+        self.assertIn("no longer used", logs.output[0])
+
     def test_missing_or_non_dict_parents_do_not_raise(self):
         for config in ({}, {"pipeline": None}, {"pipeline": {"read_module": None}}):
             with self.subTest(config=config):

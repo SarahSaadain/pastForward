@@ -135,10 +135,10 @@ Removes PCR and sequencing duplicates using DeDup. Default: **on**.
 
 Uses a [modified DeDup fork](https://github.com/SarahSaadain/DeDup) for performance improvements over upstream DeDup ([benchmark comparison repo](https://github.com/SarahSaadain/DeDup_comparison_fork)).
 
+Deduplication runs in parallel on clusters of whole contigs, at most one cluster per core (`--cores`). Each individual gets its own clusters, balanced by the reads per contig in its sorted BAM (`samtools idxstats`). The old `min_contigs_per_cluster` and `max_contigs_per_cluster` settings are ignored with a warning.
+
 | Setting | Default | Description |
 | --- | --- | --- |
-| `settings.min_contigs_per_cluster` | `1` | Minimum number of contigs grouped into a cluster. Small contigs below this count are merged together before deduplication. |
-| `settings.max_contigs_per_cluster` | `500` | Maximum number of contigs grouped per deduplication cluster. Lower values use less memory but increase runtime. Reduce (e.g. to 100) only for large, highly fragmented reference genomes. |
 | `settings.mem_mb` | `20000` | Memory (MB) for DeDup's JVM heap (`-Xms`/`-Xmx`), also requested from the cluster scheduler as `resources.mem_mb`. Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources. |
 | `settings.keep_bam` | `false` | Same as `mapping.settings.keep_bam`, for the deduplicated BAM (`{individual}_{reference}_sorted_dedupped.bam[.bai]`). Has no effect when deduplication is off. |
 

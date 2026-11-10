@@ -319,29 +319,32 @@ class MultiqcInputsTestCase(unittest.TestCase):
             self.assertTrue(files)
             self.assertFalse([f for f in files if "/reference_module/" in f])
 
-    def test_dedup_merge_inputs_share_cluster_ranges(self):
+    def test_dedup_merge_inputs_use_the_individuals_clusters(self):
         ns = self.load()
         folder = os.path.join(self.project_dir, "clusters")
         os.makedirs(folder)
-        for name in ("cluster_1_50.bed", "cluster_51_120.bed", "other.bed"):
+        for name in ("cluster_2.bed", "cluster_10.bed", "other.bed"):
             open(os.path.join(folder, name), "w").close()
+        calls = []
         checkpoint = SimpleNamespace(
-            get=lambda **kw: SimpleNamespace(
-                output=SimpleNamespace(cluster_folder=folder)
+            get=lambda **kw: (
+                calls.append(kw)
+                or SimpleNamespace(output=SimpleNamespace(cluster_folder=folder))
             )
         )
         ns["checkpoints"] = SimpleNamespace(dedup_create_all_contig_clusters=checkpoint)
         wc = SimpleNamespace(species="Dmel", reference="genome", individual="IND001")
-        self.assertEqual(ns["_dedup_cluster_ranges"](wc), [(1, 50), (51, 120)])
+        self.assertEqual(ns["_dedup_cluster_ids"](wc), [2, 10])
+        # clusters are built per individual, so the checkpoint is asked for this one only
+        self.assertEqual(
+            calls[0], {"species": "Dmel", "reference": "genome", "individual": "IND001"}
+        )
         bams = ns["dedup_merge_split_bams_input"](wc)
         jsons = ns["dedup_merge_split_jsons_input"](wc)
         self.assertEqual(len(bams), 3)  # two clusters + unmapped reads
-        self.assertTrue(
-            bams[1].endswith("dedup_51_120/IND001_genome_cluster_51_120_rmdup.bam")
-        )
-        self.assertTrue(
-            jsons[0].endswith("dedup_1_50/IND001_genome_cluster_1_50.dedup.json")
-        )
+        self.assertTrue(bams[1].endswith("dedup_10/IND001_genome_cluster_10_rmdup.bam"))
+        self.assertTrue(bams[2].endswith("IND001_genome_unmapped_reads.bam"))
+        self.assertTrue(jsons[0].endswith("dedup_2/IND001_genome_cluster_2.dedup.json"))
         self.assertEqual(len(jsons), 2)
 
     def test_fastp_adapter_flags(self):

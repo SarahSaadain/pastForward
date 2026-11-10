@@ -11,57 +11,43 @@ _DEDUP_BAM = "{species}/processed/reference_module/{reference}/mapped/{individua
 _DEDUP_BAM_BAI = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped.bam.bai"
 
 
-# Rule: Extract contig names from reference FAI
-# Rule: Extract contigs as BED (full-length intervals) from reference FAI
-rule dedup_extract_contigs_from_reference_fai:
+# Rule: Count reads per contig from the sorted BAM's index (seconds, no read scan)
+rule dedup_count_reads_per_contig:
     input:
-        fai="{species}/processed/reference_module/{reference}/reference/{reference}.fa.fai",
+        bam="{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam",
+        bai="{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam.bai",
     output:
-        bed=temp(
-            "{species}/processed/reference_module/{reference}/dedup_cluster/contigs.bed"
+        idxstats=temp(
+            "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/{individual}_{reference}_idxstats.tsv"
         ),
     log:
-        "{species}/processed/reference_module/{reference}/dedup_cluster/contigs.log",
+        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/{individual}_{reference}_idxstats.log",
     conda:
-        "../../../envs/python_and_r.yaml"
+        "../../../envs/samtools.yaml"
     message:
-        "Extracting full-length contig BED from FAI for {wildcards.species} / {wildcards.reference}"
+        "Counting reads per contig for individual {wildcards.individual} in species {wildcards.species}"
     shell:
         """
-        awk '{{print $1 "\t0\t" $2}}' "{input.fai}" >"{output.bed}" 2>"{log}"
+        samtools idxstats "{input.bam}" >"{output.idxstats}" 2>"{log}"
         """
 
 
-# Checkpoint: Create all contig clusters for deduplication
+# Checkpoint: Pack whole contigs into clusters with about the same number of reads
 checkpoint dedup_create_all_contig_clusters:
     input:
-        contigs="{species}/processed/reference_module/{reference}/dedup_cluster/contigs.bed",
+        idxstats="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/{individual}_{reference}_idxstats.tsv",
     output:
         cluster_folder=directory(
-            "{species}/processed/reference_module/{reference}/dedup_cluster/clusters"
+            "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/clusters"
         ),
     log:
-        "{species}/processed/reference_module/{reference}/dedup_cluster/dedup_create_all_contig_clusters.log",
+        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_create_all_contig_clusters.log",
     conda:
         "../../../envs/python_and_r.yaml"
     params:
         cores=workflow.cores,
-        min_contigs_per_cluster=_setting(
-            "reference_module",
-            "deduplication",
-            "settings",
-            "min_contigs_per_cluster",
-            default=1,
-        ),
-        max_contigs_per_cluster=_setting(
-            "reference_module",
-            "deduplication",
-            "settings",
-            "max_contigs_per_cluster",
-            default=500,
-        ),
     message:
-        "Creating contig clusters for deduplication for species {wildcards.species} and reference {wildcards.reference}"
+        "Creating contig clusters for deduplication for individual {wildcards.individual} in species {wildcards.species} and reference {wildcards.reference}"
     script:
         "../../../scripts/reference_module/processing/deduplication_script_dedup_create_all_contig_clusters.py"
 
@@ -93,17 +79,17 @@ rule dedup_split_bam_into_clusters_by_contig_cluster:
         bai="{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam.bai",
     output:
         bam=temp(
-            "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{start}_{end}.bam"
+            "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{cluster}.bam"
         ),
     log:
-        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_{start}_{end}.bam.log",
+        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_{cluster}.bam.log",
     threads: 2
     params:
         # -M uses the index to read only this cluster's contigs instead of scanning the whole BAM
-        extra="-M -L {species}/processed/reference_module/{reference}/dedup_cluster/clusters/cluster_{start}_{end}.bed",
+        extra="-M -L {species}/processed/reference_module/{reference}/dedup_cluster/{individual}/clusters/cluster_{cluster}.bed",
         region="",  # optional region string
     message:
-        "Splitting BAM file {input.bam} into cluster {wildcards.start}-{wildcards.end} for individual {wildcards.individual} in species {wildcards.species}"
+        "Splitting BAM file {input.bam} into cluster {wildcards.cluster} for individual {wildcards.individual} in species {wildcards.species}"
     wrapper:
         f"{WRAPPER_VERSION}/bio/samtools/view"
 
@@ -111,18 +97,18 @@ rule dedup_split_bam_into_clusters_by_contig_cluster:
 # Rule: Index split cluster BAM file
 rule dedup_index_split_cluster_bam:
     input:
-        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{start}_{end}.bam",
+        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{cluster}.bam",
     output:
         temp(
-            "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{start}_{end}.bam.bai"
+            "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{cluster}.bam.bai"
         ),
     log:
-        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{start}_{end}.bam.bai.log",
+        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{cluster}.bam.bai.log",
     threads: 2
     params:
         extra="",  # optional params string
     message:
-        "Indexing split BAM file for cluster {wildcards.start}-{wildcards.end} for individual {wildcards.individual} in species {wildcards.species}"
+        "Indexing split BAM file for cluster {wildcards.cluster} for individual {wildcards.individual} in species {wildcards.species}"
     wrapper:
         f"{WRAPPER_VERSION}/bio/samtools/index"
 
@@ -130,19 +116,19 @@ rule dedup_index_split_cluster_bam:
 # Rule: Deduplicate BAM file for each contig cluster
 rule dedup_deduplicate_bam_cluster:
     input:
-        bam="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{start}_{end}.bam",
-        bai="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{start}_{end}.bam.bai",
+        bam="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{cluster}.bam",
+        bai="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/split_cluster/{individual}_{reference}_cluster_{cluster}.bam.bai",
     output:
         dedup_folder=directory(
-            "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}/"
+            "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{cluster}/"
         ),
         dedup_bam=temp(
-            "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}/{individual}_{reference}_cluster_{start}_{end}_rmdup.bam"
+            "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{cluster}/{individual}_{reference}_cluster_{cluster}_rmdup.bam"
         ),
-        dedup_hist="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}/{individual}_{reference}_cluster_{start}_{end}.hist",
-        dedup_json="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}/{individual}_{reference}_cluster_{start}_{end}.dedup.json",
+        dedup_hist="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{cluster}/{individual}_{reference}_cluster_{cluster}.hist",
+        dedup_json="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{cluster}/{individual}_{reference}_cluster_{cluster}.dedup.json",
     log:
-        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{start}_{end}.dedup.log",
+        "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{cluster}.dedup.log",
     conda:
         "../../../envs/dedup.yaml"
     resources:

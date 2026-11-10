@@ -14,13 +14,21 @@ key names.
 import logging
 
 # (path of dict keys leading to the parent, deprecated key, current key)
+# A current key of None means the key was removed: it is dropped with a warning.
+_DEDUP_SETTINGS = ("pipeline", "reference_module", "deduplication", "settings")
 CONFIG_KEY_ALIASES = [
     (("pipeline", "read_module"), "contamination", "taxonomic_screening"),
+    # dedup clusters are now balanced by reads per contig, not by contig count
+    (_DEDUP_SETTINGS, "min_contigs_per_cluster", None),
+    (_DEDUP_SETTINGS, "max_contigs_per_cluster", None),
 ]
 
 
 def apply_config_key_aliases(config, aliases=CONFIG_KEY_ALIASES):
     """Rename deprecated config keys in place, returning the (old, new) renames applied.
+
+    A key whose current name is None was removed: it is dropped with a warning and is not
+    part of the returned list.
 
     An explicitly set current key always wins: if both names are present, the deprecated
     one is dropped with a warning rather than merged, so a config that was half-migrated
@@ -40,6 +48,14 @@ def apply_config_key_aliases(config, aliases=CONFIG_KEY_ALIASES):
 
         old_value = parent.pop(old_key)
         full_old = ".".join(parent_path + (old_key,))
+
+        if new_key is None:
+            logging.warning(
+                "Config key '%s' is no longer used and is ignored. Please remove it.",
+                full_old,
+            )
+            continue
+
         full_new = ".".join(parent_path + (new_key,))
 
         if new_key in parent:

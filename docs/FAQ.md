@@ -499,9 +499,12 @@ Yes. The mapper is configured independently under `pipeline.reference_module.map
 A [modified DeDup fork](https://github.com/SarahSaadain/DeDup), not upstream DeDup. The fork includes performance improvements. It isn't published on bioconda, so the pinned jar is side-loaded automatically into the `dedup` conda environment by `workflow/envs/dedup.post-deploy.sh` the first time it's created. There is no manual build step. Benchmarks against upstream DeDup are tracked in a [separate comparison repo](https://github.com/SarahSaadain/DeDup_comparison_fork).
 
 **Q: Why does deduplication split the BAM into clusters?**
-DeDup can use large amounts of memory on reference genomes with many contigs. Splitting by contig cluster caps peak memory use. Adjust `deduplication.settings.max_contigs_per_cluster` (default 500). Lower values reduce memory at the cost of more merge operations.
+So DeDup runs in parallel, one cluster per core. Each cluster holds whole contigs, so duplicates are never split apart. Each individual gets its own clusters, built from the reads per contig in its sorted BAM (`samtools idxstats`, read from the index in seconds). Contigs are packed largest first, each into the cluster with the fewest reads so far, so big chromosomes end up in separate clusters.
 
-Also, splitting by cluster allows for more efficient parallel processing. Each cluster is processed independently, so multiple clusters can be deduplicated simultaneously across available CPU cores.
+A contig is never split, so the largest contig sets the lower bound for the slowest cluster. On dm6, 3R holds about a quarter of the reads, so more than about 5 cores gives no further speedup for one individual. DeDup memory is set with `deduplication.settings.mem_mb`.
+
+**Q: Does the new clustering rerun deduplication on a finished project?**
+No. Clusters used to be built once per reference by contig count, which could put most of the reads in one cluster (on dm6, 2L, 2R, 3L and 3R together). They are now built per individual by read count, in `dedup_cluster/<individual>/clusters/`. Snakemake leaves finished outputs alone, so only new individuals, or deduplication that reruns for another reason, use the new clusters. The old `dedup_cluster/clusters/` and per-individual `dedup_<start>_<end>/` folders are no longer used and can be deleted. The old `min_contigs_per_cluster` and `max_contigs_per_cluster` settings are ignored with a warning.
 
 **Q: What determines which BAM becomes the `_final.bam`?**
 pastForward follows a priority chain: rescaled BAM → deduplicated BAM → sorted BAM, using the most-processed available result based on which steps are enabled.

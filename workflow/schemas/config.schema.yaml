@@ -149,8 +149,6 @@ properties:
                 type: object
                 additionalProperties: false
                 properties:
-                  min_contigs_per_cluster: {type: integer}
-                  max_contigs_per_cluster: {type: integer}
                   mem_mb: {type: integer}
                   keep_bam: {type: boolean}
           damage_rescaling:

@@ -389,25 +389,26 @@ def create_authenticity_summary_input(wildcards):
     }
 
 
-def _dedup_cluster_ranges(wildcards):
+def _dedup_cluster_ids(wildcards):
     """
-    (start, end) of every contig cluster file 'cluster_{start}_{end}.bed' written by
-    the dedup_create_all_contig_clusters checkpoint.
+    Number of every contig cluster file 'cluster_{cluster}.bed' written by the
+    dedup_create_all_contig_clusters checkpoint for this individual.
     """
     # the checkpoint makes sure the files exist before we glob them
     # for more info see: https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution
     cluster_folder = checkpoints.dedup_create_all_contig_clusters.get(
-        species=wildcards.species, reference=wildcards.reference
+        species=wildcards.species,
+        reference=wildcards.reference,
+        individual=wildcards.individual,
     ).output.cluster_folder
 
-    group_files = sorted(glob.glob(os.path.join(cluster_folder, "cluster_*_*.bed")))
+    group_files = glob.glob(os.path.join(cluster_folder, "cluster_*.bed"))
     logger.debug(f"Found {len(group_files)} contig cluster files for deduplication.")
 
-    # "cluster_1_50.bed" -> (1, 50)
-    return [
-        tuple(map(int, os.path.splitext(os.path.basename(f))[0].split("_")[1:]))
-        for f in group_files
-    ]
+    # "cluster_12.bed" -> 12
+    return sorted(
+        int(os.path.basename(f)[len("cluster_") : -len(".bed")]) for f in group_files
+    )
 
 
 def dedup_merge_split_bams_input(wildcards):
@@ -416,8 +417,8 @@ def dedup_merge_split_bams_input(wildcards):
     """
     bam_files = [
         f"{wildcards.species}/processed/reference_module/{wildcards.reference}/dedup_cluster/"
-        f"{wildcards.individual}/dedup_{start}_{end}/{wildcards.individual}_{wildcards.reference}_cluster_{start}_{end}_rmdup.bam"
-        for start, end in _dedup_cluster_ranges(wildcards)
+        f"{wildcards.individual}/dedup_{cluster}/{wildcards.individual}_{wildcards.reference}_cluster_{cluster}_rmdup.bam"
+        for cluster in _dedup_cluster_ids(wildcards)
     ]
 
     # add unmapped reads bam file to the list of bams to merge
@@ -437,8 +438,8 @@ def dedup_merge_split_jsons_input(wildcards):
     """
     json_files = [
         f"{wildcards.species}/processed/reference_module/{wildcards.reference}/dedup_cluster/"
-        f"{wildcards.individual}/dedup_{start}_{end}/{wildcards.individual}_{wildcards.reference}_cluster_{start}_{end}.dedup.json"
-        for start, end in _dedup_cluster_ranges(wildcards)
+        f"{wildcards.individual}/dedup_{cluster}/{wildcards.individual}_{wildcards.reference}_cluster_{cluster}.dedup.json"
+        for cluster in _dedup_cluster_ids(wildcards)
     ]
 
     logger.info(f"Requesting {len(json_files)} DeDup JSON files for MultiQC.")

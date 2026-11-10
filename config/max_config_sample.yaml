@@ -246,15 +246,11 @@ pipeline:
       # When true, this sub-stage will be executed (Default: true)
       execute: true
       settings:
-        # To increase performance, deduplication will be done per cluster of contigs
-        # Below settings define how the contigs will be clustered
-        # Optional: Maximum number of contigs per cluster (Default: 10 if not specified)
-        min_contigs_per_cluster: 1
-        # Optional: Maximum number of contigs per cluster (Default: 500 if not specified)
-        max_contigs_per_cluster: 500
+        # Deduplication runs per cluster of whole contigs, one cluster per core,
+        # balanced by reads per contig. There are no settings for the clustering.
         # Optional: Memory (MB) for DeDup's JVM heap, also requested from the cluster scheduler as mem_mb (Default: 20000)
         # Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources.
-        #mem_mb: 20000
+        mem_mb: 20000
         # Optional: Keep the deduplicated BAM (Default: false)
         # Stays in processed/ and is also linked (same disk) or copied (other disk) to results/reference_module/{reference}/mapped/
         #keep_bam: false
