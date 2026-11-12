@@ -6,6 +6,7 @@ tests/
                  (pf_test_library.py, build_test_library.py) and fixtures/
   integration/   needs Snakemake: test_cli_snakemake.py, dryrun_scenarios.sh,
                  module_subsets.sh (read only, read+ref, ref only, reveal only),
+                 compare_with_ref.sh (old code vs working tree on the synthetic project),
                  and synthetic_project/ (a small project with known answers) with
                  test_synthetic_run.py that checks its results,
                  and real_data_project/ (tier 2: download_full_test.sh fetches real
@@ -140,6 +141,20 @@ python3 -m unittest tests/integration/test_synthetic_run.py -v
 
 Without `tests/integration/synthetic_project/Dmel/results/` the whole file is skipped. To check another project directory,
 set `PF_TEST_PROJECT=<path>`.
+
+## `compare_with_ref.sh`: old code vs working tree
+
+Runs `tests/integration/synthetic_project/` twice in a temp dir, once with the code at a git ref
+and once with the working tree, then compares the requested outputs (BAMs by read records, JSONs
+without version lines) and prints the per-rule benchmarks of both runs. Needs the snakemake env
+activated. Exits non-zero when any output differs.
+
+```bash
+tests/integration/compare_with_ref.sh --cores 4 HEAD \
+  Dmel/processed/reference_module/dmel_mini/mapped/HistA_dmel_mini_sorted_dedupped.bam
+```
+
+Its header lists the options and known noise (mapDamage's random model fit).
 
 ## `dryrun_scenarios.sh`: Snakemake integration checks
 
