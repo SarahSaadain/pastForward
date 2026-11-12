@@ -54,7 +54,8 @@ rule index_mapped_sorted_reads_bam:
         f"{WRAPPER_VERSION}/bio/samtools/index"
 
 
-# One rule for all kept BAMs (sorted, deduplicated, rescaled). Hard link when results/ is on the same disk (no extra space), copy otherwise.
+# One rule for all kept BAMs (sorted, deduplicated, rescaled). A copy, not a hard link: the processed/
+# BAM stays, so a hard link would share Snakemake's touch with it (see _hardlink_or_copy).
 rule keep_bam:
     input:
         bam="{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_{stage}.bam",
@@ -71,7 +72,5 @@ rule keep_bam:
     message:
         "Keeping {wildcards.stage} BAM of {wildcards.individual} mapped to {wildcards.reference} in results"
     shell:
-        """
-        ln -f "{input.bam}" "{output.bam}" >"{log}" 2>&1 || cp -p "{input.bam}" "{output.bam}" >>"{log}" 2>&1
-        cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
-        """
+        f'({_hardlink_or_copy("{input.bam}", "{output.bam}", False)}) >"{{log}}" 2>&1; '
+        'cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1'

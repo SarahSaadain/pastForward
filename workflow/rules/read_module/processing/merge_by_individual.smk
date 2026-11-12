@@ -26,7 +26,10 @@ rule merge_reads_by_individual:
 
         set -- {input}
         if [ $# -eq 1 ]; then
-            ln -fL "$1" "{output}" 2>/dev/null || cp "$1" "{output}"
+            """
+        # the final reads are temp() unless quality_filtering keep_reads (see _hardlink_or_copy)
+        + _hardlink_or_copy("$1", "{output}", not _KEEP_READS)
+        + """
         else
             cat "$@" >"{output}"
         fi

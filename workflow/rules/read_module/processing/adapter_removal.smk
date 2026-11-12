@@ -132,7 +132,7 @@ rule get_adapter_removal_final:
         """
 
 
-# Hard link when results/ is on the same disk (no extra space), copy otherwise.
+# A copy, not a hard link: the processed/ reads stay (see _hardlink_or_copy).
 rule keep_trimmed_reads:
     input:
         "{species}/processed/read_module/reads_trimmed/{sample}_trimmed_final.fastq.gz",
@@ -145,7 +145,7 @@ rule keep_trimmed_reads:
     message:
         "Keeping trimmed reads of {wildcards.sample} in results"
     shell:
-        'ln -f "{input}" "{output}" > "{log}" 2>&1 || cp -p "{input}" "{output}" >> "{log}" 2>&1'
+        f'({_hardlink_or_copy("{input}", "{output}", False)}) > "{{log}}" 2>&1'
 
 
 rule merge_reads_adapter_removal_pe:

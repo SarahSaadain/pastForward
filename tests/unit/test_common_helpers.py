@@ -2,8 +2,8 @@
 """
 Unit tests for small config helpers in workflow/rules/common.smk:
 _dedup_enabled, _mapper_extra, _scg_mapper_and_extra, _split_threads,
-_reference_mapping_job_count, _mapdamage_chunk_bam and
-_mapdamage_split_source_bam.
+_reference_mapping_job_count, _mapdamage_chunk_bam,
+_mapdamage_split_source_bam and _hardlink_or_copy.
 
 common.smk holds plain Python only, so it is exec'd into the shared namespace
 workflow/scripts/pipeline_namespace.py builds.
@@ -265,6 +265,18 @@ class MapdamageChunkBamTest(unittest.TestCase):
         self.assertEqual(
             self.chunk_bam("unplaced"), self.MAPDAMAGE_SPLIT.format("unplaced")
         )
+
+
+class HardlinkOrCopyTest(unittest.TestCase):
+    def test_temp_source_is_hard_linked(self):
+        cmd = load()["_hardlink_or_copy"]("a.bam", "b.bam", True)
+        self.assertTrue(cmd.startswith('ln -fL "a.bam" "b.bam"'))
+
+    def test_kept_source_is_never_hard_linked(self):
+        # a hard link would share Snakemake's post-job touch with the kept source
+        cmd = load()["_hardlink_or_copy"]("a.bam", "b.bam", False)
+        self.assertNotIn("ln ", cmd)
+        self.assertIn('cp "a.bam" "b.bam"', cmd)
 
 
 if __name__ == "__main__":

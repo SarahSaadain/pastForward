@@ -108,6 +108,17 @@ def _reference_mapping_threads(wildcards):
     )
 
 
+def _hardlink_or_copy(src, dst, hardlink):
+    """Shell command that puts src at dst. A hard link (a copy across disks) only when src is
+    temp(): Snakemake touches every output after its job, and a hard-linked output shares that
+    touch with src. A src that stays on disk would then look newer than everything made from
+    it, so every later run would rerun those jobs. Otherwise a copy (free with reflink on
+    btrfs/xfs)."""
+    if hardlink:
+        return f'ln -fL "{src}" "{dst}" 2>/dev/null || cp "{src}" "{dst}"'
+    return f'cp --reflink=auto "{src}" "{dst}" 2>/dev/null || cp "{src}" "{dst}"'
+
+
 def _scg_mapper_and_extra(scg_settings, mapping_settings):
     """Mapper and extra flags for SCG mapping. Unset values come from the mapping step."""
     mapping_mapper = mapping_settings.get("mapper", "bwa-mem3")

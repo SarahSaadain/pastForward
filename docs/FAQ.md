@@ -354,13 +354,13 @@ pipeline:
         keep_reads: true      # -> {species}/results/read_module/reads_final/{sample}_final.fastq.gz
 ```
 
-The `quality_filtering` file is the final reads, the ones used for mapping and screening. When quality filtering is off, it holds the adapter-removed reads. The file in `processed/` is no longer deleted, and the copy in `results/` is a hard link to it when both folders are on the same disk (no extra space) or a real copy when they are not (double space). Because the file in `processed/` stays, adding a later step such as taxonomic screening does not rebuild the reads.
+The `quality_filtering` file is the final reads, the ones used for mapping and screening. When quality filtering is off, it holds the adapter-removed reads. The file in `processed/` is no longer deleted, and `results/` gets a real copy (double space, or none with reflink on btrfs/xfs). Because the file in `processed/` stays, adding a later step such as taxonomic screening does not rebuild the reads.
 
 Notes:
 
 - With adapter removal and quality filtering both off, the file is only a copy of the raw reads, so `keep_reads` does nothing. The same is true for `adapter_removal.settings.keep_reads` when adapter removal is off.
 - The kept files stay in `processed/` for as long as the project does. Delete them yourself when you no longer need them.
-- A hard link shares its data with the file in `processed/`. Editing one in place changes both. Copy a file out before modifying it.
+- Why a copy and not a hard link: Snakemake touches every output after its job. A hard link would pass that touch on to the kept file in `processed/`, which then looks newer than everything made from it, so every later run would redo those jobs.
 - Switching `keep_reads` on for a project that already has results means the reads must be rebuilt, since they were deleted earlier. That can pull mapping and everything after it back in, see the reprocessing section above. Run `./pastForward dryrun` first and check the job count. Starting a new project with it on avoids the problem.
 
 **Q: Can I keep the sorted, deduplicated or rescaled BAM, not only the final one?**
@@ -380,13 +380,13 @@ pipeline:
         keep_bam: true      # -> {species}/results/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_rescaled.bam
 ```
 
-The files in `processed/` are no longer deleted, and the copy in `results/` is a hard link to them when both folders are on the same disk (no extra space) or a real copy when they are not (double space). Because the `processed/` file stays, adding a later step such as damage rescaling does not remap or deduplicate again.
+The files in `processed/` are no longer deleted, and `results/` gets a real copy (double space, or none with reflink on btrfs/xfs). With the kept BAM as the last step, `_final.bam` is a copy too. Because the `processed/` file stays, adding a later step such as damage rescaling does not remap or deduplicate again.
 
 Notes:
 
 - `deduplication.settings.keep_bam` does nothing when deduplication is off, and `damage_rescaling.settings.keep_bam` does nothing when damage rescaling is off.
 - The rescaled BAM holds the same data as `_final.bam` unless unmapped reads are filtered. It is a separate file name, so it stays even if you later turn rescaling off and rerun.
-- A hard link shares its data with the file in `processed/`. Editing one in place changes both. Copy a file out before modifying it.
+- Why a copy and not a hard link: Snakemake touches every output after its job. A hard link would pass that touch on to the kept file in `processed/`, which then looks newer than everything made from it, so every later run would redo those jobs.
 - The kept files stay for as long as the project does. Delete them yourself when you no longer need them.
 - Switching `keep_bam` on for a project that already has results means the BAM must be rebuilt, since it was deleted earlier. That can pull mapping and everything after it back in, see the reprocessing section above. Run `./pastForward dryrun` first and check the job count.
 

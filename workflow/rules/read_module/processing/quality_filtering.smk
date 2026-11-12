@@ -92,13 +92,20 @@ rule get_quality_filtered_final:
         "{species}/processed/read_module/reads_quality_filtered/{sample}_quality_filtered_final.log",
     conda:
         "../../../envs/python_and_r.yaml"
+    params:
+        # the quality filtered reads are temp(); the trimmed reads stay with adapter_removal keep_reads
+        hardlink=_setting("read_module", "quality_filtering", "execute", default=True)
+        or not _KEEP_TRIMMED,
     message:
         "Selecting quality filtered reads for {wildcards.sample}"
     shell:
-        'echo "Source: {input.source}" > "{log}" 2>&1; ln -fL "{input.source}" "{output.final}" 2>/dev/null || cp "{input.source}" "{output.final}" >> "{log}" 2>&1'
+        'echo "Source: {input.source}" > "{log}" 2>&1; '
+        'if [ "{params.hardlink}" = True ]; then '
+        f'({_hardlink_or_copy("{input.source}", "{output.final}", True)}) >> "{{log}}" 2>&1; '
+        f'else ({_hardlink_or_copy("{input.source}", "{output.final}", False)}) >> "{{log}}" 2>&1; fi'
 
 
-# Hard link when results/ is on the same disk (no extra space), copy otherwise.
+# A copy, not a hard link: the processed/ reads stay (see _hardlink_or_copy).
 rule keep_final_reads:
     input:
         "{species}/processed/read_module/reads_quality_filtered/{sample}_quality_filtered_final.fastq.gz",
@@ -111,4 +118,4 @@ rule keep_final_reads:
     message:
         "Keeping final reads of {wildcards.sample} in results"
     shell:
-        'ln -f "{input}" "{output}" > "{log}" 2>&1 || cp -p "{input}" "{output}" >> "{log}" 2>&1'
+        f'({_hardlink_or_copy("{input}", "{output}", False)}) > "{{log}}" 2>&1'

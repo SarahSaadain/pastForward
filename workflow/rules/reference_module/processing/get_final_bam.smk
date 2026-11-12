@@ -40,9 +40,19 @@ elif _filter_remove:
     _final_source = _BAM_MAPPED_ONLY
 else:
     _final_source = _pre_filter_bam
+# Whether _final_source stays on disk (its step's keep_bam). Then the final BAM is a copy, not a
+# hard link, see _hardlink_or_copy. The filtered BAMs are temp().
+if _bam_filtering or _filter_remove:
+    _final_source_kept = False
+elif _setting("reference_module", "damage_rescaling", "execute", default=True):
+    _final_source_kept = _KEEP_RESCALED_BAM
+elif _dedup_enabled():
+    _final_source_kept = _KEEP_DEDUP_BAM
+else:
+    _final_source_kept = _KEEP_SORTED_BAM
 
 
-# Hard link the BAM from _final_source (the last processing-step BAM unless filtered).
+# Hard link (or copy, when the source is kept) the BAM from _final_source (the last processing-step BAM unless filtered).
 rule get_final_bam:
     input:
         bam=_final_source,
@@ -59,7 +69,7 @@ rule get_final_bam:
     shell:
         # The final bam is just a hard link of the bam that is output from the last step of the reference
         # processing pipeline (either damage rescaling, deduplication, or mapping)
-        # We hard link (copy if cross-filesystem) instead of move. If we would use move here, other rules will not know that the input bam
+        # We hard link (copy if cross-filesystem, or if the source is kept: see _hardlink_or_copy) instead of move. If we would use move here, other rules will not know that the input bam
         # will be renamed. These other rules will then fail because the input bam is not found (as it has been renamed).
         # By using a hard link, we ensure that the input bam is still available for other rules that need it.
         # The input bam will be deleted at the end of the pipeline when the intermediate files are cleaned up.
@@ -67,7 +77,9 @@ rule get_final_bam:
         echo "Linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}..." >"{log}" 2>&1
         echo "Input bam: {input.bam}" >>"{log}" 2>&1
         echo "Output bam: {output.bam}" >>"{log}" 2>&1
-        ln -fL "{input.bam}" "{output.bam}" 2>/dev/null || cp "{input.bam}" "{output.bam}" >>"{log}" 2>&1
+        ("""
+        + _hardlink_or_copy("{input.bam}", "{output.bam}", not _final_source_kept)
+        + """) >>"{log}" 2>&1
         cp "{input.bai}" "{output.bai}" >>"{log}" 2>&1
         echo "Done linking final bam and bai for {wildcards.individual} mapped to {wildcards.reference}." >>"{log}" 2>&1
         """
