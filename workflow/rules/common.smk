@@ -518,6 +518,38 @@ def _mapdamage_input_bam(wildcards):
     return f"{wildcards.species}/processed/reference_module/{wildcards.reference}/mapped/{wildcards.individual}_{wildcards.reference}_{stage}.bam"
 
 
+def _mapdamage_split_counting():
+    """True unless damage_rescaling.settings.downsample is set: mapDamage then needs the whole BAM."""
+    return not _setting(
+        "reference_module", "damage_rescaling", "settings", "downsample"
+    )
+
+
+def _mapdamage_chunk_bam(wildcards):
+    """BAM of one mapDamage chunk: the DeDup output of that cluster when dedup runs, so the
+    dedup clusters are never merged for mapDamage. Otherwise (and for 'unplaced') the chunk
+    cut from the sorted BAM."""
+    if wildcards.chunk != "unplaced" and _dedup_enabled():
+        return (
+            f"{wildcards.species}/processed/reference_module/{wildcards.reference}/dedup_cluster/"
+            f"{wildcards.individual}/dedup_{wildcards.chunk}/{wildcards.individual}_{wildcards.reference}_cluster_{wildcards.chunk}_rmdup.bam"
+        )
+    return (
+        f"{wildcards.species}/processed/reference_module/{wildcards.reference}/analytics/"
+        f"{wildcards.individual}/mapdamage/split/{wildcards.individual}_{wildcards.reference}_chunk_{wildcards.chunk}.bam"
+    )
+
+
+def mapdamage_chunk_tables_input(wildcards):
+    """The three mapDamage count tables of every contig cluster chunk of one individual."""
+    return [
+        f"{wildcards.species}/processed/reference_module/{wildcards.reference}/analytics/"
+        f"{wildcards.individual}/mapdamage/split/{wildcards.individual}_{wildcards.reference}_chunk_{chunk}_counts/{table}.txt"
+        for chunk in _dedup_cluster_ids(wildcards)
+        for table in ("misincorporation", "dnacomp", "lgdistribution")
+    ]
+
+
 def rescale_merge_chunks_input(wildcards):
     """
     Rescaled BAM of every chunk of one individual: one per dedup contig cluster, plus the

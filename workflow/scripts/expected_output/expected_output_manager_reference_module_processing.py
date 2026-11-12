@@ -149,7 +149,8 @@ def get_expected_output_reference_module(species):
 
                 if analysis_settings.get("damage_analysis", True) == True:
                     expected_outputs.append(
-                        f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/"
+                        # the model summary: making it also makes the damage tables and plots
+                        f"{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Stats_out_MCMC_iter_summ_stat.csv"
                     )
                     for mapdamage_table in ("misincorporation", "dnacomp"):
                         expected_outputs.append(

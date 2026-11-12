@@ -211,6 +211,11 @@ set-resources:
     mem_mb: 9000
   analyze_mapdamage_and_rescale_bam:
     mem_mb: 1000
+  # per-cluster counting and plotting: at most what the single full mapDamage run needed
+  mapdamage_count_chunk:
+    mem_mb: 1000
+  mapdamage_plot:
+    mem_mb: 1000
 
   # --- reveal_module: feature library index and species-level plots ---
   index_library_for_mapping_bwa_mem2:

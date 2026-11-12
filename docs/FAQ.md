@@ -509,6 +509,9 @@ No. Clusters used to be built once per reference by contig count, which could pu
 **Q: Why is mapDamage rescaling split into chunks?**
 Rescaling is single-core and was one of the slowest steps (48 min for a Dmel sample). mapDamage now fits its model once, then rescales the BAM in parallel chunks: one per deduplication contig cluster, plus the reads without a contig, merged afterwards. Each read is rescaled on its own, so the reads are the same as from one full rescale (checked on the synthetic project, and with a prototype on real Dmel samples). As with deduplication, the largest contig limits the speedup, to about 4 times on dm6. Finished projects do not rerun.
 
+**Q: Why does mapDamage not read the deduplicated BAM any more?**
+mapDamage counts its damage tables per chunk, from the deduplicated cluster BAMs, and sums them. The sums equal the tables of one full run, so the plots and the model are the same apart from the random model fit. The deduplicated clusters are then never merged for mapDamage. With damage rescaling on, the final BAM is the rescaled one, so the merged deduplicated BAM (`_sorted_dedupped.bam`) is only built when `deduplication.settings.keep_bam` is on or rescaling is off. With `damage_rescaling.settings.downsample` set, mapDamage still reads the whole deduplicated BAM, since it takes its subset from the whole BAM. Finished projects do not rerun.
+
 **Q: What determines which BAM becomes the `_final.bam`?**
 pastForward follows a priority chain: rescaled BAM → deduplicated BAM → sorted BAM, using the most-processed available result based on which steps are enabled.
 

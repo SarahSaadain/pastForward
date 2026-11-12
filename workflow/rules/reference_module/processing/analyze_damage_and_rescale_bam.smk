@@ -8,56 +8,151 @@
 # _mapdamage_extra (common.smk): rescale_seqlength (--seq-length), rescale_length_5p / _3p (--rescale-length-5p/-3p): always
 # passed. Defaults: 12 bases, rescale lengths follow seq-length (unset or null = default; a rescale length of 0 is passed on).
 _RESCALE_SPLIT = "{species}/processed/reference_module/{reference}/analytics/{individual}/mapdamage/split/{individual}_{reference}_chunk_{chunk}"
+_MAPPED_SORTED_BAM = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam"
+_MD = "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}"
+_MD_REF = "{species}/processed/reference_module/{reference}/reference/{reference}.fa"
+_MD_LOG = "{species}/processed/reference_module/{reference}/analytics/{individual}/mapdamage/{individual}_{reference}"
+# Keys are the mapdamage2 wrapper's output tags, which map them to mapDamage's own file names.
+_MD_TABLES = {
+    "misinc": f"{_MD}.misincorporation.txt",
+    "dnacomp": f"{_MD}.dnacomp.txt",
+    "lg_dist": f"{_MD}.lgdistribution.txt",
+}
+_MD_PLOTS = {
+    "GtoA3p": f"{_MD}.3pGtoA_freq.txt",
+    "CtoT5p": f"{_MD}.5pCtoT_freq.txt",
+    "plot_misinc": f"{_MD}.Fragmisincorporation_plot.pdf",
+    "plot_len": f"{_MD}.Length_plot.pdf",
+}
+_MD_STATS = {
+    "stats_ref": f"{_MD}.dnacomp_genome.csv",
+    "stats_prob": f"{_MD}.Stats_out_MCMC_correct_prob.csv",
+    "stats_hist": f"{_MD}.Stats_out_MCMC_hist.pdf",
+    "stats_iter": f"{_MD}.Stats_out_MCMC_iter.csv",
+    "stats_summ": f"{_MD}.Stats_out_MCMC_iter_summ_stat.csv",
+    "stats_plot_freq": f"{_MD}.Stats_out_MCMC_post_pred.pdf",
+    "stats_plot_trace": f"{_MD}.Stats_out_MCMC_trace.pdf",
+    "log": f"{_MD}.Runtime_log.txt",
+}
+# The two large tables are kept only as .gz (compress_mapdamage_tables), so the .txt files are temp().
+_MD_TABLES_OUT = {
+    tag: temp(path) if tag in ("misinc", "dnacomp") else path
+    for tag, path in _MD_TABLES.items()
+}
 
 
-# Rule: Analyze DNA damage using mapDamage2 (damage tables, plots and the rescaling model).
-# The BAM is rescaled afterwards in parallel chunks (rules below), so this rule writes no BAM.
-rule analyze_mapdamage_and_rescale_bam:
-    input:
-        bam=_mapdamage_input_bam,
-        ref="{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-    output:
-        directory=directory(
-            "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/"
-        ),
-        GtoA3p="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.3pGtoA_freq.txt",
-        CtoT5p="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.5pCtoT_freq.txt",
-        dnacomp=temp(
-            "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.dnacomp.txt"
-        ),
-        lg_dist="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.lgdistribution.txt",
-        misinc=temp(
-            "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.misincorporation.txt"
-        ),
-        plot_misinc="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Fragmisincorporation_plot.pdf",
-        plot_len="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Length_plot.pdf",
-        stats_ref="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.dnacomp_genome.csv",
-        stats_prob="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Stats_out_MCMC_correct_prob.csv",
-        stats_hist="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Stats_out_MCMC_hist.pdf",
-        stats_iter="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Stats_out_MCMC_iter.csv",
-        stats_summ="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Stats_out_MCMC_iter_summ_stat.csv",
-        stats_plot_freq="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Stats_out_MCMC_post_pred.pdf",
-        stats_plot_trace="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Stats_out_MCMC_trace.pdf",
-        log="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Runtime_log.txt",
-    log:
-        "{species}/processed/reference_module/{reference}/analytics/{individual}/mapdamage/{individual}_{reference}.rule.log",
-    params:
-        # optional parameters for mapdamage2 (except -i, -r, -d, --rescale); no bam output, so the wrapper adds no --rescale
-        extra=_mapdamage_extra(),
-    message:
-        "Analyze damage and rescale {input.bam}"
-    wrapper:
-        f"{WRAPPER_VERSION}/bio/mapdamage2"
+if _mapdamage_split_counting():
+
+    # Rule: Count the damage tables of one chunk (one DeDup cluster, or one contig cluster of
+    # the sorted BAM with dedup off). The counts are per read, so the chunk sums equal one full run.
+    rule mapdamage_count_chunk:
+        input:
+            bam=_mapdamage_chunk_bam,
+            ref=_MD_REF,
+        output:
+            misinc=temp(f"{_RESCALE_SPLIT}_counts/misincorporation.txt"),
+            dnacomp=temp(f"{_RESCALE_SPLIT}_counts/dnacomp.txt"),
+            lg_dist=temp(f"{_RESCALE_SPLIT}_counts/lgdistribution.txt"),
+        log:
+            f"{_RESCALE_SPLIT}_counts.log",
+        wildcard_constraints:
+            chunk=r"\d+",
+        params:
+            # only table outputs, so the wrapper adds no mode flag and --no-stats is passed here
+            extra=f"--no-stats {_mapdamage_extra()}",
+        message:
+            "Counting damage tables for chunk {wildcards.chunk} of {wildcards.individual}"
+        wrapper:
+            f"{WRAPPER_VERSION}/bio/mapdamage2"
+
+    # Rule: Sum the chunk tables into the tables of the individual. Reads without a contig are
+    # all unmapped and mapDamage counts no unmapped read, so the 'unplaced' chunk is not counted.
+    # Reads are mapped single-end (merged), so no unmapped read sits on a mate's contig.
+    rule mapdamage_combine_chunk_tables:
+        input:
+            mapdamage_chunk_tables_input,
+        output:
+            **_MD_TABLES_OUT,
+        log:
+            f"{_MD_LOG}.combine.log",
+        conda:
+            "../../../envs/python_and_r.yaml"
+        message:
+            "Summing mapDamage chunk tables for {wildcards.individual}"
+        script:
+            "../../../scripts/reference_module/processing/analyze_damage_script_combine_chunk_tables.py"
+
+    # Rule: Damage plots and the 5' C>T / 3' G>A tables from the summed tables (--plot-only).
+    rule mapdamage_plot:
+        input:
+            **_MD_TABLES,
+            ref=_MD_REF,
+        output:
+            **_MD_PLOTS,
+        log:
+            f"{_MD_LOG}.plot.log",
+        params:
+            # the wrapper adds --no-stats for plot outputs; mapDamage accepts it with --plot-only
+            extra=f"--plot-only {_mapdamage_extra()}",
+        message:
+            "Plotting damage for {wildcards.individual}"
+        wrapper:
+            f"{WRAPPER_VERSION}/bio/mapdamage2"
+
+    # Rule: Fit the damage model from the summed tables. Only stats outputs, so the wrapper
+    # runs mapDamage --stats-only, with the input tables linked into its work folder.
+    # The old rule name stays, so the profile entry, benchmarks and logs keep their names.
+    rule analyze_mapdamage_and_rescale_bam:
+        input:
+            ref=_MD_REF,
+            misinc=_MD_TABLES["misinc"],
+            dnacomp=_MD_TABLES["dnacomp"],
+            GtoA3p=_MD_PLOTS["GtoA3p"],
+            CtoT5p=_MD_PLOTS["CtoT5p"],
+        output:
+            **_MD_STATS,
+        log:
+            f"{_MD_LOG}.rule.log",
+        params:
+            extra=_mapdamage_extra(),
+        message:
+            "Fitting the damage model for {wildcards.individual}"
+        wrapper:
+            f"{WRAPPER_VERSION}/bio/mapdamage2"
+
+else:
+
+    # Rule: With downsample set, mapDamage takes its subset from the whole BAM, which a
+    # per-chunk count cannot copy: one run makes the tables, plots and the model. No bam
+    # output, so the wrapper adds no --rescale; the BAM is rescaled in chunks below.
+    rule analyze_mapdamage_and_rescale_bam:
+        input:
+            bam=_mapdamage_input_bam,
+            ref=_MD_REF,
+        output:
+            **_MD_TABLES_OUT,
+            **_MD_PLOTS,
+            **_MD_STATS,
+        log:
+            f"{_MD_LOG}.rule.log",
+        params:
+            # optional parameters for mapdamage2 (except -i, -r, -d, --rescale)
+            extra=_mapdamage_extra(),
+        message:
+            "Analyze damage and rescale {input.bam}"
+        wrapper:
+            f"{WRAPPER_VERSION}/bio/mapdamage2"
 
 
-# Rule: Cut the input BAM into one chunk per dedup contig cluster (whole contigs, balanced by
-# reads). mapDamage rescales each read on its own, so per-chunk rescaling plus a merge gives the
+# Rule: Cut the sorted BAM into one chunk per contig cluster (whole contigs, balanced by
+# reads). Only used with dedup off: with dedup on, the DeDup cluster BAMs are the chunks.
+# mapDamage rescales each read on its own, so per-chunk rescaling plus a merge gives the
 # same reads as one full rescale, only in parallel.
 rule rescale_split_bam_by_contig_cluster:
     input:
         # the wrapper passes input[0] to samtools, so the BAM must stay first
-        bam=_mapdamage_input_bam,
-        bai=lambda wildcards: _mapdamage_input_bam(wildcards) + ".bai",
+        bam=_MAPPED_SORTED_BAM,
+        bai=f"{_MAPPED_SORTED_BAM}.bai",
     output:
         bam=temp(f"{_RESCALE_SPLIT}.bam"),
     log:
@@ -67,7 +162,7 @@ rule rescale_split_bam_by_contig_cluster:
     threads: 2
     params:
         # -M uses the index to read only this cluster's contigs instead of scanning the whole BAM
-        # the cluster files exist: rescale_merge_chunks_input only asks for chunks after the checkpoint ran
+        # the cluster files exist: chunk inputs are only asked for after the checkpoint ran
         extra="-M -L {species}/processed/reference_module/{reference}/dedup_cluster/{individual}/clusters/cluster_{chunk}.bed",
         region="",
     message:
@@ -76,12 +171,13 @@ rule rescale_split_bam_by_contig_cluster:
         f"{WRAPPER_VERSION}/bio/samtools/view"
 
 
-# Rule: Reads without a contig ('*'). Not -f 4: unmapped reads with a mapped mate sit on the
-# mate's contig and are already in that cluster's chunk.
+# Rule: Reads without a contig ('*'), taken from the sorted BAM. DeDup never sees them (no
+# cluster holds them), so they are the same with dedup on or off. Not -f 4: unmapped reads
+# with a mapped mate sit on the mate's contig and are already in that cluster's chunk.
 rule rescale_split_bam_unplaced_reads:
     input:
-        bam=_mapdamage_input_bam,
-        bai=lambda wildcards: _mapdamage_input_bam(wildcards) + ".bai",
+        bam=_MAPPED_SORTED_BAM,
+        bai=f"{_MAPPED_SORTED_BAM}.bai",
     output:
         bam=temp(_RESCALE_SPLIT.replace("{chunk}", "unplaced") + ".bam"),
     log:
@@ -100,9 +196,9 @@ rule rescale_split_bam_unplaced_reads:
 # output and stats_prob as input, the wrapper runs mapDamage --rescale-only on that model.
 rule rescale_bam_chunk:
     input:
-        bam=f"{_RESCALE_SPLIT}.bam",
-        ref="{species}/processed/reference_module/{reference}/reference/{reference}.fa",
-        stats_prob="{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.Stats_out_MCMC_correct_prob.csv",
+        bam=_mapdamage_chunk_bam,
+        ref=_MD_REF,
+        stats_prob=_MD_STATS["stats_prob"],
     output:
         bam=temp(f"{_RESCALE_SPLIT}_rescaled.bam"),
     log:
@@ -138,7 +234,7 @@ rule rescale_merge_bam_chunks:
 
 
 # Rule: Keep the two large mapDamage tables only as .gz. No rule reads them, so the
-# plain .txt files are temp() in analyze_mapdamage_and_rescale_bam.
+# plain .txt files are temp() in the rule that makes them.
 rule compress_mapdamage_tables:
     input:
         "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}.{table}.txt",
