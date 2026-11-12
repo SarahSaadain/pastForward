@@ -528,8 +528,13 @@ def _mapdamage_split_counting():
 def _mapdamage_chunk_bam(wildcards):
     """BAM of one mapDamage chunk: the DeDup output of that cluster when dedup runs, so the
     dedup clusters are never merged for mapDamage. Otherwise (and for 'unplaced') the chunk
-    cut from the sorted BAM."""
-    if wildcards.chunk != "unplaced" and _dedup_enabled():
+    cut from the mapDamage input BAM. With dedup keep_bam the cut is taken from the kept
+    dedup BAM: the cluster BAMs are temp(), and a later mapDamage run must not redo dedup.
+    """
+    keep_dedup_bam = _setting(
+        "reference_module", "deduplication", "settings", "keep_bam", default=False
+    )
+    if wildcards.chunk != "unplaced" and _dedup_enabled() and not keep_dedup_bam:
         return (
             f"{wildcards.species}/processed/reference_module/{wildcards.reference}/dedup_cluster/"
             f"{wildcards.individual}/dedup_{wildcards.chunk}/{wildcards.individual}_{wildcards.reference}_cluster_{wildcards.chunk}_rmdup.bam"

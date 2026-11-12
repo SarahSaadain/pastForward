@@ -139,20 +139,20 @@ else:
             # optional parameters for mapdamage2 (except -i, -r, -d, --rescale)
             extra=_mapdamage_extra(),
         message:
-            "Analyze damage and rescale {input.bam}"
+            "Analyze damage of {input.bam}"
         wrapper:
             f"{WRAPPER_VERSION}/bio/mapdamage2"
 
 
-# Rule: Cut the sorted BAM into one chunk per contig cluster (whole contigs, balanced by
-# reads). Only used with dedup off: with dedup on, the DeDup cluster BAMs are the chunks.
-# mapDamage rescales each read on its own, so per-chunk rescaling plus a merge gives the
-# same reads as one full rescale, only in parallel.
+# Rule: Cut the mapDamage input BAM into one chunk per contig cluster (whole contigs, balanced
+# by reads). Used with dedup off, or with dedup keep_bam (cut from the kept dedup BAM); otherwise
+# the DeDup cluster BAMs are the chunks (_mapdamage_chunk_bam). mapDamage rescales each read on
+# its own, so per-chunk rescaling plus a merge gives the same reads as one full rescale.
 rule rescale_split_bam_by_contig_cluster:
     input:
         # the wrapper passes input[0] to samtools, so the BAM must stay first
-        bam=_MAPPED_SORTED_BAM,
-        bai=f"{_MAPPED_SORTED_BAM}.bai",
+        bam=_mapdamage_input_bam,
+        bai=lambda wildcards: _mapdamage_input_bam(wildcards) + ".bai",
     output:
         bam=temp(f"{_RESCALE_SPLIT}.bam"),
     log:

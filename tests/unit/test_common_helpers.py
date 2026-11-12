@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Unit tests for small config helpers in workflow/rules/common.smk:
-_dedup_enabled, _mapper_extra, _scg_mapper_and_extra, _split_threads and
-_reference_mapping_job_count.
+_dedup_enabled, _mapper_extra, _scg_mapper_and_extra, _split_threads,
+_reference_mapping_job_count and _mapdamage_chunk_bam.
 
 common.smk holds plain Python only, so it is exec'd into the shared namespace
 workflow/scripts/pipeline_namespace.py builds.
@@ -17,6 +17,7 @@ import os
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(REPO_ROOT, "workflow"))
@@ -205,6 +206,46 @@ class ReferenceMappingJobCountTest(unittest.TestCase):
                 self.assertEqual(ns["_reference_mapping_job_count"](), 1)
             finally:
                 os.chdir(old_cwd)
+
+
+class MapdamageChunkBamTest(unittest.TestCase):
+    MAPDAMAGE_SPLIT = "Dm/processed/reference_module/ref/analytics/I1/mapdamage/split/I1_ref_chunk_{}.bam"
+    RMDUP = "Dm/processed/reference_module/ref/dedup_cluster/I1/dedup_0/I1_ref_cluster_0_rmdup.bam"
+
+    def chunk_bam(self, chunk, dedup_execute=True, keep_bam=False):
+        ns = load(
+            {
+                "reference_module": {
+                    "deduplication": {
+                        "execute": dedup_execute,
+                        "settings": {"keep_bam": keep_bam},
+                    }
+                }
+            }
+        )
+        wildcards = SimpleNamespace(
+            species="Dm", reference="ref", individual="I1", chunk=chunk
+        )
+        return ns["_mapdamage_chunk_bam"](wildcards)
+
+    def test_dedup_on_reads_the_dedup_cluster_bam(self):
+        self.assertEqual(self.chunk_bam("0"), self.RMDUP)
+
+    def test_dedup_off_reads_a_chunk_cut_from_the_sorted_bam(self):
+        self.assertEqual(
+            self.chunk_bam("0", dedup_execute=False), self.MAPDAMAGE_SPLIT.format(0)
+        )
+
+    def test_kept_dedup_bam_is_split_instead_so_dedup_never_reruns(self):
+        # the cluster BAMs are temp(); with keep_bam a later mapDamage run must use the kept BAM
+        self.assertEqual(
+            self.chunk_bam("0", keep_bam=True), self.MAPDAMAGE_SPLIT.format(0)
+        )
+
+    def test_unplaced_chunk_is_always_cut(self):
+        self.assertEqual(
+            self.chunk_bam("unplaced"), self.MAPDAMAGE_SPLIT.format("unplaced")
+        )
 
 
 if __name__ == "__main__":
