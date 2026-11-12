@@ -47,7 +47,7 @@ rule map_reads_to_reference_minibwa:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}.bam.log",
     conda:
         "../../../../envs/minibwa.yaml"
-    threads: 15
+    threads: _reference_mapping_threads
     params:
         extra=_ref_mapper_extra,
     shell:

@@ -6,6 +6,7 @@
 # rules and functions" guidance) so their originating rule files stay
 # rules-only. Small one-off helpers stay inline as lambdas at their call site.
 
+import functools
 import glob
 import os
 
@@ -41,6 +42,69 @@ def _mapper_extra(settings, mapper):
     # `or`, not a .get() default: "" would drop minimap2's -ax sr and make it write PAF.
     return (settings.get("mapper_extra_params") or "").strip() or _mapper_default_extra(
         mapper
+    )
+
+
+def _split_threads(cores, n_jobs, target=8, fallback=10):
+    """Threads per job so that n_jobs parallel jobs fill `cores` evenly.
+
+    Aims for about `target` threads per job, where the mapper's speedup flattens.
+    Fewer jobs than slots: each job gets more threads (1 job on 16 cores: 16).
+    More jobs: split evenly (16 cores: 2 x 8, 12 cores: 2 x 6).
+    `fallback` is used when the core count is unknown (cluster runs without --cores).
+    """
+    if not cores:
+        return fallback
+    parallel = max(1, min(n_jobs, round(cores / target)))
+    return max(1, cores // parallel)
+
+
+@functools.cache
+def _reference_mapping_job_count():
+    """Individual x reference pairs without a _final.bam, i.e. still to map.
+
+    A rerun with one individual left gives that one all cores. A _final.bam that
+    exists but is out of date counts as done, so such reruns get too many threads
+    each and run one after the other (slower, not wrong).
+    """
+    count = 0
+    for species in config.get("species", {}):
+        try:
+            references = get_references_ids_for_species(species)
+        except Exception:
+            # No reference: the expected output manager skips this species too.
+            continue
+        for reference in references:
+            for individual in get_individuals_for_species(species):
+                count += not os.path.exists(
+                    f"{species}/results/reference_module/{reference}/mapped/{individual}_{reference}_final.bam"
+                )
+    return count
+
+
+# Threads per job where each mapper's speedup flattens. bwa-mem family: bwa-mem3 docs run
+# 14-16 per instance. minimap2/bowtie2 throughput is flat from 12 to 48 threads (BWA-MEME,
+# Bioinformatics 2022). bwa-aln: 7.4x at 8, 9.8x at 16 (BigBWA); not measured here.
+_MAPPER_THREAD_TARGET = {
+    "bwa-mem2": 16,
+    "bwa-mem3": 16,
+    "minibwa": 16,
+    "minimap2": 8,
+    "bowtie": 8,
+    "bowtie2": 8,
+    "bwa-aln": 8,
+}
+
+
+def _reference_mapping_threads(wildcards):
+    """Threads for the reference mapping rules: --cores split across mapping jobs."""
+    # workflow.cores raises when no --cores is given (cluster runs); this is None then.
+    return _split_threads(
+        workflow.global_resources["_cores"].value,
+        _reference_mapping_job_count(),
+        target=_MAPPER_THREAD_TARGET.get(
+            _ref_mapper, 8
+        ),  # set in map_reads_to_reference.smk
     )
 
 

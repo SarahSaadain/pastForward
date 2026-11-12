@@ -51,7 +51,7 @@ rule map_reads_to_reference_bwa_mem3:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}.bam.log",
     conda:
         "../../../../envs/bwa_mem3.yaml"
-    threads: 15
+    threads: _reference_mapping_threads
     params:
         extra=_ref_mapper_extra,
     shell:

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Unit tests for small config helpers in workflow/rules/common.smk:
-_dedup_enabled, _mapper_extra and _scg_mapper_and_extra.
+_dedup_enabled, _mapper_extra, _scg_mapper_and_extra, _split_threads and
+_reference_mapping_job_count.
 
 common.smk holds plain Python only, so it is exec'd into the shared namespace
 workflow/scripts/pipeline_namespace.py builds.
@@ -14,6 +15,7 @@ Run with either:
 import logging
 import os
 import sys
+import tempfile
 import unittest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -156,6 +158,53 @@ class ScgMapperAndExtraTest(unittest.TestCase):
         self.assertEqual(
             self.pick({"mapper_extra_params": ""}, mapping), ("minimap2", "-ax sr")
         )
+
+
+class SplitThreadsTest(unittest.TestCase):
+    def test_cases(self):
+        split = load()["_split_threads"]
+        for cores, jobs, want in [
+            (16, 1, 16),  # one job takes every core
+            (16, 2, 8),
+            (16, 5, 8),  # split evenly, 2 at a time
+            (12, 5, 6),
+            (24, 5, 8),
+            (10, 5, 10),
+            (4, 5, 4),
+            (16, 0, 16),  # no jobs: no division by zero
+            (None, 5, 10),  # cores unknown: fallback
+        ]:
+            self.assertEqual(split(cores, jobs), want, (cores, jobs))
+
+    def test_target(self):
+        split = load()["_split_threads"]
+        self.assertEqual(split(16, 5, target=16), 16)  # one at a time
+        self.assertEqual(split(32, 5, target=16), 16)  # 2 x 16
+        self.assertEqual(split(64, 5, target=16), 16)  # 4 x 16
+
+
+class ReferenceMappingJobCountTest(unittest.TestCase):
+    def test_counts_only_open_pairs_and_skips_species_without_reference(self):
+        ns = load()
+        ns["config"]["species"] = {"Sp": {}, "NoRef": {}}
+
+        def references(species):
+            if species == "NoRef":
+                raise Exception("No reference found for species NoRef.")
+            return ["ref"]
+
+        ns["get_references_ids_for_species"] = references
+        ns["get_individuals_for_species"] = lambda species: ["Done", "Open"]
+        old_cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmp:
+            os.chdir(tmp)
+            try:
+                mapped = "Sp/results/reference_module/ref/mapped"
+                os.makedirs(mapped)
+                open(f"{mapped}/Done_ref_final.bam", "w").close()
+                self.assertEqual(ns["_reference_mapping_job_count"](), 1)
+            finally:
+                os.chdir(old_cwd)
 
 
 if __name__ == "__main__":

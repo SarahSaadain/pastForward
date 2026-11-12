@@ -47,7 +47,7 @@ rule align_reads_to_reference_bwa_aln:
         ),
     log:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_bwa_aln.log",
-    threads: 10
+    threads: _reference_mapping_threads
     params:
         extra=_ref_mapper_extra,
     wrapper:

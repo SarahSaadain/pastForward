@@ -56,7 +56,7 @@ rule map_reads_to_reference_bowtie:
         "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}.bam.log",
     conda:
         "../../../../envs/bowtie.yaml"
-    threads: 15
+    threads: _reference_mapping_threads
     params:
         extra=_ref_mapper_extra,
     shell:
