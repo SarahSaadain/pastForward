@@ -525,16 +525,20 @@ def _mapdamage_split_counting():
     )
 
 
-def _mapdamage_chunk_bam(wildcards):
-    """BAM of one mapDamage chunk: the DeDup output of that cluster when dedup runs, so the
-    dedup clusters are never merged for mapDamage. Otherwise (and for 'unplaced') the chunk
-    cut from the mapDamage input BAM. With dedup keep_bam the cut is taken from the kept
-    dedup BAM: the cluster BAMs are temp(), and a later mapDamage run must not redo dedup.
+def _mapdamage_reads_dedup_clusters():
+    """True when the DeDup cluster BAMs are the mapDamage chunks, so they are never merged for
+    mapDamage. Not with dedup keep_bam: the cluster BAMs are temp(), and a later mapDamage run
+    (e.g. rescaling switched on afterwards) must use the kept dedup BAM, not redo dedup.
     """
-    keep_dedup_bam = _setting(
+    return _dedup_enabled() and not _setting(
         "reference_module", "deduplication", "settings", "keep_bam", default=False
     )
-    if wildcards.chunk != "unplaced" and _dedup_enabled() and not keep_dedup_bam:
+
+
+def _mapdamage_chunk_bam(wildcards):
+    """BAM of one mapDamage chunk: the DeDup output of that cluster, or (always for
+    'unplaced') the chunk cut from _mapdamage_split_source_bam."""
+    if wildcards.chunk != "unplaced" and _mapdamage_reads_dedup_clusters():
         return (
             f"{wildcards.species}/processed/reference_module/{wildcards.reference}/dedup_cluster/"
             f"{wildcards.individual}/dedup_{wildcards.chunk}/{wildcards.individual}_{wildcards.reference}_cluster_{wildcards.chunk}_rmdup.bam"
@@ -543,6 +547,15 @@ def _mapdamage_chunk_bam(wildcards):
         f"{wildcards.species}/processed/reference_module/{wildcards.reference}/analytics/"
         f"{wildcards.individual}/mapdamage/split/{wildcards.individual}_{wildcards.reference}_chunk_{wildcards.chunk}.bam"
     )
+
+
+def _mapdamage_split_source_bam(wildcards):
+    """BAM the mapDamage chunks are cut from: the mapDamage input BAM, or, when the DeDup
+    cluster BAMs are the chunks, the sorted BAM (only 'unplaced' is cut then; DeDup never
+    sees those reads, so they are the same as in the dedup BAM)."""
+    if _mapdamage_reads_dedup_clusters():
+        return f"{wildcards.species}/processed/reference_module/{wildcards.reference}/mapped/{wildcards.individual}_{wildcards.reference}_sorted.bam"
+    return _mapdamage_input_bam(wildcards)
 
 
 def mapdamage_chunk_tables_input(wildcards):

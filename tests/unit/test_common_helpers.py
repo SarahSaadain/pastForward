@@ -2,7 +2,8 @@
 """
 Unit tests for small config helpers in workflow/rules/common.smk:
 _dedup_enabled, _mapper_extra, _scg_mapper_and_extra, _split_threads,
-_reference_mapping_job_count and _mapdamage_chunk_bam.
+_reference_mapping_job_count, _mapdamage_chunk_bam and
+_mapdamage_split_source_bam.
 
 common.smk holds plain Python only, so it is exec'd into the shared namespace
 workflow/scripts/pipeline_namespace.py builds.
@@ -212,7 +213,12 @@ class MapdamageChunkBamTest(unittest.TestCase):
     MAPDAMAGE_SPLIT = "Dm/processed/reference_module/ref/analytics/I1/mapdamage/split/I1_ref_chunk_{}.bam"
     RMDUP = "Dm/processed/reference_module/ref/dedup_cluster/I1/dedup_0/I1_ref_cluster_0_rmdup.bam"
 
-    def chunk_bam(self, chunk, dedup_execute=True, keep_bam=False):
+    def source_bam(self, **kw):
+        return self.chunk_bam("0", helper="_mapdamage_split_source_bam", **kw)
+
+    def chunk_bam(
+        self, chunk, dedup_execute=True, keep_bam=False, helper="_mapdamage_chunk_bam"
+    ):
         ns = load(
             {
                 "reference_module": {
@@ -226,7 +232,7 @@ class MapdamageChunkBamTest(unittest.TestCase):
         wildcards = SimpleNamespace(
             species="Dm", reference="ref", individual="I1", chunk=chunk
         )
-        return ns["_mapdamage_chunk_bam"](wildcards)
+        return ns[helper](wildcards)
 
     def test_dedup_on_reads_the_dedup_cluster_bam(self):
         self.assertEqual(self.chunk_bam("0"), self.RMDUP)
@@ -240,6 +246,19 @@ class MapdamageChunkBamTest(unittest.TestCase):
         # the cluster BAMs are temp(); with keep_bam a later mapDamage run must use the kept BAM
         self.assertEqual(
             self.chunk_bam("0", keep_bam=True), self.MAPDAMAGE_SPLIT.format(0)
+        )
+
+    def test_cut_source_is_the_sorted_bam_when_dedup_clusters_are_the_chunks(self):
+        self.assertEqual(
+            self.source_bam(),
+            "Dm/processed/reference_module/ref/mapped/I1_ref_sorted.bam",
+        )
+
+    def test_cut_source_is_the_kept_dedup_bam_with_keep_bam(self):
+        # the sorted BAM is temp() too; reading it would remap a finished project
+        self.assertEqual(
+            self.source_bam(keep_bam=True),
+            "Dm/processed/reference_module/ref/mapped/I1_ref_sorted_dedupped.bam",
         )
 
     def test_unplaced_chunk_is_always_cut(self):

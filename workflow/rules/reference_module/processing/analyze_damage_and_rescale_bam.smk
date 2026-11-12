@@ -8,7 +8,6 @@
 # _mapdamage_extra (common.smk): rescale_seqlength (--seq-length), rescale_length_5p / _3p (--rescale-length-5p/-3p): always
 # passed. Defaults: 12 bases, rescale lengths follow seq-length (unset or null = default; a rescale length of 0 is passed on).
 _RESCALE_SPLIT = "{species}/processed/reference_module/{reference}/analytics/{individual}/mapdamage/split/{individual}_{reference}_chunk_{chunk}"
-_MAPPED_SORTED_BAM = "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_sorted.bam"
 _MD = "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}"
 _MD_REF = "{species}/processed/reference_module/{reference}/reference/{reference}.fa"
 _MD_LOG = "{species}/processed/reference_module/{reference}/analytics/{individual}/mapdamage/{individual}_{reference}"
@@ -145,14 +144,14 @@ else:
 
 
 # Rule: Cut the mapDamage input BAM into one chunk per contig cluster (whole contigs, balanced
-# by reads). Used with dedup off, or with dedup keep_bam (cut from the kept dedup BAM); otherwise
-# the DeDup cluster BAMs are the chunks (_mapdamage_chunk_bam). mapDamage rescales each read on
-# its own, so per-chunk rescaling plus a merge gives the same reads as one full rescale.
+# by reads). Not used when the DeDup cluster BAMs are the chunks (_mapdamage_reads_dedup_clusters).
+# mapDamage rescales each read on its own, so per-chunk rescaling plus a merge gives the same
+# reads as one full rescale.
 rule rescale_split_bam_by_contig_cluster:
     input:
         # the wrapper passes input[0] to samtools, so the BAM must stay first
-        bam=_mapdamage_input_bam,
-        bai=lambda wildcards: _mapdamage_input_bam(wildcards) + ".bai",
+        bam=_mapdamage_split_source_bam,
+        bai=lambda wildcards: _mapdamage_split_source_bam(wildcards) + ".bai",
     output:
         bam=temp(f"{_RESCALE_SPLIT}.bam"),
     log:
@@ -171,13 +170,12 @@ rule rescale_split_bam_by_contig_cluster:
         f"{WRAPPER_VERSION}/bio/samtools/view"
 
 
-# Rule: Reads without a contig ('*'), taken from the sorted BAM. DeDup never sees them (no
-# cluster holds them), so they are the same with dedup on or off. Not -f 4: unmapped reads
-# with a mapped mate sit on the mate's contig and are already in that cluster's chunk.
+# Rule: Reads without a contig ('*'). Not -f 4: unmapped reads with a mapped mate sit on the
+# mate's contig and are already in that cluster's chunk.
 rule rescale_split_bam_unplaced_reads:
     input:
-        bam=_MAPPED_SORTED_BAM,
-        bai=f"{_MAPPED_SORTED_BAM}.bai",
+        bam=_mapdamage_split_source_bam,
+        bai=lambda wildcards: _mapdamage_split_source_bam(wildcards) + ".bai",
     output:
         bam=temp(_RESCALE_SPLIT.replace("{chunk}", "unplaced") + ".bam"),
     log:
