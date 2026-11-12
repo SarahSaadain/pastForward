@@ -71,6 +71,12 @@ _KEEP_READS = _setting(
 )
 
 
+_QF_SOURCE_TEMP = (
+    _setting("read_module", "quality_filtering", "execute", default=True)
+    or not _KEEP_TRIMMED
+)
+
+
 rule get_quality_filtered_final:
     input:
         # If quality filtering is enabled, use the quality filtered reads as input for the next steps in the pipeline.
@@ -92,17 +98,12 @@ rule get_quality_filtered_final:
         "{species}/processed/read_module/reads_quality_filtered/{sample}_quality_filtered_final.log",
     conda:
         "../../../envs/python_and_r.yaml"
-    params:
-        # the quality filtered reads are temp(); the trimmed reads stay with adapter_removal keep_reads
-        hardlink=_setting("read_module", "quality_filtering", "execute", default=True)
-        or not _KEEP_TRIMMED,
     message:
         "Selecting quality filtered reads for {wildcards.sample}"
     shell:
         'echo "Source: {input.source}" > "{log}" 2>&1; '
-        'if [ "{params.hardlink}" = True ]; then '
-        f'({_hardlink_or_copy("{input.source}", "{output.final}", True)}) >> "{{log}}" 2>&1; '
-        f'else ({_hardlink_or_copy("{input.source}", "{output.final}", False)}) >> "{{log}}" 2>&1; fi'
+        # the quality filtered reads are temp(); the trimmed reads stay with adapter_removal keep_reads
+        f'({_hardlink_or_copy("{input.source}", "{output.final}", _QF_SOURCE_TEMP)}) >> "{{log}}" 2>&1'
 
 
 # A copy, not a hard link: the processed/ reads stay (see _hardlink_or_copy).

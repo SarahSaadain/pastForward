@@ -214,6 +214,13 @@ def merge_reads_by_individual_input(wildcards):
         qf_file = f"{species}/processed/read_module/reads_quality_filtered/{sample}_quality_filtered_final.fastq.gz"
         quality_filtered_files.append(qf_file)
 
+    # With keep_reads, a single sample is hard linked from its results/ copy, not from the kept
+    # processed/ file: only this rule reads that copy, so the touch a hard link shares (see
+    # _hardlink_or_copy) reaches nothing else, and the reads are not stored a third time.
+    if _KEEP_READS and len(quality_filtered_files) == 1:
+        return [
+            f"{species}/results/read_module/reads_final/{samples_of_individual[0]}_final.fastq.gz"
+        ]
     return quality_filtered_files
 
 

@@ -27,8 +27,8 @@ rule merge_reads_by_individual:
         set -- {input}
         if [ $# -eq 1 ]; then
             """
-        # the final reads are temp() unless quality_filtering keep_reads (see _hardlink_or_copy)
-        + _hardlink_or_copy("$1", "{output}", not _KEEP_READS)
+        # a temp() file, or with keep_reads the results/ copy (merge_reads_by_individual_input)
+        + _hardlink_or_copy("$1", "{output}", True)
         + """
         else
             cat "$@" >"{output}"

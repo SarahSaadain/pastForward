@@ -380,7 +380,7 @@ pipeline:
         keep_bam: true      # -> {species}/results/reference_module/{reference}/mapped/{individual}_{reference}_sorted_dedupped_rescaled.bam
 ```
 
-The files in `processed/` are no longer deleted, and `results/` gets a real copy (double space, or none with reflink on btrfs/xfs). With the kept BAM as the last step, `_final.bam` is a copy too. Because the `processed/` file stays, adding a later step such as damage rescaling does not remap or deduplicate again.
+The files in `processed/` are no longer deleted, and `results/` gets a real copy (double space, or none with reflink on btrfs/xfs). With the kept BAM as the last step, `_final.bam` is a hard link to that `results/` copy, so the BAM is stored twice, not three times. Because the `processed/` file stays, adding a later step such as damage rescaling does not remap or deduplicate again.
 
 Notes:
 
