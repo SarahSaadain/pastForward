@@ -890,13 +890,14 @@
               coordinate-sorted and indexed. The unsorted BAM is discarded to save disk space.
               The <strong>pre-dedup sorted BAM</strong> is used for <strong>Preseq</strong> library complexity estimation
               &mdash; running Preseq after deduplication would remove the duplication information it requires, producing invalid estimates.
-              <div class="when-hint"><span class="def-pill on">Default: ON</span>Mapping always runs when Reference Processing is enabled — it is the core step that all downstream analyses depend on. Choose your mapper based on your data: <strong>bowtie</strong> for reads under 50 bp, <strong>bwa-aln</strong> for typical short aDNA reads (&lt;70 bp), <strong>bwa-mem2</strong>, <strong>bwa-mem3</strong> or <strong>minibwa</strong> from about 70 bp, <strong>bowtie2</strong> from about 50 bp, <strong>minimap2</strong> above 100 bp or for highly divergent references.</div>
+              <div class="when-hint"><span class="def-pill on">Default: ON</span>Mapping always runs when Reference Processing is enabled — it is the core step that all downstream analyses depend on. Choose your mapper based on your data: <strong>bowtie</strong> for reads under 50 bp, <strong>bwa-aln</strong> for typical short aDNA reads (&lt;70 bp), <strong>bwa-mem</strong>, <strong>bwa-mem2</strong>, <strong>bwa-mem3</strong> or <strong>minibwa</strong> from about 70 bp, <strong>bowtie2</strong> from about 50 bp, <strong>minimap2</strong> above 100 bp or for highly divergent references.</div>
             </div>
             <div class="subsection-body open">
               <div class="field">
                 <label>Mapper</label>
                 <select id="rp_mapper" onchange="mapperInfo('rp_mapper','rp_minfo'); render()">
                   <option value="bwa-aln">bwa-aln</option>
+                  <option value="bwa-mem">bwa-mem</option>
                   <option value="bwa-mem2">bwa-mem2</option>
                   <option value="bwa-mem3" selected>bwa-mem3</option>
                   <option value="minibwa">minibwa</option>
@@ -1319,6 +1320,7 @@
                 <select id="scg_mapper" onchange="mapperInfo('scg_mapper','scg_minfo'); render()">
                   <option value="" selected>inherit from REVEAL mapper</option>
                   <option value="bwa-aln">bwa-aln</option>
+                  <option value="bwa-mem">bwa-mem</option>
                   <option value="bwa-mem2">bwa-mem2</option>
                   <option value="bwa-mem3">bwa-mem3</option>
                   <option value="minibwa">minibwa</option>
@@ -1394,6 +1396,7 @@
                 <label>Mapper</label>
                 <select id="rv_mapper" onchange="mapperInfo('rv_mapper','rv_minfo'); render()">
                   <option value="bwa-aln">bwa-aln</option>
+                  <option value="bwa-mem">bwa-mem</option>
                   <option value="bwa-mem2">bwa-mem2</option>
                   <option value="bwa-mem3" selected>bwa-mem3</option>
                   <option value="minibwa">minibwa</option>
@@ -1679,6 +1682,7 @@ function optToggle(cbId, bodyId, hdrId) {
 
 const MAPPER_DESC = {
   'bwa-aln':  'Classic seed-and-extend, well-suited for short aDNA reads (Oliva et al. 2021).',
+  'bwa-mem': 'Original bwa mem. Same alignments as bwa-mem2, slower, same index as bwa-aln. Reads from about 70 bp.',
   'bwa-mem2': 'Faster modern reimplementation of bwa-mem; good for longer reads.',
   'bwa-mem3': 'Maintained, faster successor of bwa-mem2 (bwa-mem2 alignments plus fixes; --compat for exact legacy output). Reads from about 70 bp.',
   'minibwa':  'Successor of bwa-mem for short reads by Heng Li, about twice as fast as bwa-mem2 (new algorithm, alignments differ). Reads from about 70 bp.',

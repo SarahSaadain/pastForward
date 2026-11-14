@@ -96,6 +96,7 @@ class IndexCompressionTest(unittest.TestCase):
         self.assertIn("a.fa.0123.gz", index_archives("a.fa", "bwa-mem2"))
         self.assertNotIn("a.fa.0123.gz", index_archives("a.fa", "bwa-mem3"))
         self.assertIn("a.fa.pac.gz", index_archives("a.fa", "bwa-mem3"))
+        self.assertIn("a.fa.sa.gz", index_archives("a.fa", "bwa-mem"))
         self.assertEqual(
             index_archives("a.fa", "minibwa"), ["a.fa.l2b.gz", "a.fa.mbw.gz"]
         )

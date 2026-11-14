@@ -1,0 +1,54 @@
+####################################################
+# Reference mapper: bwa-mem
+# Included by map_reads_to_reference.smk when pipeline.reference_module.mapping.settings.mapper picks it.
+# Needs `_ref_mapper_extra` from the including file. To add a mapper: copy this file, add the name
+# to the `mapper` enum in workflow/schemas/config.schema.yaml, and to _SUFFIXES in
+# workflow/scripts/index_compression.py. The REVEAL steps have their own mappers/ folders.
+####################################################
+
+
+rule index_reference_for_mapping_bwa_mem:
+    input:
+        "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
+    output:
+        temp(
+            multiext(
+                "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
+                ".sa",
+                ".amb",
+                ".ann",
+                ".bwt",
+                ".pac",
+            )
+        ),
+    log:
+        "{species}/processed/reference_module/{reference}/index/{reference}_bwa_mem_index.log",
+    cache: True
+    message:
+        "Indexing reference {wildcards.reference} with BWA-MEM"
+    wrapper:
+        f"{WRAPPER_VERSION}/bio/bwa/index"
+
+
+rule map_reads_to_reference_bwa_mem:
+    input:
+        reads=["{species}/results/read_module/reads_merged/{individual}.fastq.gz"],
+        idx=multiext(
+            "{species}/processed/reference_module/{reference}/reference/{reference}.fa",
+            ".sa",
+            ".amb",
+            ".ann",
+            ".bwt",
+            ".pac",
+        ),
+    output:
+        temp(
+            "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}_unsorted.bam"
+        ),
+    log:
+        "{species}/processed/reference_module/{reference}/mapped/{individual}_{reference}.bam.log",
+    threads: _reference_mapping_threads
+    params:
+        extra=_ref_mapper_extra,
+    wrapper:
+        f"{WRAPPER_VERSION}/bio/bwa/mem"

@@ -86,6 +86,7 @@ def _reference_mapping_job_count():
 # 14-16 per instance. minimap2/bowtie2 throughput is flat from 12 to 48 threads (BWA-MEME,
 # Bioinformatics 2022). bwa-aln: 7.4x at 8, 9.8x at 16 (BigBWA); not measured here.
 _MAPPER_THREAD_TARGET = {
+    "bwa-mem": 16,
     "bwa-mem2": 16,
     "bwa-mem3": 16,
     "minibwa": 16,

@@ -13,13 +13,14 @@ import shutil
 import subprocess
 from pathlib import Path
 
-# bwa-aln (.bwt .sa), bwa-mem2 (.0123 .bwt.2bit.64), minibwa (.l2b .mbw), bowtie (.ebwt), bowtie2 (.bt2) and minimap2 (.mmi) index files.
+# bwa-aln and bwa-mem (.bwt .sa), bwa-mem2 (.0123 .bwt.2bit.64), minibwa (.l2b .mbw), bowtie (.ebwt), bowtie2 (.bt2) and minimap2 (.mmi) index files.
 # Also the wildcard_constraint of the pack_index rule.
 INDEX_REGEX = r".+(?:\.(?:fa|fasta)\.(?:0123|amb|ann|bwt\.2bit\.64|bwt|pac|sa|l2b|mbw|(?:rev\.)?[1-4]\.(?:ebwt|bt2))|\.mmi)"
 _INDEX = re.compile(INDEX_REGEX + r"\.gz$")
 
 _SUFFIXES = {
     "bwa-aln": (".amb", ".ann", ".bwt", ".pac", ".sa"),
+    "bwa-mem": (".amb", ".ann", ".bwt", ".pac", ".sa"),
     "bwa-mem2": (".0123", ".amb", ".ann", ".bwt.2bit.64", ".pac"),
     "bwa-mem3": (".amb", ".ann", ".bwt.2bit.64", ".pac"),
     "minibwa": (".l2b", ".mbw"),
