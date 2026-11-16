@@ -249,9 +249,11 @@ pipeline:
       settings:
         # Deduplication runs per cluster of whole contigs, one cluster per core,
         # balanced by reads per contig. There are no settings for the clustering.
-        # Optional: Memory (MB) for DeDup's JVM heap, also requested from the cluster scheduler as mem_mb (Default: 20000)
-        # Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources.
-        mem_mb: 20000
+        # Optional: Memory (MB) for DeDup's JVM heap on the first attempt, also requested from the cluster scheduler as mem_mb (Default: 2000)
+        # A failed DeDup job is retried twice, doubling the heap each time (2000, 4000, 8000 by default).
+        # Heap need grows with the depth of duplicate stacks, not with BAM size.
+        # Increase for libraries with very many duplicates or deep mtDNA ("OutOfMemoryError: Java heap space" in the dedup log after the last retry).
+        mem_mb: 2000
         # Optional: Keep the deduplicated BAM (Default: false)
         # Stays in processed/ and is also linked (same disk) or copied (other disk) to results/reference_module/{reference}/mapped/
         #keep_bam: false

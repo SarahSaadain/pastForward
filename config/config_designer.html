@@ -955,8 +955,8 @@
             <div class="subsection-body open">
               <div class="field">
                 <label>Memory (MB)</label>
-                <input type="number" id="dedup_mem" value="20000" min="1" oninput="render()">
-                <p class="hint">Default: 20000. DeDup's JVM heap (<code>-Xms</code>/<code>-Xmx</code>), also requested from the cluster scheduler as <code>resources.mem_mb</code>. Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources.</p>
+                <input type="number" id="dedup_mem" value="2000" min="1" oninput="render()">
+                <p class="hint">Default: 2000. Maximum DeDup JVM heap (<code>-Xmx</code>) on the first attempt, also requested from the cluster scheduler as <code>resources.mem_mb</code>. A failed job is retried twice with the heap doubled each time (2000, 4000, 8000 by default). Increase for libraries with very many duplicates or deep mtDNA (<code>OutOfMemoryError: Java heap space</code> in the dedup log after the last retry).</p>
               </div>
             </div>
             <div class="field">

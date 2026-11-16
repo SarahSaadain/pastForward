@@ -505,6 +505,17 @@ So DeDup runs in parallel, one cluster per core. Each cluster holds whole contig
 
 A contig is never split, so the largest contig sets the lower bound for the slowest cluster. On dm6, 3R holds about a quarter of the reads, so more than about 5 cores gives no further speedup for one individual. DeDup memory is set with `deduplication.settings.mem_mb`.
 
+**Q: How much memory does DeDup need, and what does `mem_mb` set?**
+`deduplication.settings.mem_mb` (default `2000`) is the maximum Java heap for each DeDup job on its first attempt (`-Xmx`). The same value is requested from the scheduler as `resources.mem_mb`, so one DeDup job per cluster and core fits next to the others. The JVM only grows the heap as far as the data needs, so most jobs use less.
+
+When a DeDup job fails, Snakemake starts it again, up to two more times, and doubles the heap and the request each time: 2000, 4000, then 8000 MB with the default. Only this rule retries. Other rules still stop at their first failure. A retry follows any failure, not only a full heap, so a job with a real error (e.g. a broken BAM) runs three times before it stops. The log is rewritten on each attempt, so it shows the last one.
+
+Heap need grows with the depth of duplicate stacks (many reads at the same position), not with the size of the BAM or the cluster. In a test on 32 clusters of two *D. melanogaster* individuals (40 M reads), every heap from 20000 down to 1000 MB passed with identical output and the same run time, and peak memory fell from 10.8 GB to 1.2 GB. The only failure was at 512 MB, on a small cluster with 99 % duplicates. The 2000 MB first attempt already passed every cluster of that test, and the retries cover data that needs up to 8000 MB. Libraries with very many duplicates, or deep mtDNA, can need more.
+
+If a dedup job fails, look at its log in `processed/reference_module/<reference>/dedup_cluster/<individual>/dedup_<cluster>.dedup.log`. `OutOfMemoryError: Java heap space` means the heap was too small even on the last retry. Raise `mem_mb` (e.g. to `4000` or `8000`, so the last retry gets 16000 or 32000 MB) and run `./pastForward resume --cores <N>`. Only the failed clusters rerun: a changed `mem_mb` does not rerun finished deduplication. On a machine with little memory per core, a lower `mem_mb` lets more DeDup jobs run at once.
+
+Before this release the default was `20000`, passed as both `-Xms` and `-Xmx`, so every DeDup job reserved the full 20 GB at start whatever the data. Set `mem_mb: 20000` to request the old amount.
+
 **Q: Does the new clustering rerun deduplication on a finished project?**
 No. Clusters used to be built once per reference by contig count, which could put most of the reads in one cluster (on dm6, 2L, 2R, 3L and 3R together). They are now built per individual by read count, in `dedup_cluster/<individual>/clusters/`. Snakemake leaves finished outputs alone, so only new individuals, or deduplication that reruns for another reason, use the new clusters. The old `dedup_cluster/clusters/` and per-individual `dedup_<start>_<end>/` folders are no longer used and can be deleted. The old `min_contigs_per_cluster` and `max_contigs_per_cluster` settings are ignored with a warning.
 

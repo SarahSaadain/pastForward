@@ -129,22 +129,22 @@ rule dedup_deduplicate_bam_cluster:
         dedup_json="{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{cluster}/{individual}_{reference}_cluster_{cluster}.dedup.json",
     log:
         "{species}/processed/reference_module/{reference}/dedup_cluster/{individual}/dedup_{cluster}.dedup.log",
+    # Heap need grows with duplicate stack depth, not cluster size, so start
+    # small and double the heap on each retry (2000, 4000, 8000 by default).
+    retries: 2
     conda:
         "../../../envs/dedup.yaml"
     resources:
-        mem_mb=_setting(
-            "reference_module", "deduplication", "settings", "mem_mb", default=20000
-        ),
-    params:
-        mem_mb=_setting(
-            "reference_module", "deduplication", "settings", "mem_mb", default=20000
-        ),
+        mem_mb=lambda wildcards, attempt: _setting(
+            "reference_module", "deduplication", "settings", "mem_mb", default=2000
+        )
+        * 2 ** (attempt - 1),
     message:
         "Deduplicating BAM file for {input.bam} using dedup for individual {wildcards.individual} in species {wildcards.species}"
     shell:
         """
         mkdir -p "{output.dedup_folder}"
-        dedup -Xms{params.mem_mb}m -Xmx{params.mem_mb}m --input "{input.bam}" --merged --output "{output.dedup_folder}" >"{log}" 2>&1
+        dedup -Xmx{resources.mem_mb}m --input "{input.bam}" --merged --output "{output.dedup_folder}" >"{log}" 2>&1
         """
 
 

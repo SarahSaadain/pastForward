@@ -139,7 +139,7 @@ Deduplication runs in parallel on clusters of whole contigs, at most one cluster
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `settings.mem_mb` | `20000` | Memory (MB) for DeDup's JVM heap (`-Xms`/`-Xmx`), also requested from the cluster scheduler as `resources.mem_mb`. Increase for large reference genomes/BAM files; decrease for small ones to free up cluster resources. |
+| `settings.mem_mb` | `2000` | Maximum memory (MB) for DeDup's JVM heap (`-Xmx`) on the first attempt, also requested from the cluster scheduler as `resources.mem_mb`. A failed DeDup job is retried twice, with the heap doubled each time (2000, 4000, 8000 MB by default). Heap need grows with the depth of duplicate stacks, not with BAM size. Increase it for libraries with very many duplicates or deep mtDNA, when the dedup log still shows `OutOfMemoryError: Java heap space` after the last retry. See the FAQ. |
 | `settings.keep_bam` | `false` | Same as `mapping.settings.keep_bam`, for the deduplicated BAM (`{individual}_{reference}_sorted_dedupped.bam[.bai]`). Has no effect when deduplication is off. |
 
 #### `filter_unmapped_reads`
