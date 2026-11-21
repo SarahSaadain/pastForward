@@ -7,6 +7,7 @@ tests/
   integration/   needs Snakemake: test_cli_snakemake.py, dryrun_scenarios.sh,
                  module_subsets.sh (read only, read+ref, ref only, reveal only),
                  compare_with_ref.sh (old code vs working tree on the synthetic project),
+                 run_synthetic.sh (real run on the synthetic project),
                  and synthetic_project/ (a small project with known answers) with
                  test_synthetic_run.py that checks its results,
                  and real_data_project/ (tier 2: download_full_test.sh fetches real
@@ -132,12 +133,16 @@ historical sample and ModB a modern one. The tests check that a finished run rep
 
 Values are checked against ranges, not exact numbers, so tool updates do not break them.
 
-Run the pipeline on `tests/integration/synthetic_project/` first, with the Snakemake env active. Then run the tests:
+Run the pipeline on `tests/integration/synthetic_project/` first, then run the tests:
 
 ```bash
-snakemake --directory tests/integration/synthetic_project --cores 4 --software-deployment-method conda
+tests/integration/run_synthetic.sh
 python3 -m unittest tests/integration/test_synthetic_run.py -v
 ```
+
+`run_synthetic.sh` activates the Snakemake env, drops stray job-env paths from `PATH`, and
+reuses the shared conda prefix (`~/.snakemake/pf_conda`). Extra arguments go to snakemake, e.g.
+`--until <rule>`. Its header covers rerunning a step whose outputs are `temp()`.
 
 Without `tests/integration/synthetic_project/Dmel/results/` the whole file is skipped. To check another project directory,
 set `PF_TEST_PROJECT=<path>`.

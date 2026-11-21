@@ -23,7 +23,7 @@ def setUpModule():
     if not RESULTS.is_dir():
         raise unittest.SkipTest(
             f"{RESULTS} not found. Run the pipeline on tests/integration/synthetic_project/ first: "
-            "snakemake --directory tests/integration/synthetic_project --cores 4 --software-deployment-method conda"
+            "tests/integration/run_synthetic.sh"
         )
 
 

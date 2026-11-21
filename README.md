@@ -99,11 +99,10 @@ Want to call `snakemake` directly, tune its flags, run without the CLI wrapper, 
 
 Two test sets show that your setup works before you run your own data.
 
-**Tier 1: small synthetic set, in the repo.** `tests/integration/synthetic_project/` holds simulated reads of two *D. melanogaster* individuals (a damaged "historical" one and a modern one) on a 400 kb reference made of real sequence. It also holds a small ECMSD database and Centrifuge index, and a set of single-copy genes, so every step runs without network once the conda envs exist. Run it from the repo root with the `snakemake` env activated:
+**Tier 1: small synthetic set, in the repo.** `tests/integration/synthetic_project/` holds simulated reads of two *D. melanogaster* individuals (a damaged "historical" one and a modern one) on a 400 kb reference made of real sequence. It also holds a small ECMSD database and Centrifuge index, and a set of single-copy genes, so every step runs without network once the conda envs exist. Run it with:
 
 ```bash
-conda activate snakemake
-snakemake --directory tests/integration/synthetic_project --cores 4 --software-deployment-method conda --conda-prefix ~/.snakemake/pf_conda
+tests/integration/run_synthetic.sh   # activates the `snakemake` env (PF_SNAKEMAKE_ENV to change), 4 cores (PF_CORES)
 python3 -m unittest tests/integration/test_synthetic_run.py -v   # checks the known answers
 ```
 
