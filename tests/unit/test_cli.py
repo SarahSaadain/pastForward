@@ -29,6 +29,11 @@ sys.path.insert(0, os.path.join(REPO_ROOT, "workflow"))
 
 import scripts.cli as cli  # noqa: E402
 
+# Commands that find snakemake (install, run, ...) record it in cli.json. Keep the user's real
+# ~/.config/pastforward/cli.json out of reach. test_cli_snakemake.py imports this module too.
+_SETTINGS_DIR = tempfile.TemporaryDirectory()
+cli.user_settings.SETTINGS_FILE = Path(_SETTINGS_DIR.name) / "cli.json"
+
 
 class BuildCmdTestCase(unittest.TestCase):
     def test_run_cmd_adds_defaults(self):
