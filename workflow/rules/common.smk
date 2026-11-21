@@ -398,6 +398,48 @@ def create_multiqc_species_input(wildcards):
     return file_list
 
 
+# One file per version_source, so switching it never shows the old source's version.
+_ECMSD_VERSION_FILE = f"resources/tool_versions/ecmsd_{_setting('read_module', 'taxonomic_screening', 'tools', 'ecmsd', 'settings', 'version_source', default='conda')}_version.txt"
+_REVEAL_VERSION_FILE = f"resources/tool_versions/reveal_{_setting('reveal_module', 'settings', 'version_source', default='conda')}_version.txt"
+
+
+def create_report_info_input(wildcards):
+    """
+    Inputs of the report info sections: the version files of the tools in this run, and the
+    ECMSD database files (a rebuilt database updates its dates). A tool that is switched off
+    gets no key, so its version is never looked up.
+    """
+    ecmsd_on = (
+        _setting("read_module", "execute", default=True) == True
+        and _setting("read_module", "taxonomic_screening", "execute", default=True)
+        == True
+        and _setting(
+            "read_module",
+            "taxonomic_screening",
+            "tools",
+            "ecmsd",
+            "execute",
+            default=True,
+        )
+        == True
+    )
+    inputs = {}
+    if ecmsd_on:
+        inputs["ecmsd_version"] = _ECMSD_VERSION_FILE
+        inputs["ecmsd_db"] = [
+            os.path.join(_ecmsd_db_folder(), f) for f in _ECMSD_DB_FILES
+        ]
+    if _setting("reveal_module", "execute", default=True) == True:
+        inputs["reveal_version"] = _REVEAL_VERSION_FILE
+    return inputs
+
+
+def create_report_info_files(wildcards):
+    """The two report info files of a species, for the MultiQC rules."""
+    base = f"{wildcards.species}/results/summary/report_info/{wildcards.species}"
+    return [f"{base}_tool_versions_mqc.json", f"{base}_raw_results_mqc.json"]
+
+
 def create_authenticity_summary_input(wildcards):
     """
     Per-individual files for the authenticity table, grouped by source. A group is listed

@@ -4,6 +4,7 @@
 rule create_multiqc_reference:
     input:
         create_multiqc_reference_input,
+        report_info=create_report_info_files,
         config="{species}/results/reference_module/{reference}/analytics/species_level/{species}_{reference}/{species}_{reference}_multiqc_config.yaml",
     output:
         "{species}/results/reference_module/{reference}/analytics/species_level/{species}_{reference}_multiqc.html",

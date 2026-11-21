@@ -7,6 +7,7 @@ import textwrap
 rule create_multiqc_species_individual:
     input:
         create_multiqc_species_individual_input,
+        report_info=create_report_info_files,
         config="{species}/results/summary/individual_level/{individual}/{individual}_multiqc_config.yaml",
     output:
         "{species}/results/summary/individual_level/{individual}_multiqc.html",

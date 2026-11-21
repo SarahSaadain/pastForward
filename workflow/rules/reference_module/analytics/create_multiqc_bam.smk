@@ -4,6 +4,7 @@
 rule create_multiqc_bam_individual:
     input:
         create_multiqc_bam_individual_input,
+        report_info=create_report_info_files,
         config="{species}/results/summary/individual_level/{individual}/{individual}_{reference}_multiqc_config.yaml",
     output:
         "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}_{reference}_multiqc.html",

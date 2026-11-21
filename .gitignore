@@ -24,6 +24,7 @@ config.yaml
 tests/integration/synthetic_project/logs/
 tests/integration/synthetic_project/Dmel/processed/
 tests/integration/synthetic_project/Dmel/results/
+tests/integration/synthetic_project/resources/tool_versions/
 # Tier-2 test project (tests/integration/real_data_project/): only its config is tracked, the downloaded data and outputs are not.
 tests/integration/real_data_project/*
 !tests/integration/real_data_project/download_full_test.sh
