@@ -10,6 +10,9 @@
 _RESCALE_SPLIT = "{species}/processed/reference_module/{reference}/analytics/{individual}/mapdamage/split/{individual}_{reference}_chunk_{chunk}"
 _MD = "{species}/results/reference_module/{reference}/analytics/individual_level/{individual}/mapdamage/{individual}_{reference}"
 _MD_REF = "{species}/processed/reference_module/{reference}/reference/{reference}.fa"
+# mapDamage reads <ref>.fai and, if missing, builds it in every job at once, so parallel chunks
+# can read it half written. Unnamed input: the mapdamage2 wrapper links every named input but bam/ref.
+_MD_FAI = f"{_MD_REF}.fai"
 _MD_LOG = "{species}/processed/reference_module/{reference}/analytics/{individual}/mapdamage/{individual}_{reference}"
 # Keys are the mapdamage2 wrapper's output tags, which map them to mapDamage's own file names.
 _MD_TABLES = {
@@ -46,6 +49,7 @@ if _mapdamage_split_counting():
     # the sorted BAM with dedup off). The counts are per read, so the chunk sums equal one full run.
     rule mapdamage_count_chunk:
         input:
+            _MD_FAI,
             bam=_mapdamage_chunk_bam,
             ref=_MD_REF,
         output:
@@ -126,6 +130,7 @@ else:
     # output, so the wrapper adds no --rescale; the BAM is rescaled in chunks below.
     rule analyze_mapdamage_and_rescale_bam:
         input:
+            _MD_FAI,
             bam=_mapdamage_input_bam,
             ref=_MD_REF,
         output:
@@ -194,6 +199,7 @@ rule rescale_split_bam_unplaced_reads:
 # output and stats_prob as input, the wrapper runs mapDamage --rescale-only on that model.
 rule rescale_bam_chunk:
     input:
+        _MD_FAI,
         bam=_mapdamage_chunk_bam,
         ref=_MD_REF,
         stats_prob=_MD_STATS["stats_prob"],

@@ -60,6 +60,7 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **mapDamage chunks failed with "Index for '...fa.fai' does contain any sequences"**: mapDamage reads the reference's `.fai` and builds it itself when it is missing. With split counting, many chunk jobs started on a fresh reference at once, each wrote the same `.fai`, and some read it half written. `mapdamage_count_chunk`, `rescale_bam_chunk` and the downsample `analyze_mapdamage_and_rescale_bam` now take the `.fai` as input, so `index_reference_with_samtools` builds it once before them. Nothing reruns where the `.fai` already exists.
 - **Random `get_final_bam` failure "Output ... has older modification time"**: `get_final_bam`, `keep_bam` and the rescaled-BAM step hard-linked the BAM index. Snakemake touches outputs after a job, so touching the linked index also made the input index newer than the output BAM, and the mtime check failed when the two touches fell in different clock ticks. The index (a few KB) is now copied; the BAM is still hard-linked.
 - **bwa-mem3 and minibwa envs did not solve** under strict channel priority (`htslib` / `libdeflate` conflict). `workflow/envs/bwa_mem3.yaml` and `minibwa.yaml` now list conda-forge before bioconda.
 - **MultiQC logo missing outside the project root**: the logo path is now found from the workflow folder, so runs with `snakemake --directory` show the logo too. Before, MultiQC logged "custom_logo path not found".
