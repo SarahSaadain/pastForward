@@ -13,35 +13,35 @@ pastForward analyzes raw ancient and historical DNA from a sequencing facility. 
 
 pastForward is built on [Snakemake](https://snakemake.github.io).
 
-> **Note:** pastForward uses two purpose-built tools: [REVEAL](https://github.com/SarahSaadain/REVEAL) for transposable element and genomic feature dynamics, and [ECMSD](https://github.com/capoony/ECMSD) for contamination screening against a curated mitochondrial database. See their READMEs for details on each tool.
+> **Note:** pastForward uses two companion tools: [REVEAL](https://github.com/SarahSaadain/REVEAL) for transposable element and genomic feature dynamics, and [ECMSD](https://github.com/capoony/ECMSD) for contamination screening against a curated mitochondrial database. See their READMEs for details on each tool.
 
-## Workflow Overview
+## Workflow overview
 
 ![Pipeline Overview](docs/img/pf_pipeline_process_withoutLogo.svg)
 
 For detailed information about the processing steps, see the [Process Overview](docs/process_overview.md) page. For common questions and troubleshooting, see the [FAQ](docs/FAQ.md).
 
-## Quick Start
+## Quick start
 
-New to pastForward? These four steps take you from nothing to a finished run. Each one links to more detail.
+These four steps take you from nothing to a finished run.
 
 1. **Install Conda and Snakemake, and download pastForward.** The [Setup Guide](config/README.md) walks through this step by step.
 2. **Add your species and sequencing data.** Also covered in the [Setup Guide](config/README.md#step-4-add-your-species-and-data), including how your read files need to be named.
-3. **Create a `config.yaml` file.** Every pipeline stage is turned on by default, but can be adjusted if required. To run with default settings, a config with a project name and species list is enough. If you want to adjust the config but would rather not edit a text file by hand, open the [Config Designer](https://sarahsaadain.github.io/pastForward/config/config_designer.html) in your browser to create your config.
+3. **Create a `config.yaml` file.** Every pipeline stage is on by default, so a config with a project name and a species list is enough. To change settings without editing a text file by hand, open the [Config Designer](https://sarahsaadain.github.io/pastForward/config/config_designer.html) in your browser to create your config.
 4. **Run the pipeline.** See [Running the Pipeline](#running-the-pipeline) below for the exact command.
 
 Already running pastForward and want a newer version? See the [Update Guide](docs/update.md).
 
-## Running the Pipeline
+## Running the pipeline
 
 Run `./pastForward` from your **project folder**, the folder that directly contains `workflow/`, `config/`, and your `<species>/` folders. See [Project Structure](config/README.md#project-structure) for what that folder should look like.
 
 For a new project, run these in order:
 
-1. **`./pastForward check`**: see what pastForward finds on disk for your config (species/individuals/references/...). Fix your data or config first if anything looks wrong here.
-2. **`./pastForward preview`**: see the output files a run would produce, including ones it'll skip.
-3. **`./pastForward dryrun`** *(optional)*: a full Snakemake dry run, to double-check the exact rules that would execute.
-4. **`./pastForward run --cores 40`**: runs the pipeline, in the background by default.
+1. `./pastForward check`: see what pastForward finds on disk for your config (species/individuals/references/...). Fix your data or config first if anything looks wrong here.
+2. `./pastForward preview`: see the output files a run would produce, including ones it'll skip.
+3. `./pastForward dryrun` (optional): a full Snakemake dry run, to double-check the exact rules that would execute.
+4. `./pastForward run --cores 40`: runs the pipeline, in the background by default.
 
 ```bash
 ./pastForward check
@@ -81,7 +81,7 @@ For a new project, run these in order:
 
 `touch` runs `snakemake --touch`: it only updates the timestamps of output files that already exist, so Snakemake treats them as up to date and skips the steps that produced them. Nothing is recomputed and no file content changes. It is meant for cases where the results are fine but their timestamps are not, e.g. after copying results in from another machine. Output files that do not exist yet are skipped with a warning, and by default only files Snakemake already considers out of date are touched. Add `--forcerun <rule>` or `--forceall` to touch the rest as well.
 
-`benchmark` summarizes what a run actually cost. Every step writes a small `*.benchmark.jsonl` file next to its log file, recording wall time, peak memory, threads, and input size, and `benchmark` collects them into one row per rule, ordered by total core-hours. Use it to see where a run spends its time, or, with `--emit-profile`, to turn those measurements into resource requests for an HPC cluster. See [Running with Snakemake](docs/snakemake.md#benchmarking-a-run).
+`benchmark` summarizes what a run cost. Every step writes a small `*.benchmark.jsonl` file next to its log file, recording wall time, peak memory, threads, and input size, and `benchmark` collects them into one row per rule, ordered by total core-hours. Use it to see where a run spends its time, or, with `--emit-profile`, to turn those measurements into resource requests for an HPC cluster. See [Running with Snakemake](docs/snakemake.md#benchmarking-a-run).
 
 `tools create-species <species> [<species> ...]` sets up a new species. It creates the species folder with all its `input/` subfolders in the project root and prints a `species:` block you can paste into `config/config.yaml`. Folders that already exist are left alone, so it is safe to run again. `processed/` and `results/` are not created, since the pipeline makes those itself. See [Add a Species](config/README.md#add-a-species).
 
@@ -95,7 +95,7 @@ Snakemake keeps track of what's already been done and only re-runs steps that ar
 
 Want to call `snakemake` directly, tune its flags, run without the CLI wrapper, or run on an HPC cluster? See [Running with Snakemake](docs/snakemake.md).
 
-## Test Data
+## Test data
 
 Two test sets show that your setup works before you run your own data.
 
@@ -119,10 +119,8 @@ cd tests/integration/real_data_project && ./pastForward check && ./pastForward r
 
 pastForward generates a MultiQC report for:
 
-* **Each species** (all samples from that species together, so you can compare results across them)
-  * Location: `{species}/results/summary/species_level/{species}_multiqc.overall.html`
-* **Each individual sample**
-  * Location: `{species}/results/summary/individual_level/{individual}_multiqc.html`
+* each species, with all its samples together so you can compare them: `{species}/results/summary/species_level/{species}_multiqc.overall.html`
+* each individual: `{species}/results/summary/individual_level/{individual}_multiqc.html`
 
 These reports summarize reads before and after trimming, taxonomic screening, coverage, deduplication, and damage rescaling. Use them to judge the quality of your sequenced reads and decide whether a sample needs additional library preparation.
 
