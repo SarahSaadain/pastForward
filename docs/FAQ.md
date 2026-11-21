@@ -623,7 +623,7 @@ The install-once behavior is on purpose: it keeps a pipeline run reproducible ev
 - Per-species: `{species}/results/summary/species_level/{species}_multiqc.overall.html`
 
 **Q: Which tool versions and ECMSD database were used, and where are the raw results?**
-The last two sections of every MultiQC report answer both. "Tool versions" shows pastForward, ECMSD, REVEAL and the ECMSD database (path, file dates and sizes). The database file dates are when it was built on this machine, not the NCBI release date. "Where to find the raw results" lists the folder of each step that is switched on in the config. The versions are read once into `resources/tool_versions/`. After upgrading a tool inside an existing conda env, delete that folder to refresh them.
+The last two sections of every MultiQC report answer both. "Tool versions" shows pastForward, ECMSD, REVEAL and the ECMSD database (path, file dates and sizes). With the ECMSD development branch the database records its RefSeq release and download dates (`db_info.txt`) and those are shown. Older ECMSD shows only the file dates, which are the local build date. "Where to find the raw results" lists the folder of each step that is switched on in the config. The versions are read once into `resources/tool_versions/`. After upgrading a tool inside an existing conda env, delete that folder to refresh them.
 
 **Q: A step was disabled. Will the report still work?**
 Yes. Each report only requests inputs from enabled steps. Disabled steps are left out, so the report reflects what was run.

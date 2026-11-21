@@ -38,6 +38,33 @@ def _on(node, *keys, default=True):
     return node.get(keys[-1], default)
 
 
+# Keys of db_info.txt (tab separated key, value), written by ECMSD's MakeRef.sh.
+_DB_INFO_LABELS = {
+    "built": "built",
+    "refseq_release": "RefSeq release",
+    "refseq_downloaded": "mitogenomes downloaded",
+    "taxdump_downloaded": "taxonomy downloaded",
+    "n_references": "references",
+    "n_extra_references": "extra references",
+    "extended": "last extended",
+    "ecmsd_version": "built with ECMSD",
+}
+
+
+def read_db_info(db_folder):
+    """db_info.txt of an ECMSD database as a dict, or {} when it has none."""
+    info = {}
+    try:
+        with open(os.path.join(db_folder, "db_info.txt")) as f:
+            for line in f:
+                key, _, value = line.rstrip("\n").partition("\t")
+                if key and value:
+                    info[key] = value
+    except OSError:
+        pass
+    return info
+
+
 def read_version(path):
     """First non-empty line of a `--version` output, e.g. 'ECMSD version 1.2.0'."""
     try:
@@ -72,9 +99,17 @@ def tool_rows(
     if ecmsd:
         rows.append(("ECMSD", ecmsd["version"], ecmsd["source"]))
     if ecmsd and ecmsd_db:
-        for relative, label in _ECMSD_DB_LABELS.items():
-            date, size = _file_info(os.path.join(ecmsd_db, relative))
-            rows.append((f"ECMSD database: {label}", f"file date {date}", size))
+        info = read_db_info(ecmsd_db)
+        if info:
+            # ECMSD (development branch) records what the database was built from
+            for key, label in _DB_INFO_LABELS.items():
+                if key in info:
+                    rows.append((f"ECMSD database: {label}", info[key], ""))
+        else:
+            # Older ECMSD: only the file dates, which are the local build date
+            for relative, label in _ECMSD_DB_LABELS.items():
+                date, size = _file_info(os.path.join(ecmsd_db, relative))
+                rows.append((f"ECMSD database: {label}", f"file date {date}", size))
         rows.append(("ECMSD database folder", ecmsd_db, ""))
     if ecmsd and taxonomic_hierarchy:
         rows.append(("ECMSD taxonomic level", taxonomic_hierarchy, ""))

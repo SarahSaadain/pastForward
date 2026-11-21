@@ -26,6 +26,7 @@ import pf_test_library as testlib  # noqa: E402
 from scripts.pipeline_namespace import load_pipeline_namespace  # noqa: E402
 from scripts.summary_module.create_report_info import (  # noqa: E402
     raw_result_rows,
+    read_db_info,
     read_version,
     tool_rows,
     write_sections,
@@ -145,6 +146,25 @@ class ToolRowsTest(unittest.TestCase):
         self.assertEqual(
             rows["ECMSD database: NCBI taxonomy names"][1], "file date missing"
         )
+
+    def test_db_info_replaces_file_dates(self):
+        with tempfile.TemporaryDirectory() as db:
+            with open(os.path.join(db, "db_info.txt"), "w") as f:
+                f.write(
+                    "built\t2026-11-01\nrefseq_release\t230\nrefseq_downloaded\t2026-10-30\n"
+                )
+            self.assertEqual(read_db_info(db)["refseq_release"], "230")
+            rows = {
+                r[0]: r[1]
+                for r in tool_rows(
+                    "2.2.0",
+                    ecmsd={"version": "v", "source": "dev"},
+                    ecmsd_db=db,
+                )
+            }
+        self.assertEqual(rows["ECMSD database: mitogenomes downloaded"], "2026-10-30")
+        self.assertEqual(rows["ECMSD database: RefSeq release"], "230")
+        self.assertNotIn("ECMSD database: NCBI taxonomy nodes", rows)
 
     def test_read_version(self):
         with tempfile.TemporaryDirectory() as d:
